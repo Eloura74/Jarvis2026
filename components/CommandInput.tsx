@@ -83,76 +83,80 @@ const CommandInput: React.FC<CommandInputProps> = ({
   }, [isProcessing, isListening]);
 
   return (
-    // Panneau principal avec effet verre (glass-panel)
-    <div className="glass-panel p-4 rounded-lg mt-4 relative">
-      {/* Effet glow rouge pendant l'écoute vocale (fond flou animé) */}
-      <div
-        className={`absolute inset-0 bg-cyan-500/5 blur-xl rounded-lg pointer-events-none transition-opacity duration-500 ${isListening ? "opacity-100 bg-red-500/10" : "opacity-0"}`}
-      ></div>
+    // Panneau Tech UI
+    <div className="relative w-full max-w-3xl mt-8">
+      {/* Connecteurs Latéraux G/D */}
+      <div className="absolute top-1/2 -left-4 w-4 h-[2px] bg-cyan-500/30"></div>
+      <div className="absolute top-1/2 -right-4 w-4 h-[2px] bg-cyan-500/30"></div>
 
-      {/* Container flex pour aligner icône + input + boutons */}
-      <div className="flex items-center gap-4 relative z-10">
-        {/* Icône de statut système (gauche) */}
-        {/* - LISTENING : fond rouge, pulse */}
-        {/* - PROCESSING : fond violet, spin */}
-        {/* - IDLE : fond dark gris */}
-        <div
-          className={`p-3 rounded-full transition-all duration-300 ${isListening ? "bg-red-500/20 animate-pulse" : isProcessing ? "bg-purple-500/20 animate-spin" : "bg-slate-800"}`}
-        >
-          <Command
-            className={`w-6 h-6 ${isListening ? "text-red-400" : isProcessing ? "text-purple-400" : "text-cyan-400"}`}
+      {/* Conteneur principal avec Clip-Path */}
+      <div className="tech-border-container clip-tech p-[1px]">
+        <div className="tech-content clip-tech p-4 relative flex items-center gap-4">
+          {/* Background avec texture Hex */}
+          <div className="absolute inset-0 bg-hex-pattern opacity-10 pointer-events-none"></div>
+
+          {/* Effet glow rouge pendant l'écoute */}
+          <div
+            className={`absolute inset-0 bg-red-500/10 transition-opacity duration-500 ${isListening ? "opacity-100" : "opacity-0"}`}
+          ></div>
+
+          {/* Icône Statut */}
+          <div
+            className={`p-3 clip-tech-sm transition-all duration-300 ${isListening ? "bg-red-500/20 animate-pulse" : isProcessing ? "bg-purple-500/20 animate-spin" : "bg-cyan-900/20 border border-cyan-500/30"}`}
+          >
+            <Command
+              className={`w-6 h-6 ${isListening ? "text-red-400" : isProcessing ? "text-purple-400" : "text-cyan-400"}`}
+            />
+          </div>
+
+          {/* Input */}
+          <input
+            ref={inputRef}
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            disabled={isProcessing || isListening}
+            placeholder={
+              isListening
+                ? "ANALYZING AUDIO INPUT..."
+                : isProcessing
+                  ? "PROCESSING DATA STREAMS..."
+                  : "ENTER COMMAND OR AUTH_KEY..."
+            }
+            className="flex-1 bg-transparent border-b border-cyan-500/30 focus:border-cyan-400 text-lg py-2 px-2 text-cyan-50 outline-none font-mono placeholder-cyan-800/50 transition-colors disabled:opacity-50 tracking-wider"
           />
+
+          {/* Boutons Actions */}
+          <div className="flex gap-2">
+            <button
+              onClick={onListenToggle}
+              disabled={isProcessing}
+              className={`p-3 clip-tech-sm transition-all border ${isListening ? "bg-red-500/20 border-red-500 text-red-400 shadow-[0_0_15px_rgba(239,68,68,0.3)]" : "bg-cyan-900/10 border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/20 hover:text-white"}`}
+              title="Toggle Voice"
+            >
+              {isListening ? (
+                <MicOff className="w-5 h-5" />
+              ) : (
+                <Mic className="w-5 h-5" />
+              )}
+            </button>
+
+            <button
+              onClick={handleSend}
+              disabled={!input.trim() || isProcessing || isListening}
+              className="p-3 clip-tech-sm bg-cyan-600/80 hover:bg-cyan-500 border border-cyan-400 text-white transition-all shadow-[0_0_15px_rgba(8,145,178,0.5)] disabled:opacity-50 disabled:grayscale"
+            >
+              <Send className="w-5 h-5" />
+            </button>
+          </div>
         </div>
+      </div>
 
-        {/* Input de commande textuelle */}
-        {/* Désactivé si en listening ou processing */}
-        {/* Placeholder dynamique selon l'état */}
-        <input
-          ref={inputRef}
-          type="text"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={handleKeyDown}
-          disabled={isProcessing || isListening}
-          placeholder={
-            isListening
-              ? "Listening..."
-              : isProcessing
-                ? "Processing neural inputs..."
-                : "Enter command or speak..."
-          }
-          className="flex-1 bg-transparent border-b-2 border-slate-700 focus:border-cyan-400 text-lg py-2 px-2 text-white outline-none font-mono placeholder-slate-600 transition-colors disabled:opacity-50"
-        />
-
-        {/* Bouton Micro (contrôle reconnaissance vocale) */}
-        {/* - Si listening : MicOff (rouge, glow), click = arrêter */}
-        {/* - Sinon : Mic (gris), click = démarrer */}
-        {/* Désactivé pendant processing */}
-        <button
-          onClick={onListenToggle}
-          disabled={isProcessing}
-          className={`p-3 rounded-full transition-all ${isListening ? "bg-red-500/20 text-red-400 hover:bg-red-500/30 shadow-[0_0_15px_rgba(239,68,68,0.3)]" : "hover:bg-slate-700 text-slate-400 hover:text-cyan-400"}`}
-          title={isListening ? "Stop Listening" : "Enable Voice Input"}
-        >
-          {isListening ? (
-            <MicOff className="w-5 h-5" />
-          ) : (
-            <Mic className="w-5 h-5" />
-          )}
-        </button>
-
-        {/* Bouton Send (envoyer la commande textuelle) */}
-        {/* Désactivé si :
-                - Input vide
-                - En processing
-                - En listening (mode vocal actif) */}
-        <button
-          onClick={handleSend}
-          disabled={!input.trim() || isProcessing || isListening}
-          className="p-3 bg-cyan-600 hover:bg-cyan-500 disabled:opacity-50 disabled:hover:bg-cyan-600 rounded-full text-white transition-all shadow-[0_0_15px_rgba(8,145,178,0.5)]"
-        >
-          <Send className="w-5 h-5" />
-        </button>
+      {/* Indicateur inférieur (ligne décorative) */}
+      <div className="absolute -bottom-2 left-10 right-10 h-[2px] bg-cyan-500/20 flex justify-between">
+        <div className="w-2 h-2 bg-cyan-500 -mt-[3px]"></div>
+        <div className="w-2 h-2 bg-cyan-500 -mt-[3px]"></div>
       </div>
     </div>
   );

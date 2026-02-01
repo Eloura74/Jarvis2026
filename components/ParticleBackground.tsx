@@ -208,10 +208,18 @@ const ParticleBackground: React.FC<ParticleBackgroundProps> = ({ status }) => {
         if (!ctx || !mounted) return;
 
         // Sélection couleur selon statut système
-        ctx.fillStyle =
-          status === SystemStatus.ERROR
-            ? "rgba(239, 68, 68, 0.5)" // Rouge (erreur)
-            : "rgba(6, 182, 212, 0.5)"; // Cyan (normal)
+        if (status === SystemStatus.ERROR) {
+          ctx.fillStyle = "rgba(255, 42, 42, 0.8)"; // Red
+        } else if (
+          status === SystemStatus.PROCESSING ||
+          status === SystemStatus.NETWORKING
+        ) {
+          ctx.fillStyle = "rgba(192, 132, 252, 0.8)"; // Purple
+        } else if (status === SystemStatus.LISTENING) {
+          ctx.fillStyle = "rgba(255, 215, 0, 0.8)"; // Gold
+        } else {
+          ctx.fillStyle = "rgba(0, 243, 255, 0.4)"; // Cyan
+        }
 
         // Dessin du cercle
         ctx.beginPath();
@@ -273,13 +281,24 @@ const ParticleBackground: React.FC<ParticleBackgroundProps> = ({ status }) => {
             ctx.beginPath();
 
             // Opacité de la ligne proportionnelle à la distance
-            // Plus proche = plus opaque (1.0 si distance=0, 0.0 si distance=120)
-            ctx.strokeStyle =
-              status === SystemStatus.ERROR
-                ? `rgba(239, 68, 68, ${1 - distance / 120})` // Rouge (erreur)
-                : `rgba(6, 182, 212, ${0.15 * (1 - distance / 120)})`; // Cyan (normal, opacité réduite)
+            // Plus proche = plus opaque
+            let strokeColor;
 
-            ctx.lineWidth = 1;
+            if (status === SystemStatus.ERROR) {
+              strokeColor = `rgba(255, 42, 42, ${1 - distance / 120})`; // Red Alert
+            } else if (
+              status === SystemStatus.PROCESSING ||
+              status === SystemStatus.NETWORKING
+            ) {
+              strokeColor = `rgba(168, 85, 247, ${0.8 * (1 - distance / 120)})`; // Purple
+            } else if (status === SystemStatus.LISTENING) {
+              strokeColor = `rgba(255, 215, 0, ${0.8 * (1 - distance / 120)})`; // Gold
+            } else {
+              strokeColor = `rgba(0, 243, 255, ${0.2 * (1 - distance / 120)})`; // Cyan Primary
+            }
+
+            ctx.strokeStyle = strokeColor;
+            ctx.lineWidth = status === SystemStatus.IDLE ? 0.5 : 1.5; // Lignes plus fines en idle
             ctx.moveTo(p.x, p.y);
             ctx.lineTo(p2.x, p2.y);
             ctx.stroke();

@@ -21,6 +21,7 @@
  */
 
 import React from "react";
+import { motion } from "framer-motion";
 
 /**
  * Props du composant JarvisCore
@@ -39,109 +40,233 @@ interface JarvisCoreProps {
  * @returns {JSX.Element} Le réacteur arc animé
  */
 const JarvisCore: React.FC<JarvisCoreProps> = ({ status }) => {
-  // Calcul des états basés sur le statut système
-  // Processing = tout sauf IDLE et LISTENING (ex: PROCESSING, ERROR, etc.)
   const isProcessing = status !== "IDLE" && status !== "LISTENING";
   const isListening = status === "LISTENING";
+  const isError = status === "ERROR";
 
-  // Sélection des classes Tailwind pour couleurs principales (texte + bordures)
-  // Rouge = écoute vocale | Violet = traitement IA | Cyan = repos/idle
-  const mainColor = isListening
-    ? "text-red-500 border-red-500"
-    : isProcessing
-      ? "text-purple-500 border-purple-500"
-      : "text-cyan-400 border-cyan-400";
+  // Palette dynamique
+  const getColors = () => {
+    if (isError)
+      return {
+        primary: "#ef4444",
+        secondary: "#7f1d1d",
+        glow: "rgba(239, 68, 68, 0.6)",
+      };
+    if (isListening)
+      return {
+        primary: "#ef4444",
+        secondary: "#b91c1c",
+        glow: "rgba(239, 68, 68, 0.6)",
+      };
+    if (isProcessing)
+      return {
+        primary: "#a855f7",
+        secondary: "#6b21a8",
+        glow: "rgba(168, 85, 247, 0.6)",
+      };
+    return {
+      primary: "#06b6d4",
+      secondary: "#155e75",
+      glow: "rgba(6, 182, 212, 0.5)",
+    };
+  };
 
-  // Classes pour effet glow/lueur autour des éléments
-  // Utilise des box-shadows personnalisées avec rgba pour transparence
-  const glowColor = isListening
-    ? "shadow-[0_0_50px_rgba(239,68,68,0.5)]"
-    : isProcessing
-      ? "shadow-[0_0_50px_rgba(168,85,247,0.5)]"
-      : "shadow-[0_0_50px_rgba(34,211,238,0.3)]";
-
-  // Couleurs de fond pour éléments solides (particules, core)
-  const bgGlow = isListening
-    ? "bg-red-500"
-    : isProcessing
-      ? "bg-purple-500"
-      : "bg-cyan-400";
+  const colors = getColors();
 
   return (
-    // Conteneur principal 320x320px, centré, non interactif
-    // pointer-events-none = désactive clics (purement visuel)
-    // select-none = désactive sélection texte
-    <div className="relative w-80 h-80 flex items-center justify-center pointer-events-none select-none perspective-1000">
-      {/* COUCHE 1 : Anneaux 3D en rotation (3 cercles concentriques) */}
+    <div className="relative w-96 h-96 flex items-center justify-center pointer-events-none select-none">
+      {/* Fond lumineux global (Ambiance) */}
+      <motion.div
+        animate={{ opacity: [0.2, 0.4, 0.2] }}
+        transition={{ duration: 4, repeat: Infinity }}
+        className="absolute inset-0 rounded-full blur-[100px]"
+        style={{
+          background: `radial-gradient(circle, ${colors.glow} 0%, transparent 70%)`,
+        }}
+      />
 
-      {/* Anneau extérieur (100%) - Bordure pointillée, rotation lente 20s */}
-      <div
-        className={`absolute w-full h-full rounded-full border border-dashed opacity-20 animate-[spin_20s_linear_infinite] ${mainColor}`}
-      ></div>
+      {/* SVG COMPLEXE : Anneaux Mécaniques */}
+      <svg className="w-full h-full absolute inset-0" viewBox="0 0 400 400">
+        <defs>
+          <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="4" result="coloredBlur" />
+            <feMerge>
+              <feMergeNode in="coloredBlur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+        </defs>
 
-      {/* Anneau intermédiaire (90%) - Rotation inverse 15s, incliné 45° (effet 3D) */}
-      <div
-        className={`absolute w-[90%] h-[90%] rounded-full border-[1px] opacity-40 animate-[spin_15s_linear_infinite_reverse] ${mainColor}`}
-        style={{ transform: "rotateX(45deg)" }}
-      ></div>
+        {/* CERCLE EXTERNE (Structure) - Fixe */}
+        <circle
+          cx="200"
+          cy="200"
+          r="190"
+          fill="none"
+          stroke={colors.secondary}
+          strokeWidth="1"
+          opacity="0.3"
+          strokeDasharray="5 5"
+        />
 
-      {/* Anneau interne (80%) - Bordure 2px, glow actif, rotation 8s */}
-      <div
-        className={`absolute w-[80%] h-[80%] rounded-full border-[2px] opacity-60 animate-[spin_8s_linear_infinite] ${mainColor} ${glowColor}`}
-      ></div>
+        {/* ANNEAU 1 : Segments Rotatifs (Lent) */}
+        <motion.g
+          animate={{ rotate: 360 }}
+          transition={{ duration: 60, repeat: Infinity, ease: "linear" }}
+          style={{ originX: "200px", originY: "200px" }}
+        >
+          <circle
+            cx="200"
+            cy="200"
+            r="170"
+            fill="none"
+            stroke={colors.primary}
+            strokeWidth="1"
+            opacity="0.2"
+          />
+          <path
+            d="M 200 30 A 170 170 0 0 1 370 200"
+            fill="none"
+            stroke={colors.primary}
+            strokeWidth="4"
+            strokeLinecap="round"
+            opacity="0.6"
+            filter="url(#glow)"
+          />
+          <path
+            d="M 200 370 A 170 170 0 0 1 30 200"
+            fill="none"
+            stroke={colors.primary}
+            strokeWidth="4"
+            strokeLinecap="round"
+            opacity="0.6"
+            filter="url(#glow)"
+          />
+        </motion.g>
 
-      {/* COUCHE 2 : Core Reactor Central (réacteur arc) */}
-      <div className="relative w-32 h-32 flex items-center justify-center">
-        {/* Halo lumineux extérieur (blur, pulse) */}
-        <div
-          className={`absolute inset-0 rounded-full blur-xl opacity-30 animate-pulse ${bgGlow}`}
-        ></div>
-        {/* Anneau central avec bordure double, rotation rapide 3s */}
-        <div
-          className={`absolute inset-2 rounded-full border-4 border-double opacity-80 animate-[spin_3s_linear_infinite] ${mainColor}`}
-        ></div>
-        {/* Cœur blanc lumineux (centre du reactor) */}
-        {/* mix-blend-overlay = effet de fusion avec arrière-plan */}
-        <div className="absolute inset-8 bg-white rounded-full blur-md opacity-90 mix-blend-overlay"></div>
-      </div>
+        {/* ANNEAU 2 : Indicateurs Tech (Rapide Inverse) */}
+        <motion.g
+          animate={{ rotate: -360 }}
+          transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
+          style={{ originX: "200px", originY: "200px" }}
+        >
+          <circle
+            cx="200"
+            cy="200"
+            r="140"
+            fill="none"
+            stroke={colors.secondary}
+            strokeWidth="1"
+            strokeDasharray="20 40"
+            opacity="0.4"
+          />
+          {/* Triangles décoratifs */}
+          <polygon
+            points="200,60 205,70 195,70"
+            fill={colors.primary}
+            opacity="0.8"
+          />
+          <polygon
+            points="200,340 205,330 195,330"
+            fill={colors.primary}
+            opacity="0.8"
+          />
+        </motion.g>
 
-      {/* COUCHE 3 : Particules de données en orbite */}
-      {/* Orbite 120% (plus large que le reactor), rotation lente 30s */}
-      <div
-        className={`absolute w-[120%] h-[120%] rounded-full border-[1px] border-slate-700/30 animate-[spin_30s_linear_infinite]`}
-      >
-        {/* Particule 1 (top) - Suit la rotation de l'orbite */}
-        <div
-          className={`absolute top-0 left-1/2 w-2 h-2 rounded-full ${bgGlow} blur-[1px]`}
-        ></div>
-        {/* Particule 2 (bottom) - Opposée à la particule 1 */}
-        <div
-          className={`absolute bottom-0 left-1/2 w-2 h-2 rounded-full ${bgGlow} blur-[1px]`}
-        ></div>
-      </div>
+        {/* ANNEAU 3 : Core Inner Ring (Pulsant) */}
+        <motion.g
+          animate={{ scale: isListening ? [1, 1.05, 1] : 1 }}
+          transition={{ duration: 0.5, repeat: Infinity }}
+          style={{ originX: "200px", originY: "200px" }}
+        >
+          <circle
+            cx="200"
+            cy="200"
+            r="90"
+            fill="none"
+            stroke={colors.primary}
+            strokeWidth="2"
+            opacity="0.8"
+            filter="url(#glow)"
+          />
+          {/* Détails internes */}
+          <path
+            d="M 200 110 L 200 130"
+            stroke={colors.primary}
+            strokeWidth="2"
+          />
+          <path
+            d="M 290 200 L 270 200"
+            stroke={colors.primary}
+            strokeWidth="2"
+          />
+          <path
+            d="M 200 290 L 200 270"
+            stroke={colors.primary}
+            strokeWidth="2"
+          />
+          <path
+            d="M 110 200 L 130 200"
+            stroke={colors.primary}
+            strokeWidth="2"
+          />
+        </motion.g>
 
-      {/* COUCHE 4 : Lignes HUD holographiques (croix centrale) */}
+        {/* CENTRAL REACTOR */}
+        <motion.circle
+          cx="200"
+          cy="200"
+          r="60"
+          fill={isListening ? colors.primary : "none"}
+          stroke={colors.primary}
+          strokeWidth="3"
+          opacity="0.9"
+          animate={{
+            fillOpacity: isListening ? [0.2, 0.5, 0.2] : 0.1,
+            strokeWidth: isProcessing ? [3, 8, 3] : 3,
+          }}
+          transition={{ duration: isProcessing ? 1 : 2, repeat: Infinity }}
+          filter="url(#glow)"
+        />
+
+        {/* Noyau Blanc Pur */}
+        <circle
+          cx="200"
+          cy="200"
+          r="40"
+          fill="white"
+          fillOpacity="0.8"
+          filter="url(#glow)"
+        />
+      </svg>
+
+      {/* Lignes de connexion HUD (HTML/CSS pour faciliter le layout textuel si besoin) */}
       <div className="absolute inset-0 flex items-center justify-center">
-        {/* Ligne horizontale avec dégradé depuis le centre */}
-        <div className="w-[150%] h-[1px] bg-gradient-to-r from-transparent via-cyan-500/20 to-transparent absolute top-1/2"></div>
-        {/* Ligne verticale avec dégradé depuis le centre */}
-        <div className="h-[150%] w-[1px] bg-gradient-to-b from-transparent via-cyan-500/20 to-transparent absolute left-1/2"></div>
+        <div className="w-[1px] h-[400px] bg-gradient-to-b from-transparent via-cyan-500/30 to-transparent"></div>
+        <div className="h-[1px] w-[400px] bg-gradient-to-r from-transparent via-cyan-500/30 to-transparent"></div>
       </div>
 
-      {/* COUCHE 5 : Texte de statut flottant (en dessous du reactor) */}
-      <div className="absolute -bottom-16 text-center transform transition-all duration-300">
-        {/* Label "CURRENT PROTOCOL" en petites majuscules espacées */}
-        <div className="text-[10px] tracking-[0.5em] text-slate-500 font-mono mb-1">
-          CURRENT PROTOCOL
+      {/* Status Text (Tech Typography) */}
+      <div className="absolute -bottom-20 text-center flex flex-col items-center">
+        <div className="flex items-center gap-2 mb-2 opacity-60">
+          <div className="h-[1px] w-12 bg-cyan-500/50"></div>
+          <span className="text-[10px] tracking-[0.3em] text-cyan-400 font-mono">
+            SYSTEM_STATUS
+          </span>
+          <div className="h-[1px] w-12 bg-cyan-500/50"></div>
         </div>
-        {/* Nom du statut en gros (IDLE, LISTENING, PROCESSING...) */}
-        {/* Couleur change selon l'état : rouge (listening), violet (processing), cyan (idle) */}
-        {/* neon-text = classe CSS custom pour effet néon (définie dans index.css) */}
-        <div
-          className={`text-2xl font-bold tracking-widest neon-text uppercase ${isListening ? "text-red-400" : isProcessing ? "text-purple-400" : "text-cyan-400"}`}
+        <motion.div
+          key={status} // Key change triggers animation
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-3xl font-bold tracking-widest uppercase font-mono"
+          style={{
+            color: colors.primary,
+            textShadow: `0 0 20px ${colors.glow}`,
+          }}
         >
           {status}
-        </div>
+        </motion.div>
       </div>
     </div>
   );

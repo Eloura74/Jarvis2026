@@ -10,75 +10,131 @@
  */
 
 import React from "react";
-import { Wifi, Battery, Cpu, Layers } from "lucide-react";
+import { Cpu, Wifi, Activity, Zap } from "lucide-react";
 
 /**
- * Props du composant BottomHUD
- * @interface BottomHUDProps
+ * Composant Helper pour les barres de progression segmentées "Tech"
  */
-interface BottomHUDProps {
-  /** Nombre de nodes mémorisés dans la mémoire applicative */
-  memoryNodeCount: number;
-}
-
-/**
- * Composant affichant les métriques système en bas de l'écran
- *
- * Affiche les indicateurs de performance et de statut du système
- * avec des animations et un style holographique.
- *
- * @param {BottomHUDProps} props - Props du composant
- * @returns {JSX.Element} Barre HUD inférieure
- */
-const BottomHUD: React.FC<BottomHUDProps> = ({ memoryNodeCount }) => {
+const TechBar: React.FC<{ value: number; color: string; count?: number }> = ({
+  value,
+  color,
+  count = 10,
+}) => {
   return (
-    // Container principal : fixé en bas, masqué sur mobile
-    <div className="absolute bottom-10 w-full px-16 flex justify-between items-end font-mono text-xs text-cyan-600/70 hidden md:flex pointer-events-none z-20">
-      {/* Section gauche : Métriques système */}
-      <div className="flex gap-12">
-        {/* Métrique 1 : Température CPU */}
-        <div className="flex flex-col gap-2">
-          {/* Label avec icône */}
-          <div className="flex items-center gap-2 text-cyan-400">
-            <Cpu size={14} /> CORE TEMP
-          </div>
-          {/* Barre de progression */}
-          <div className="h-1 w-32 bg-slate-800 rounded overflow-hidden">
-            <div className="h-full bg-cyan-500 w-[42%] animate-pulse"></div>
-          </div>
-          {/* Valeur affichée */}
-          <span className="text-xl text-cyan-300">42°C</span>
-        </div>
+    <div className="flex gap-[2px] h-1.5 mt-1">
+      {Array.from({ length: count }).map((_, i) => (
+        <div
+          key={i}
+          className={`flex-1 rounded-[1px] ${
+            i / count < value / 100 ? color : "bg-slate-800"
+          }`}
+        />
+      ))}
+    </div>
+  );
+};
 
-        {/* Métrique 2 : Mémoire applicative */}
-        <div className="flex flex-col gap-2">
-          {/* Label avec icône */}
-          <div className="flex items-center gap-2 text-purple-400">
-            <Layers size={14} /> MEMORY BANK
+const BottomHUD: React.FC = () => {
+  return (
+    <div className="absolute bottom-0 w-full p-6 flex justify-between items-end z-40 pointer-events-none select-none">
+      {/* GAUCHE : SYSTEM STATUS */}
+      <div className="pointer-events-auto flex items-end gap-2">
+        <div className="tech-border-container clip-tech-sm p-[1px]">
+          <div className="tech-content clip-tech-sm px-6 py-3 flex gap-8">
+            {/* CPU */}
+            <div className="flex flex-col min-w-[100px]">
+              <div className="flex justify-between items-center mb-1">
+                <div className="flex items-center gap-2 text-cyan-400">
+                  <Cpu size={14} />
+                  <span className="text-[10px] tracking-widest font-mono">
+                    CPU_CORE
+                  </span>
+                </div>
+                <span className="text-sm font-bold font-mono text-cyan-300">
+                  34%
+                </span>
+              </div>
+              <TechBar value={34} color="bg-cyan-400 shadow-[0_0_5px_cyan]" />
+            </div>
+
+            {/* MEMORY */}
+            <div className="flex flex-col min-w-[100px]">
+              <div className="flex justify-between items-center mb-1">
+                <div className="flex items-center gap-2 text-purple-400">
+                  <Activity size={14} />
+                  <span className="text-[10px] tracking-widest font-mono">
+                    MEM_ALLOC
+                  </span>
+                </div>
+                <span className="text-sm font-bold font-mono text-purple-300">
+                  12.4G
+                </span>
+              </div>
+              <TechBar
+                value={60}
+                color="bg-purple-400 shadow-[0_0_5px_purple]"
+              />
+            </div>
           </div>
-          {/* Barre de progression (65% utilisée) */}
-          <div className="h-1 w-32 bg-slate-800 rounded overflow-hidden">
-            <div className="h-full bg-purple-500 w-[65%]"></div>
-          </div>
-          {/* Nombre de nodes mémorisés */}
-          <span className="text-xl text-purple-300">
-            {memoryNodeCount} NODES
-          </span>
+        </div>
+        {/* Decoration Ligne Connecteur */}
+        <div className="h-[2px] w-12 bg-cyan-500/20 mb-4"></div>
+      </div>
+
+      {/* CENTRE : SCAN LINE DECO (Non intrusive) */}
+      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 opacity-40">
+        <div className="w-64 h-[1px] bg-gradient-to-r from-transparent via-cyan-500 to-transparent"></div>
+        <div className="text-[8px] tracking-[1em] text-cyan-500 font-mono">
+          SYSTEM_READY
         </div>
       </div>
 
-      {/* Section droite : Statut connexion et batterie */}
-      <div className="flex gap-4 items-center border border-cyan-900/50 px-4 py-2 rounded bg-black/40 backdrop-blur-sm">
-        {/* Connexion réseau (secure, avec icône animée) */}
-        <Wifi className="w-4 h-4 text-green-500 animate-pulse" />
-        <span>UPLINK: SECURE</span>
+      {/* DROITE : NETWORK & POWER */}
+      <div className="pointer-events-auto flex items-end gap-2">
+        {/* Decoration Ligne Connecteur */}
+        <div className="h-[2px] w-12 bg-cyan-500/20 mb-4"></div>
 
-        {/* Séparateur vertical */}
-        <div className="h-4 w-[1px] bg-cyan-900 mx-2"></div>
+        <div className="tech-border-container clip-tech-sm p-[1px]">
+          <div className="tech-content clip-tech-sm px-6 py-3 flex gap-8">
+            {/* NETWORK */}
+            <div className="flex flex-col min-w-[100px] items-end">
+              <div className="flex justify-between items-center gap-4 mb-1 w-full">
+                <span className="text-sm font-bold font-mono text-emerald-300">
+                  540 MB/s
+                </span>
+                <div className="flex items-center gap-2 text-emerald-400">
+                  <span className="text-[10px] tracking-widest font-mono">
+                    NET_LINK
+                  </span>
+                  <Wifi size={14} />
+                </div>
+              </div>
+              <TechBar
+                value={85}
+                color="bg-emerald-400 shadow-[0_0_5px_emerald]"
+              />
+            </div>
 
-        {/* Batterie (100%) */}
-        <Battery className="w-4 h-4 text-cyan-500" />
-        <span>PWR: 100%</span>
+            {/* POWER */}
+            <div className="flex flex-col min-w-[100px] items-end">
+              <div className="flex justify-between items-center gap-4 mb-1 w-full">
+                <span className="text-sm font-bold font-mono text-yellow-300">
+                  98%
+                </span>
+                <div className="flex items-center gap-2 text-yellow-400">
+                  <span className="text-[10px] tracking-widest font-mono">
+                    PWR_LVL
+                  </span>
+                  <Zap size={14} />
+                </div>
+              </div>
+              <TechBar
+                value={98}
+                color="bg-yellow-400 shadow-[0_0_5px_yellow]"
+              />
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

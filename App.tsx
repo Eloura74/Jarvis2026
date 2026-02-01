@@ -601,11 +601,19 @@ const App: React.FC = () => {
   // --- RENDER ---
   return (
     <div className="h-screen w-screen bg-[#020205] text-cyan-50 font-sans overflow-hidden relative flex flex-col items-center justify-center crt-flicker selection:bg-cyan-500/30">
-      {/* Interactive Neural Background */}
+      {/* === BACKGROUND LAYERS === */}
+
+      {/* 1. Interactive Neural Background (Canvas) */}
       <ParticleBackground status={status} />
 
-      {/* Radial Vignette */}
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_10%,#020205_90%)] pointer-events-none z-10"></div>
+      {/* 2. Perspective Grid (Terrain mouvant 3D) */}
+      <div className="perspective-grid opacity-30"></div>
+
+      {/* 3. Radial Vignette (Profondeur) */}
+      <div className="vignette-overlay"></div>
+
+      {/* 4. Scanline Overlay (Effet écran CRT subtil) */}
+      <div className="scanline-overlay"></div>
 
       {/* Overlay Text */}
       {activeOverlay && (
@@ -665,7 +673,7 @@ const App: React.FC = () => {
       />
 
       {/* Bottom HUD : Métriques système */}
-      <BottomHUD memoryNodeCount={appMemory.length} />
+      <BottomHUD />
 
       <TerminalLog
         logs={logs}
