@@ -1,0 +1,27 @@
+{
+  "name": "jarvis-backend",
+  "version": "1.0.0",
+  "description": "Backend Node.js pour J.A.R.V.I.S. - Indexation et lancement d'applications Windows",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js",
+    "scan": "node appIndexer.js"
+  },
+  "keywords": [
+    "jarvis",
+    "windows",
+    "app-launcher"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "glob": "^10.3.10"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  }
+}

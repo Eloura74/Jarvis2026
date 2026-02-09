@@ -23,7 +23,6 @@ import TopHUD from "./components/HUD/TopHUD";
 import BottomHUD from "./components/HUD/BottomHUD";
 import CommandFeedback, { CommandInfo } from "./components/CommandFeedback";
 import CommandHistoryPanel from "./components/CommandHistoryPanel";
-import SettingsPanel, { JarvisSettings } from "./components/SettingsPanel";
 import { parseCommand } from "./services/geminiService";
 import { LogEntry, SystemStatus, OmniDecision } from "./types";
 import { INITIAL_LOGS } from "./constants";
@@ -58,22 +57,12 @@ const App: React.FC = () => {
   const [omniResponse, setOmniResponse] = useState<string | null>(null);
   const [voiceEnabled, setVoiceEnabled] = useState(true);
   const [showHistory, setShowHistory] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
 
   // États pour wake word et command feedback
   const [currentCommand, setCurrentCommand] = useState<CommandInfo | null>(
     null,
   );
   const [commandHistory, setCommandHistory] = useState<CommandInfo[]>([]);
-
-  // Settings utilisateur
-  const [settings, setSettings] = useState<JarvisSettings>({
-    wakeWordEnabled: false,
-    voiceLanguage: "fr-FR",
-    wakeWordThreshold: 0.75, // 🔧 Augmenté de 0.6 à 0.75 (moins de faux positifs)
-    voiceVolume: 1.0,
-    theme: "classic",
-  });
 
   // ========================================
   // PERSISTANCE LOCALSTORAGE
@@ -111,36 +100,6 @@ const App: React.FC = () => {
   }, [commandHistory]);
 
   // ========================================
-  // HELPERS (Logs)
-  // ========================================
-
-  /**
-   * Ajoute un log dans le terminal
-   *
-   * @param message - Message à logger
-   * @param source - Source du log (SYSTEM, USER, OMNI, KERNEL, VOICE)
-   * @param type - Type de log (info, success, warning, error)
-   */
-  const addLog = useCallback(
-    (
-      message: string,
-      source: LogEntry["source"] = "SYSTEM",
-      type: LogEntry["type"] = "info",
-    ) => {
-      const newLog: LogEntry = {
-        id: Math.random().toString(36).substr(2, 9),
-        timestamp: new Date().toISOString(),
-        source,
-        message,
-        type,
-      };
-      // Garde seulement les 100 derniers logs pour éviter saturation mémoire
-      setLogs((prev) => [...prev.slice(-99), newLog]);
-    },
-    [],
-  );
-
-  // ========================================
   // HOOKS PERSONNALISÉS
   // ========================================
 
@@ -155,11 +114,10 @@ const App: React.FC = () => {
     enabled: voiceEnabled,
     onStart: () => setStatus(SystemStatus.SPEAKING),
     onEnd: () => resetToIdle(),
-    volume: settings.voiceVolume, // Appliquer volume depuis settings
   });
 
   // Reconnaissance vocale (Speech-to-Text)
-  const { toggleListening, isListening } = useVoiceRecognition(
+  const { toggleListening } = useVoiceRecognition(
     // Callback : transcription détectée
     (transcript) => {
       addLog(`Voix détectée: "${transcript}"`, "VOICE", "success");
@@ -190,51 +148,49 @@ const App: React.FC = () => {
     probability: 0.2, // 20% de chances à chaque tick
   });
 
-  const handleWakeWordDetected = useCallback(() => {
-    console.log("✨ WAKE WORD DÉTECTÉ !");
-    addLog('"Hey JARVIS" détecté', "SYSTEM", "success");
-    toggleListening(); // Démarrer reconnaissance vocale
-  }, [addLog, toggleListening]);
-
-  const wakeWordOptions = React.useMemo(
-    () => ({
-      keywords: ["jarvis", "hey jarvis", "ok jarvis"],
-      confidenceThreshold: settings.wakeWordThreshold, // Depuis settings
-      language: settings.voiceLanguage, // Depuis settings
-    }),
-    [settings.wakeWordThreshold, settings.voiceLanguage],
-  );
-
   // Wake Word ("Hey JARVIS") - Écoute continue
   const { isEnabled: wakeWordEnabled, toggleWakeWord } = useWakeWord(
-    handleWakeWordDetected,
-    wakeWordOptions,
+    () => {
+      console.log("✨ WAKE WORD DÉTECTÉ !");
+      addLog('"Hey JARVIS" détecté', "SYSTEM", "success");
+      toggleListening(); // Démarrer reconnaissance vocale
+    },
+    {
+      keywords: ["jarvis", "hey jarvis", "ok jarvis"],
+      confidenceThreshold: 0.6,
+      language: "fr-FR",
+    },
   );
-
-  // 🔧 FIX: Handler pour toggle wake word qui met à jour Settings
-  // Au lieu d'appeler toggleWakeWord() directement, on update settings
-  const handleToggleWakeWord = useCallback(() => {
-    setSettings((prev) => ({
-      ...prev,
-      wakeWordEnabled: !prev.wakeWordEnabled,
-    }));
-  }, []);
-
-  // Synchroniser wake word avec les settings et l'état d'écoute
-  useEffect(() => {
-    // Désactiver le wake word si on écoute activement (conflit de micro)
-    const shouldBeEnabled = settings.wakeWordEnabled && !isListening;
-
-    if (shouldBeEnabled && !wakeWordEnabled) {
-      toggleWakeWord();
-    } else if (!shouldBeEnabled && wakeWordEnabled) {
-      toggleWakeWord();
-    }
-  }, [settings.wakeWordEnabled, isListening, wakeWordEnabled, toggleWakeWord]);
 
   // ========================================
   // HELPERS
   // ========================================
+
+  /**
+   * Ajoute un log dans le terminal
+   *
+   * @param message - Message à logger
+   * @param source - Source du log (SYSTEM, USER, OMNI, KERNEL, VOICE)
+   * @param type - Type de log (info, success, warning, error)
+   */
+  const addLog = useCallback(
+    (
+      message: string,
+      source: LogEntry["source"] = "SYSTEM",
+      type: LogEntry["type"] = "info",
+    ) => {
+      const newLog: LogEntry = {
+        id: Math.random().toString(36).substr(2, 9),
+        timestamp: new Date().toISOString(),
+        source,
+        message,
+        type,
+      };
+      // Garde seulement les 100 derniers logs pour éviter saturation mémoire
+      setLogs((prev) => [...prev.slice(-99), newLog]);
+    },
+    [],
+  );
 
   /**
    * Effacer tout l'historique des commandes
@@ -364,6 +320,7 @@ const App: React.FC = () => {
       );
 
       let foundPath = "";
+      let usedBackend = false;
 
       // ÉTAPE 1 : Vérifier dans la mémoire utilisateur
       const memoryMatch = appMemory.find(
@@ -383,6 +340,7 @@ const App: React.FC = () => {
           // Backend a trouvé des résultats !
           const bestMatch = backendResults[0];
           foundPath = bestMatch.path;
+          usedBackend = true;
 
           addLog(
             `Found: "${bestMatch.name}" at ${foundPath}`,
@@ -434,65 +392,24 @@ const App: React.FC = () => {
         setActiveOverlay(null);
         setStatus(SystemStatus.EXECUTING);
 
-        // 🔧 FIX CRITIQUE : TOUJOURS lancer via backend (fiable)
-        // Peu importe si le path vient du cache ou de la recherche backend
-        addLog(`Ready to launch: ${foundPath}`, "SYSTEM", "info");
+        // Si trouvé via backend, lancer via backend (plus fiable)
+        if (usedBackend) {
+          const launched = await launchAppOnBackend(foundPath);
 
-        const launched = await launchAppOnBackend(foundPath);
-
-        if (launched) {
-          addLog(`Application launched successfully`, "SYSTEM", "success");
-          updateMemory(targetApp, foundPath);
-          setStatus(SystemStatus.IDLE);
-        } else {
-          // ❌ ÉCHEC : Path invalide ou application corrompue
-          addLog(`Failed to launch application`, "SYSTEM", "error");
-
-          // 🔧 INVALIDATION CACHE : Supprimer le path invalide de la mémoire
-          const updatedMemory = appMemory.filter(
-            (m) => m.lastPath !== foundPath,
-          );
-          localStorage.setItem(
-            "jarvis_app_memory",
-            JSON.stringify(updatedMemory),
-          );
-
-          // Notification utilisateur
-          addLog(
-            `Path invalide supprimé du cache. Nouvelle recherche...`,
-            "SYSTEM",
-            "warning",
-          );
-
-          // 🔄 RETRY : Forcer recherche backend comme si c'était la 1ère fois
-          const retryResults = await searchAppOnBackend(targetApp);
-
-          if (retryResults.length > 0) {
-            const newMatch = retryResults[0];
-            const newPath = newMatch.path;
-
-            addLog(`Nouvelle tentative avec: ${newPath}`, "SYSTEM", "info");
-
-            const retryLaunched = await launchAppOnBackend(newPath);
-
-            if (retryLaunched) {
-              addLog(`Application launched successfully`, "SYSTEM", "success");
-              updateMemory(targetApp, newPath); // Nouveau path en cache
-              setStatus(SystemStatus.IDLE);
-            } else {
-              addLog(`Impossible de lancer "${targetApp}"`, "SYSTEM", "error");
-              setStatus(SystemStatus.ERROR);
-              setTimeout(() => setStatus(SystemStatus.IDLE), 2000);
-            }
+          if (launched) {
+            addLog(`Application launched via backend`, "SYSTEM", "success");
+            updateMemory(targetApp, foundPath);
+            setStatus(SystemStatus.IDLE);
           } else {
-            addLog(
-              `Aucun résultat pour "${targetApp}" dans l'index backend`,
-              "SYSTEM",
-              "error",
-            );
+            addLog(`Failed to launch via backend`, "SYSTEM", "error");
             setStatus(SystemStatus.ERROR);
             setTimeout(() => setStatus(SystemStatus.IDLE), 2000);
           }
+        } else {
+          // Fallback : afficher le chemin (navigateur ne peut pas lancer)
+          addLog(`Ready to launch: ${foundPath}`, "SYSTEM", "success");
+          updateMemory(targetApp, foundPath);
+          setStatus(SystemStatus.IDLE);
         }
       }
     }
@@ -613,19 +530,11 @@ const App: React.FC = () => {
   // --- RENDER ---
   return (
     <div className="h-screen w-screen bg-[#020205] text-cyan-50 font-sans overflow-hidden relative flex flex-col items-center justify-center crt-flicker selection:bg-cyan-500/30">
-      {/* === BACKGROUND LAYERS === */}
-
-      {/* 1. Interactive Neural Background (Canvas) */}
+      {/* Interactive Neural Background */}
       <ParticleBackground status={status} />
 
-      {/* 2. Perspective Grid (Terrain mouvant 3D) */}
-      <div className="perspective-grid opacity-30"></div>
-
-      {/* 3. Radial Vignette (Profondeur) */}
-      <div className="vignette-overlay"></div>
-
-      {/* 4. Scanline Overlay (Effet écran CRT subtil) */}
-      <div className="scanline-overlay"></div>
+      {/* Radial Vignette */}
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_10%,#020205_90%)] pointer-events-none z-10"></div>
 
       {/* Overlay Text */}
       {activeOverlay && (
@@ -642,11 +551,8 @@ const App: React.FC = () => {
         onVoiceToggle={() => setVoiceEnabled(!voiceEnabled)}
         onOpenLogs={() => setIsLogOpen(true)}
         onOpenHistory={() => setShowHistory(true)}
-        onOpenSettings={() => setShowSettings(true)}
-        isListening={isListening}
-        onToggleListening={toggleListening}
-        wakeWordEnabled={settings.wakeWordEnabled}
-        onWakeWordToggle={handleToggleWakeWord}
+        wakeWordEnabled={wakeWordEnabled}
+        onWakeWordToggle={toggleWakeWord}
       />
 
       {/* Main Core & Response Area */}
@@ -685,7 +591,7 @@ const App: React.FC = () => {
       />
 
       {/* Bottom HUD : Métriques système */}
-      <BottomHUD />
+      <BottomHUD memoryNodeCount={appMemory.length} />
 
       <TerminalLog
         logs={logs}
@@ -700,14 +606,6 @@ const App: React.FC = () => {
         onClose={() => setShowHistory(false)}
         onReExecute={handleReExecute}
         onClearHistory={handleClearHistory}
-      />
-
-      {/* Settings Panel - Paramètres JARVIS */}
-      <SettingsPanel
-        isOpen={showSettings}
-        onClose={() => setShowSettings(false)}
-        onSettingsChange={setSettings}
-        currentSettings={settings}
       />
     </div>
   );

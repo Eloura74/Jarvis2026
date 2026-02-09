@@ -1,0 +1,121 @@
+/**
+ * Design Tokens - OMNI / J.A.R.V.I.S.
+ * 
+ * Variables CSS centralisées pour maintenir la cohérence visuelle.
+ * Tous les composants doivent utiliser ces tokens plutôt que des valeurs en dur.
+ */
+
+:root {
+  /* === COULEURS PRIMAIRES === */
+  --color-cyan-primary: #22d3ee; /* Cyan principal (idle, success) */
+  --color-cyan-dark: #0891b2; /* Cyan foncé (hover, accents) */
+  --color-red-primary: #ef4444; /* Rouge (listening, error) */
+  --color-purple-primary: #a855f7; /* Violet (processing) */
+
+  /* === COULEURS SECONDAIRES === */
+  --color-slate-900: #0f172a; /* Fond principal */
+  --color-slate-800: #1e293b; /* Fond secondaire */
+  --color-slate-700: #334155; /* Bordures */
+  --color-slate-600: #475569; /* Texte désactivé */
+  --color-slate-500: #64748b; /* Texte secondaire */
+  --color-slate-400: #94a3b8; /* Texte tertiaire */
+
+  /* === COULEURS SYSTÈME === */
+  --color-success: var(--color-cyan-primary);
+  --color-error: var(--color-red-primary);
+  --color-warning: #facc15; /* Jaune warning */
+  --color-info: var(--color-cyan-primary);
+
+  /* === ESPACEMENTS === */
+  --spacing-xs: 0.25rem; /* 4px */
+  --spacing-sm: 0.5rem; /* 8px */
+  --spacing-md: 1rem; /* 16px */
+  --spacing-lg: 1.5rem; /* 24px */
+  --spacing-xl: 2rem; /* 32px */
+  --spacing-2xl: 3rem; /* 48px */
+
+  /* === RAYONS DE BORDURE === */
+  --radius-sm: 0.25rem; /* 4px */
+  --radius-md: 0.5rem; /* 8px */
+  --radius-lg: 1rem; /* 16px */
+  --radius-full: 9999px; /* Cercle complet */
+
+  /* === OMBRES === */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+
+  /* === OMBRES GLOW (Effets néon) === */
+  --glow-cyan: 0 0 50px rgba(34, 211, 238, 0.3);
+  --glow-cyan-strong: 0 0 50px rgba(34, 211, 238, 0.5);
+  --glow-red: 0 0 50px rgba(239, 68, 68, 0.3);
+  --glow-red-strong: 0 0 50px rgba(239, 68, 68, 0.5);
+  --glow-purple: 0 0 50px rgba(168, 85, 247, 0.3);
+  --glow-purple-strong: 0 0 50px rgba(168, 85, 247, 0.5);
+
+  /* === TRANSITIONS === */
+  --transition-fast: 150ms ease;
+  --transition-normal: 300ms ease;
+  --transition-slow: 500ms ease;
+
+  /* === TYPOGRAPHIE === */
+  --font-mono: "Courier New", monospace;
+  --font-sans:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", sans-serif;
+
+  --text-xs: 0.625rem; /* 10px */
+  --text-sm: 0.75rem; /* 12px */
+  --text-base: 1rem; /* 16px */
+  --text-lg: 1.125rem; /* 18px */
+  --text-xl: 1.25rem; /* 20px */
+  --text-2xl: 1.5rem; /* 24px */
+  --text-3xl: 1.875rem; /* 30px */
+
+  /* === Z-INDEX === */
+  --z-base: 1;
+  --z-dropdown: 10;
+  --z-sticky: 20;
+  --z-fixed: 30;
+  --z-modal: 40;
+  --z-popover: 50;
+  --z-tooltip: 60;
+}
+
+/* === CLASSES UTILITAIRES === */
+
+/* Glass panel effect (effet verre) */
+.glass-panel {
+  background: rgba(15, 23, 42, 0.7);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(100, 116, 139, 0.2);
+}
+
+/* Effet texte néon */
+.neon-text {
+  text-shadow:
+    0 0 10px currentColor,
+    0 0 20px currentColor,
+    0 0 30px currentColor;
+}
+
+/* Animation pulse personnalisée */
+@keyframes pulse-custom {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.pulse-custom {
+  animation: pulse-custom 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Perspective 3D pour anneaux */
+.perspective-1000 {
+  perspective: 1000px;
+}

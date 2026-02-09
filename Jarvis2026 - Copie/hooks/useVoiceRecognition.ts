@@ -52,15 +52,6 @@ export function useVoiceRecognition(
   // Flag pour empêcher les appels multiples à start() avant onstart
   const isStartingRef = useRef(false);
 
-  const onTranscriptRef = useRef(onTranscript);
-  const onStatusChangeRef = useRef(onStatusChange);
-
-  // Mettre à jour les refs à chaque rendu
-  useEffect(() => {
-    onTranscriptRef.current = onTranscript;
-    onStatusChangeRef.current = onStatusChange;
-  }, [onTranscript, onStatusChange]);
-
   // Initialisation de la reconnaissance vocale au montage du composant
   useEffect(() => {
     // Vérification du support de la Web Speech API (avec préfixe webkit)
@@ -87,9 +78,7 @@ export function useVoiceRecognition(
             isStartingRef.current = false; // Réinitialisation du flag de démarrage
             setIsListening(true);
             // Notification du changement d'état au composant parent
-            if (onStatusChangeRef.current) {
-              onStatusChangeRef.current(true);
-            }
+            onStatusChange?.(true);
           };
 
           // Événement : fin de l'écoute (automatique ou manuelle)
@@ -97,9 +86,7 @@ export function useVoiceRecognition(
             isStartingRef.current = false; // Réinitialisation du flag de démarrage
             setIsListening(false);
             // Notification du changement d'état au composant parent
-            if (onStatusChangeRef.current) {
-              onStatusChangeRef.current(false);
-            }
+            onStatusChange?.(false);
           };
 
           // Événement : résultat de la reconnaissance (texte détecté)
@@ -108,9 +95,7 @@ export function useVoiceRecognition(
             const transcript = event.results[0][0].transcript;
 
             // Envoi de la transcription au composant parent
-            if (onTranscriptRef.current) {
-              onTranscriptRef.current(transcript);
-            }
+            onTranscript(transcript);
           };
 
           // Événement : erreur de reconnaissance
@@ -118,9 +103,7 @@ export function useVoiceRecognition(
             console.error("Erreur reconnaissance vocale:", event.error);
             isStartingRef.current = false; // Réinitialisation du flag en cas d'erreur
             setIsListening(false);
-            if (onStatusChangeRef.current) {
-              onStatusChangeRef.current(false);
-            }
+            onStatusChange?.(false);
           };
 
           recognitionRef.current = recognition;
