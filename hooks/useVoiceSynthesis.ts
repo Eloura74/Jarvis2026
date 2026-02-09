@@ -71,25 +71,37 @@ export function useVoiceSynthesis({
       // Récupération des voix disponibles
       const voices = window.speechSynthesis.getVoices();
 
-      // Recherche d'une voix britannique ou technologique
+      // ========================================
+      // RECHERCHE VOIX FRANÇAISE
+      // ========================================
       // Ordre de préférence :
-      // 1. Google UK English Male (voix masculine britannique)
-      // 2. Daniel (voix iOS britannique)
-      // 3. Toute voix en-GB (britannique générique)
-      const preferredVoice = voices.find(
-        (v) =>
-          v.name.includes("Google UK English Male") ||
-          v.name.includes("Daniel") ||
-          v.lang.startsWith("en-GB"),
-      );
+      // 1. Google français (meilleure qualité)
+      // 2. Microsoft Thomas/Julie (Windows français)
+      // 3. Toute voix fr-FR disponible
+      const preferredVoice =
+        voices.find(
+          (v) =>
+            v.lang.startsWith("fr-FR") &&
+            (v.name.includes("Google") ||
+              v.name.includes("Thomas") ||
+              v.name.includes("Julie") ||
+              v.name.includes("French")),
+        ) || voices.find((v) => v.lang.startsWith("fr-FR")); // Fallback : n'importe quelle voix française
 
       // Application de la voix trouvée
       if (preferredVoice) {
         utterance.voice = preferredVoice;
+        console.log(
+          `🗣️ Voix sélectionnée: ${preferredVoice.name} (${preferredVoice.lang})`,
+        );
+      } else {
+        console.warn(
+          "⚠️ Aucune voix française trouvée, utilisation voix par défaut",
+        );
       }
 
-      // Configuration des paramètres vocaux (style J.A.R.V.I.S.)
-      utterance.pitch = 0.9; // Ton légèrement grave (plus autoritaire)
+      // Configuration des paramètres vocaux (style J.A.R.V.I.S. français)
+      utterance.pitch = 1.0; // Ton normal (français neutre)
       utterance.rate = 1.1; // Cadence rapide (efficacité, intelligence)
       utterance.volume = volume; // Volume depuis settings
 

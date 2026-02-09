@@ -76,9 +76,13 @@ export function useVoiceRecognition(
             window.SpeechRecognition || window.webkitSpeechRecognition;
           const recognition = new SpeechRecognition();
 
-          // Configuration de la reconnaissance vocale
-          recognition.continuous = false; // Mode non-continu (plus compatible)
-          recognition.interimResults = false; // Pas de résultats intermédiaires
+          // ========================================
+          // OPTIMISATION : INTERIM RESULTS
+          // ========================================
+          // Configuration optimisée pour feedback instantané
+          // NOTE: continuous=false pour éviter conflits avec wake word
+          recognition.continuous = false; // ❌ Mode continu désactivé (conflit wake word)
+          recognition.interimResults = true; // ✅ Résultats intermédiaires activés
           recognition.lang = "fr-FR"; // Langue française (J.A.R.V.I.S. français)
           recognition.maxAlternatives = 1; // Une seule alternative pour performance
 
@@ -102,17 +106,46 @@ export function useVoiceRecognition(
             }
           };
 
-          // Événement : résultat de la reconnaissance (texte détecté)
-          recognition.onresult = (event: any) => {
-            // Extraction du texte transcrit (premier résultat)
-            const transcript = event.results[0][0].transcript;
+          // ========================================
+          // ÉVÉNEMENT : RÉSULTAT RECONNAISSANCE (OPTIMISÉ)
+          // ========================================
+          // Support résultats intermédiaires pour feedback instantané
+          let lastInterimTranscript = "";
 
-            // Envoi de la transcription au composant parent
-            if (onTranscriptRef.current) {
-              onTranscriptRef.current(transcript);
+          recognition.onresult = (event: any) => {
+            // Récupérer dernier résultat
+            const lastResult = event.results[event.results.length - 1];
+            const transcript = lastResult[0].transcript;
+            const isFinal = lastResult.isFinal;
+            const confidence = lastResult[0].confidence || 1;
+
+            // CAS 1 : Résultat FINAL → traiter immédiatement
+            if (isFinal) {
+              // Filtrer par confiance minimum
+              if (confidence > 0.5) {
+                console.log(
+                  `✅ Transcription finale: "${transcript}" (${Math.round(confidence * 100)}%)`,
+                );
+
+                // Envoi transcription au parent
+                if (onTranscriptRef.current) {
+                  onTranscriptRef.current(transcript);
+                }
+              } else {
+                console.log(
+                  `⚠️ Confiance faible (${Math.round(confidence * 100)}%) → ignoré: "${transcript}"`,
+                );
+              }
+            }
+            // CAS 2 : Résultat INTERIM → preview uniquement
+            else {
+              // Éviter log spam (seulement si changement significatif)
+              if (transcript !== lastInterimTranscript) {
+                console.log(`🎤 Preview: "${transcript}"`);
+                lastInterimTranscript = transcript;
+              }
             }
           };
-
           // Événement : erreur de reconnaissance
           recognition.onerror = (event: any) => {
             console.error("Erreur reconnaissance vocale:", event.error);
