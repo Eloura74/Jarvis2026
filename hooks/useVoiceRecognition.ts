@@ -40,6 +40,8 @@ interface UseVoiceRecognitionReturn {
   stopListening: () => void;
   /** Bascule entre écoute et arrêt */
   toggleListening: () => void;
+  /** Arrête l'écoute et attend l'événement onend (résout la race condition asynchrone) */
+  stopAndWait: () => Promise<void>;
 }
 
 export function useVoiceRecognition(
@@ -51,6 +53,8 @@ export function useVoiceRecognition(
   const recognitionRef = useRef<any>(null);
   // Flag pour empêcher les appels multiples à start() avant onstart
   const isStartingRef = useRef(false);
+  // Ref synchrone pour isListening (résout problème state asynchrone React)
+  const isListeningRef = useRef(false);
 
   const onTranscriptRef = useRef(onTranscript);
   const onStatusChangeRef = useRef(onStatusChange);
@@ -89,6 +93,7 @@ export function useVoiceRecognition(
           // Événement : démarrage de l'écoute
           recognition.onstart = () => {
             isStartingRef.current = false; // Réinitialisation du flag de démarrage
+            isListeningRef.current = true; // ✅ Mise à jour ref synchrone
             setIsListening(true);
             // Notification du changement d'état au composant parent
             if (onStatusChangeRef.current) {
@@ -99,6 +104,7 @@ export function useVoiceRecognition(
           // Événement : fin de l'écoute (automatique ou manuelle)
           recognition.onend = () => {
             isStartingRef.current = false; // Réinitialisation du flag de démarrage
+            isListeningRef.current = false; // ✅ Mise à jour ref synchrone
             setIsListening(false);
             // Notification du changement d'état au composant parent
             if (onStatusChangeRef.current) {
@@ -150,6 +156,7 @@ export function useVoiceRecognition(
           recognition.onerror = (event: any) => {
             console.error("Erreur reconnaissance vocale:", event.error);
             isStartingRef.current = false; // Réinitialisation du flag en cas d'erreur
+            isListeningRef.current = false; // ✅ Mise à jour ref synchrone
             setIsListening(false);
             if (onStatusChangeRef.current) {
               onStatusChangeRef.current(false);
@@ -185,43 +192,96 @@ export function useVoiceRecognition(
 
   // Méthode : démarrage de l'écoute
   const startListening = useCallback(() => {
+    console.log(
+      `🎤 startListening appelé - recognitionRef=${!!recognitionRef.current}, isListeningRef=${isListeningRef.current}, isStarting=${isStartingRef.current}`,
+    );
+
     if (!recognitionRef.current) {
+      console.error("❌ recognitionRef.current est null");
       return;
     }
 
-    // Vérification : ne pas démarrer si déjà en cours
-    if (isListening || isStartingRef.current) {
+    // ✅ VÉRIFICATION AVEC REF (synchrone) au lieu du state (asynchrone)
+    if (isListeningRef.current || isStartingRef.current) {
+      console.warn(
+        `⚠️ startListening bloqué : isListeningRef=${isListeningRef.current}, isStarting=${isStartingRef.current}`,
+      );
       return;
     }
 
     try {
+      console.log("✅ Démarrage reconnaissance vocale...");
       isStartingRef.current = true;
       recognitionRef.current.start();
     } catch (error: any) {
-      console.error("Erreur démarrage reconnaissance:", error.message);
+      console.error("❌ Erreur démarrage reconnaissance:", error.message);
       isStartingRef.current = false;
+      isListeningRef.current = false;
     }
-  }, [isListening]);
+  }, []);
 
   // Méthode : arrêt de l'écoute
   const stopListening = useCallback(() => {
-    if (recognitionRef.current && isListening) {
+    if (recognitionRef.current && isListeningRef.current) {
       try {
         recognitionRef.current.stop();
       } catch (error) {
         console.error("Erreur arrêt reconnaissance:", error);
       }
     }
-  }, [isListening]);
+  }, []);
 
   // Méthode : basculement écoute/arrêt
   const toggleListening = useCallback(() => {
-    if (isListening) {
+    if (isListeningRef.current) {
       stopListening();
     } else {
       startListening();
     }
-  }, [isListening, startListening, stopListening]);
+  }, [startListening, stopListening]);
+
+  // ========================================
+  // MÉTHODE : Arrêt AVEC ATTENTE événement onend
+  // ========================================
+  // Cette méthode résout la race condition asynchrone lors du mode conversation.
+  // Retourne une Promise qui se résout UNIQUEMENT quand l'événement recognition.onend se déclenche.
+  // Utilisée pour garantir que isListening=false avant de redémarrer.
+  const stopAndWait = useCallback((): Promise<void> => {
+    return new Promise<void>((resolve) => {
+      // Si pas de reconnaissance active ou déjà arrêté, résoudre immédiatement
+      if (!recognitionRef.current || !isListeningRef.current) {
+        console.log("✅ stopAndWait : déjà arrêté, résolution immédiate");
+        resolve();
+        return;
+      }
+
+      console.log("🛑 stopAndWait : arrêt en cours, attente événement onend...");
+
+      // Créer un handler unique pour cet arrêt
+      const onEndHandler = () => {
+        console.log("✅ stopAndWait : événement onend reçu");
+        // Retirer le listener pour éviter les fuites mémoire
+        recognitionRef.current?.removeEventListener("end", onEndHandler);
+        // ✅ Forcer ref à false immédiatement (le state sera mis à jour par recognition.onend)
+        isListeningRef.current = false;
+        resolve();
+      };
+
+      // Ajouter le listener AVANT d'appeler stop()
+      recognitionRef.current.addEventListener("end", onEndHandler);
+
+      // Démarrer l'arrêt
+      try {
+        recognitionRef.current.stop();
+      } catch (error: any) {
+        console.error("⚠️ Erreur stopAndWait:", error.message);
+        // En cas d'erreur, nettoyer le listener et résoudre quand même
+        recognitionRef.current?.removeEventListener("end", onEndHandler);
+        isListeningRef.current = false;
+        resolve();
+      }
+    });
+  }, []);
 
   return {
     isListening,
@@ -229,5 +289,6 @@ export function useVoiceRecognition(
     startListening,
     stopListening,
     toggleListening,
+    stopAndWait,
   };
 }

@@ -45,6 +45,8 @@ const App: React.FC = () => {
   const [commandHistory, setCommandHistory] = useState<CommandInfo[]>([]);
   const [successTrigger, setSuccessTrigger] = useState(0); // Trigger pour animation succès
   const [conversationMode, setConversationMode] = useState(false); // 🆕 Mode conversation continue
+  const [currentSpeechText, setCurrentSpeechText] = useState<string>(""); // 🗣️ Texte que Jarvis prononce actuellement
+  const lastMicActivationTime = useRef<number>(0); // ⏱️ Timestamp de la dernière activation micro (pour période de grâce)
 
   // Settings utilisateur (État gardé pour future implémentation configuration)
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -92,17 +94,50 @@ const App: React.FC = () => {
   // ========================================
   // SYNTHÈSE VOCALE avec callback onEnd
   // ========================================
-  const { speak } = useVoiceSynthesis({
+  const { speak: rawSpeak, stop: stopSpeech } = useVoiceSynthesis({
     enabled: true,
+    onStart: async () => {
+      // 🛑 Marquer que Jarvis parle + arrêter le micro COMPLÈTEMENT
+      isSpeakingRef.current = true;
+      console.log("🛑 Jarvis commence à parler - arrêt TOTAL du micro jusqu'à la fin...");
+      
+      if (isListening) {
+        await stopAndWait();
+        console.log("✅ Reconnaissance arrêtée - micro restera éteint jusqu'à la fin");
+      }
+      
+      // ❌ PLUS DE RÉACTIVATION PENDANT LA PAROLE
+      // Le micro ne redémarrera QUE dans onEnd
+      // Sacrifice de l'interruption pour éliminer l'auto-écoute
+    },
     onEnd: () => {
-      // 🎤 MODE CONVERSATION CONTINUE
-      // Avec recognition.continuous = true, le micro reste actif automatiquement
-      // Plus besoin de redémarrer manuellement !
-      console.log(
-        `🔍 onEnd déclenché - conversationMode: ${conversationModeRef.current}, status: ${statusRef.current}`,
-      );
+      // 🔊 Nettoyage après la fin
+      console.log("🔊 Jarvis a terminé de parler");
+      
+      // Délai de sécurité de 1000ms pour éviter tout écho
+      setTimeout(() => {
+        isSpeakingRef.current = false;
+        setCurrentSpeechText(""); // Réinitialiser le texte prononcé
+        
+        // Redémarrer le micro UNIQUEMENT si mode conversation actif
+        if (conversationModeRef.current) {
+          console.log("🎤 Redémarrage micro - prêt pour nouvelle question...");
+          lastMicActivationTime.current = Date.now();
+          // startListening() vérifie déjà isListeningRef.current en interne
+          startListening();
+        }
+      }, 1000); // Délai augmenté à 1 seconde
     },
   });
+
+  // Wrapper de speak pour stocker le texte prononcé
+  const speak = useCallback(
+    (text: string) => {
+      setCurrentSpeechText(text);
+      rawSpeak(text);
+    },
+    [rawSpeak],
+  );
 
   const { status, setStatus } = useSystemStatus();
   const { memory: appMemory, updateMemory } = useAppMemory();
@@ -124,6 +159,8 @@ const App: React.FC = () => {
   // 🔧 Refs pour le mode conversation (résout problème closure dans onEnd)
   const conversationModeRef = useRef(conversationMode);
   const statusRef = useRef(status);
+  const currentSpeechTextRef = useRef<string>(""); // Ref pour texte prononcé (utilisé pour détection interruption)
+  const isSpeakingRef = useRef(false); // Ref pour savoir si Jarvis parle actuellement
 
   // Sync refs avec state
   useEffect(() => {
@@ -134,8 +171,44 @@ const App: React.FC = () => {
     statusRef.current = status;
   }, [status]);
 
-  const { isListening, toggleListening } = useVoiceRecognition(
+  useEffect(() => {
+    currentSpeechTextRef.current = currentSpeechText;
+  }, [currentSpeechText]);
+
+  const {
+    isListening,
+    toggleListening,
+    startListening,
+    stopListening,
+    stopAndWait,
+  } = useVoiceRecognition(
     (text) => {
+      // ========================================
+      // 🚫 FILTRE ABSOLU : Jarvis parle = TOUT IGNORER
+      // ========================================
+      // Le micro devrait être éteint, mais sécurité supplémentaire
+      if (isSpeakingRef.current || window.speechSynthesis.speaking) {
+        console.log(`🚫 Jarvis parle - transcription bloquée : "${text}"`);
+        return;
+      }
+
+      // ========================================
+      // 🛡️ PÉRIODE DE SÉCURITÉ : 1500ms après réactivation
+      // ========================================
+      // Évite de capter les échos audio résiduels
+      const timeSinceActivation = Date.now() - lastMicActivationTime.current;
+      if (timeSinceActivation < 1500) {
+        console.log(
+          `⏳ Période de sécurité (${timeSinceActivation}ms < 1500ms) : "${text}" ignoré`,
+        );
+        return;
+      }
+
+      // ========================================
+      // ✅ COMMANDE VALIDE - Traiter normalement
+      // ========================================
+      console.log(`✅ Commande reçue : "${text}"`);
+      
       // Appeler handleCommand via ref (défini plus tard)
       if (text && handleCommandRef.current) {
         handleCommandRef.current(text);
@@ -317,6 +390,12 @@ const App: React.FC = () => {
         addLog("🎤 Mode conversation activé", "SYSTEM", "info");
       }
 
+      // ✂️ INTERRUPTION : Si Jarvis est en train de parler, l'interrompre
+      if (window.speechSynthesis.speaking) {
+        console.log("✂️ Interruption détectée : arrêt de la synthèse vocale");
+        stopSpeech(); // Arrêter la voix de Jarvis
+      }
+
       const newCommand: CommandInfo = {
         text,
         timestamp: Date.now(),
@@ -413,9 +492,20 @@ const App: React.FC = () => {
   // ✅ Assigner handleCommand à la ref pour useVoiceRecognition
   handleCommandRef.current = handleCommand;
 
+  // Wrapper pour toggleListening qui initialise le timestamp
+  const handleMicrophoneClick = useCallback(() => {
+    // Initialiser le timestamp si on démarre le micro
+    if (!isListening) {
+      lastMicActivationTime.current = Date.now();
+      console.log("🎤 Clic micro - timestamp initialisé");
+    }
+    toggleListening();
+  }, [isListening, toggleListening]);
+
   // Mode écoute continue si demandé par status
   useEffect(() => {
     if (status === SystemStatus.LISTENING && !isListening) {
+      lastMicActivationTime.current = Date.now();
       toggleListening();
     } else if (status !== SystemStatus.LISTENING && isListening) {
       // toggleListening(); // Let it stop naturally or force stop
@@ -441,7 +531,7 @@ const App: React.FC = () => {
         cpuUsage={Math.floor(20 + Math.random() * 15)} // Simulation
         memoryUsage="4.2 GB"
         onCommand={handleCommand}
-        onMicrophoneClick={toggleListening}
+        onMicrophoneClick={handleMicrophoneClick}
         isListening={isListening}
         logs={logs.map((log) => ({
           source: log.source,
