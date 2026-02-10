@@ -72,37 +72,44 @@ export function useVoiceSynthesis({
       const voices = window.speechSynthesis.getVoices();
 
       // ========================================
-      // RECHERCHE VOIX FRANÇAISE
+      // RECHERCHE VOIX FRANÇAISE FÉMININE NATURELLE
       // ========================================
-      // Ordre de préférence :
-      // 1. Google français (meilleure qualité)
-      // 2. Microsoft Thomas/Julie (Windows français)
-      // 3. Toute voix fr-FR disponible
+      // Ordre de préférence (voix féminines, fluides, naturelles) :
+      // 1. Google Français (fr-FR) - très naturelle
+      // 2. Microsoft Denise (fr-FR) - excellente qualité
+      // 3. Microsoft Hortense (fr-FR) - bonne qualité
+      // 4. Microsoft Julie (fr-FR)
+      // 5. Toute voix fr-FR féminine
       const preferredVoice =
         voices.find(
-          (v) =>
-            v.lang.startsWith("fr-FR") &&
-            (v.name.includes("Google") ||
-              v.name.includes("Thomas") ||
-              v.name.includes("Julie") ||
-              v.name.includes("French")),
-        ) || voices.find((v) => v.lang.startsWith("fr-FR")); // Fallback : n'importe quelle voix française
+          (v) => v.lang.startsWith("fr-FR") && v.name.includes("Google")
+        ) || // Google = meilleure
+        voices.find(
+          (v) => v.lang.startsWith("fr-FR") && v.name.includes("Denise")
+        ) || // Microsoft Denise
+        voices.find(
+          (v) => v.lang.startsWith("fr-FR") && v.name.includes("Hortense")
+        ) || // Microsoft Hortense
+        voices.find(
+          (v) => v.lang.startsWith("fr-FR") && v.name.includes("Julie")
+        ) || // Microsoft Julie
+        voices.find((v) => v.lang.startsWith("fr-FR")); // Fallback : n'importe quelle voix fr-FR
 
       // Application de la voix trouvée
       if (preferredVoice) {
         utterance.voice = preferredVoice;
         console.log(
-          `🗣️ Voix sélectionnée: ${preferredVoice.name} (${preferredVoice.lang})`,
+          `🗣️ Voix sélectionnée: ${preferredVoice.name} (${preferredVoice.lang})`
         );
       } else {
         console.warn(
-          "⚠️ Aucune voix française trouvée, utilisation voix par défaut",
+          "⚠️ Aucune voix française trouvée, utilisation voix par défaut"
         );
       }
 
-      // Configuration des paramètres vocaux (style J.A.R.V.I.S. français)
-      utterance.pitch = 1.0; // Ton normal (français neutre)
-      utterance.rate = 1.1; // Cadence rapide (efficacité, intelligence)
+      // Configuration des paramètres vocaux (style FÉMININ, FLUIDE, NATUREL)
+      utterance.pitch = 0.9; // Légèrement plus aigu pour voix féminine naturelle
+      utterance.rate = 0.9; // Cadence plus lente = plus fluide et compréhensible
       utterance.volume = volume; // Volume depuis settings
 
       // Synchronisation avec l'état du système
@@ -126,7 +133,7 @@ export function useVoiceSynthesis({
       // Démarrage de la synthèse vocale
       window.speechSynthesis.speak(utterance);
     },
-    [enabled, onStart, onEnd, volume],
+    [enabled, onStart, onEnd, volume]
   );
 
   /**

@@ -368,12 +368,22 @@ const App: React.FC = () => {
       const CONVERSATION_END_KEYWORDS = [
         "au revoir",
         "à bientôt",
+        "à plus tard",
         "stop",
+        "stop écoute",
         "merci c'est tout",
         "ça suffit",
         "arrête",
+        "arrête toi",
+        "arrête d'écouter",
         "termine",
+        "terminé",
         "fini",
+        "c'est bon",
+        "c'est tout",
+        "bonne soirée",
+        "bonne journée",
+        "bonne nuit",
       ];
 
       const normalizedText = text.toLowerCase();
@@ -381,6 +391,13 @@ const App: React.FC = () => {
         setConversationMode(false);
         speak("À bientôt !");
         addLog("👋 Mode conversation désactivé", "SYSTEM", "info");
+        // Arrêter le micro après la réponse de Jarvis
+        setTimeout(() => {
+          if (isListening) {
+            stopListening();
+            console.log("🛑 Micro arrêté après mot de fin");
+          }
+        }, 2500); // Laisser le temps à Jarvis de dire "À bientôt !"
         return;
       }
 
