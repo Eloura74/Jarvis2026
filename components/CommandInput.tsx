@@ -17,7 +17,15 @@
  */
 
 import React, { useState, KeyboardEvent, useEffect, useRef } from "react";
-import { Mic, Send, Command, MicOff } from "lucide-react";
+import {
+  Mic,
+  Send,
+  Command,
+  MicOff,
+  Lightbulb,
+  ArrowRight,
+} from "lucide-react";
+import { getPredictionsWithScore } from "../services/predictionEngine";
 
 /**
  * Props du composant CommandInput
@@ -48,6 +56,9 @@ const CommandInput: React.FC<CommandInputProps> = ({
   onListenToggle,
 }) => {
   const [input, setInput] = useState("");
+  const [predictions, setPredictions] = useState<
+    Array<{ command: string; score: number }>
+  >([]);
   const inputRef = useRef<HTMLInputElement>(null);
 
   /**
@@ -81,6 +92,32 @@ const CommandInput: React.FC<CommandInputProps> = ({
       inputRef.current?.focus();
     }
   }, [isProcessing, isListening]);
+
+  /**
+   * Charger prédictions contextuelles au montage et actualiser périodiquement
+   */
+  useEffect(() => {
+    // Chargement initial
+    const loadPredictions = () => {
+      const preds = getPredictionsWithScore(3); // Top 3 suggestions avec scores
+      setPredictions(preds);
+    };
+
+    loadPredictions();
+
+    // Actualiser toutes les minutes (prédictions changent selon l'heure)
+    const interval = setInterval(loadPredictions, 60000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  /**
+   * Exécute une suggestion prédictive
+   */
+  const executeSuggestion = (command: string) => {
+    onSend(command);
+    setInput(""); // Clear input
+  };
 
   return (
     // Panneau Tech UI
@@ -158,6 +195,61 @@ const CommandInput: React.FC<CommandInputProps> = ({
         <div className="w-2 h-2 bg-cyan-500 -mt-[3px]"></div>
         <div className="w-2 h-2 bg-cyan-500 -mt-[3px]"></div>
       </div>
+
+      {/* Panneau Suggestions Prédictives */}
+      {predictions.length > 0 && !isProcessing && !isListening && (
+        <div className="absolute top-full mt-4 left-0 right-0 animate-fade-in">
+          <div className="flex items-center gap-2 mb-2 px-2">
+            <Lightbulb className="w-4 h-4 text-yellow-400 animate-pulse" />
+            <span className="text-xs text-cyan-400 font-mono tracking-wide">
+              SUGGESTIONS CONTEXTUELLES
+            </span>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            {predictions.map((pred, index) => (
+              <button
+                key={pred.command}
+                onClick={() => executeSuggestion(pred.command)}
+                className="group flex items-center justify-between p-3 bg-gradient-to-r from-cyan-900/20 to-purple-900/20 border border-cyan-500/30 hover:border-cyan-400 hover:from-cyan-900/40 hover:to-purple-900/40 transition-all duration-300 clip-tech-sm"
+                style={{
+                  animationDelay: `${index * 100}ms`,
+                }}
+              >
+                <div className="flex items-center gap-3 flex-1">
+                  <ArrowRight className="w-4 h-4 text-cyan-400 group-hover:translate-x-1 transition-transform" />
+                  <span className="text-cyan-100 font-mono text-sm tracking-wide">
+                    {pred.command}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  {/* Score Badge */}
+                  <div className="px-2 py-1 bg-cyan-500/20 border border-cyan-400/50 clip-tech-sm">
+                    <span className="text-xs text-cyan-300 font-bold">
+                      {pred.score}%
+                    </span>
+                  </div>
+
+                  {/* Indicateur visuel confiance */}
+                  <div className="flex gap-0.5">
+                    {[...Array(3)].map((_, i) => (
+                      <div
+                        key={i}
+                        className={`w-1 h-3 ${
+                          i < Math.ceil(pred.score / 33.3)
+                            ? "bg-cyan-400"
+                            : "bg-cyan-900/50"
+                        }`}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

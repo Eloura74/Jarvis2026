@@ -237,6 +237,48 @@ export function getFlexiblePredictions(): string[] {
     .map((p) => p.command);
 }
 
+/**
+ * Version UI de getPredictions avec scores pour affichage
+ *
+ * Retourne objets {command, score} pour utilisation dans interface
+ *
+ * @param limit - Nombre maximum de suggestions (défaut 3)
+ * @returns Liste de suggestions avec scores
+ */
+export function getPredictionsWithScore(
+  limit: number = MAX_SUGGESTIONS,
+): Array<{ command: string; score: number }> {
+  const now = new Date();
+  const hour = now.getHours();
+  const dayOfWeek = now.getDay();
+
+  // Filtrer patterns contextuels
+  const contextualPatterns = patterns.filter(
+    (p) =>
+      p.hour === hour &&
+      p.dayOfWeek === dayOfWeek &&
+      p.frequency >= CONFIDENCE_THRESHOLD,
+  );
+
+  // Trier et mapper avec scores
+  const topSuggestions = contextualPatterns
+    .sort((a, b) => b.frequency - a.frequency)
+    .slice(0, limit)
+    .map((p) => ({
+      command: p.command,
+      score: p.frequency,
+    }));
+
+  if (topSuggestions.length > 0) {
+    console.log(
+      `💡 Suggestions UI (${hour}h, ${getDayName(dayOfWeek)}):`,
+      topSuggestions,
+    );
+  }
+
+  return topSuggestions;
+}
+
 // ============================================================================
 // ANALYTICS
 // ============================================================================

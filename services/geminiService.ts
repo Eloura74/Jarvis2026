@@ -16,6 +16,8 @@ import { OmniDecision, AppMemory } from "../types";
 import { validateEnv } from "../config/env";
 import { generateAppsListForPrompt } from "../appsDatabase";
 import { getCachedDecision, setCachedDecision } from "./geminiCache";
+import * as webNav from "./webNavigationService";
+import * as productivity from "./productivityService";
 
 // ============================================================================
 // CONFIGURATION ET INITIALISATION
@@ -235,6 +237,256 @@ const toolDeclarations: FunctionDeclaration[] = [
         keys: { type: Type.STRING }, // Raccourci (si action="shortcut", ex: "ctrl+c")
       },
       required: ["action"],
+    },
+  },
+
+  // ========================================
+  // NOUVEAUX OUTILS SYSTÈME AVANCÉS
+  // ========================================
+
+  // OUTIL 8 : Contrôle volume audio
+  // Permet à Gemini de gérer le volume système
+  // Exemples : "augmente le volume", "volume à 50%", "mute le son"
+  {
+    name: "control_volume",
+    description: "Control system volume (set, increase, decrease, mute).",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        action: {
+          type: Type.STRING,
+          enum: ["set", "increase", "decrease", "mute"],
+          description: "Action to perform on volume",
+        },
+        value: {
+          type: Type.NUMBER,
+          description: "Volume level 0-100 (only for 'set' action)",
+        },
+      },
+      required: ["action"],
+    },
+  },
+
+  // OUTIL 9 : Gestion fichiers et dossiers
+  // Permet à Gemini de créer/supprimer fichiers et dossiers
+  // Exemples : "crée un dossier Test", "supprime ce fichier"
+  {
+    name: "manage_files",
+    description: "Create or delete files and directories.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        action: {
+          type: Type.STRING,
+          enum: ["create", "delete"],
+          description: "File operation to perform",
+        },
+        path: {
+          type: Type.STRING,
+          description: "Full path to file or directory",
+        },
+        type: {
+          type: Type.STRING,
+          enum: ["file", "directory"],
+          description: "Type when creating (default: file)",
+        },
+      },
+      required: ["action", "path"],
+    },
+  },
+
+  // OUTIL 10 : Recherche fichiers
+  // Permet à Gemini de trouver des fichiers sur le système
+  // Exemples : "trouve tous les PDF", "cherche fichier rapport"
+  {
+    name: "search_files",
+    description: "Search for files on the system by name or pattern.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        query: {
+          type: Type.STRING,
+          description: "Search query (file name or pattern)",
+        },
+        path: {
+          type: Type.STRING,
+          description: "Optional base path to search in",
+        },
+      },
+      required: ["query"],
+    },
+  },
+
+  // OUTIL 11 : Capture d'écran
+  // Permet à Gemini de prendre des screenshots
+  // Exemples : "prends une capture d'écran", "screenshot"
+  {
+    name: "take_screenshot",
+    description: "Take a screenshot of the current screen.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        savePath: {
+          type: Type.STRING,
+          description: "Optional custom save path",
+        },
+      },
+      required: [],
+    },
+  },
+
+  // OUTIL 12 : Contrôle session Windows
+  // Permet à Gemini de verrouiller/éteindre/redémarrer le PC
+  // Exemples : "verrouille la session", "éteins le PC dans 10 secondes"
+  {
+    name: "control_session",
+    description: "Control Windows session (lock, shutdown, restart, sleep).",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        action: {
+          type: Type.STRING,
+          enum: ["lock", "shutdown", "restart", "sleep"],
+          description: "Session action to perform",
+        },
+        delay: {
+          type: Type.NUMBER,
+          description: "Delay in seconds before action (shutdown/restart only)",
+        },
+      },
+      required: ["action"],
+    },
+  },
+
+  // OUTIL 13 : Contrôle lecture média
+  // Permet à Gemini de contrôler la musique/vidéo
+  // Exemples : "pause la musique", "chanson suivante", "piste précédente"
+  {
+    name: "control_media",
+    description: "Control media playback (play, pause, next, previous, stop).",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        action: {
+          type: Type.STRING,
+          enum: ["play", "pause", "next", "previous", "stop"],
+          description: "Media control action",
+        },
+      },
+      required: ["action"],
+    },
+  },
+
+  // ========================================
+  // OUTILS NAVIGATION WEB
+  // ========================================
+
+  {
+    name: "search_web",
+    description: "Search on Google, YouTube, Wikipedia or GitHub.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        engine: {
+          type: Type.STRING,
+          enum: ["google", "youtube", "wikipedia", "github"],
+        },
+        query: { type: Type.STRING },
+      },
+      required: ["engine", "query"],
+    },
+  },
+
+  {
+    name: "open_url",
+    description: "Open URL in browser.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        url: { type: Type.STRING },
+      },
+      required: ["url"],
+    },
+  },
+
+  {
+    name: "manage_bookmarks",
+    description: "Add, open or list bookmarks.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        action: {
+          type: Type.STRING,
+          enum: ["add", "open", "list"],
+        },
+        title: { type: Type.STRING },
+        url: { type: Type.STRING },
+      },
+      required: ["action"],
+    },
+  },
+
+  // ========================================
+  // OUTILS PRODUCTIVITÉ
+  // ========================================
+
+  {
+    name: "set_timer",
+    description: "Start countdown timer with notification.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        label: { type: Type.STRING },
+        duration: { type: Type.NUMBER },
+      },
+      required: ["label", "duration"],
+    },
+  },
+
+  {
+    name: "manage_notes",
+    description: "Add, search or list notes.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        action: {
+          type: Type.STRING,
+          enum: ["add", "search", "list"],
+        },
+        content: { type: Type.STRING },
+        query: { type: Type.STRING },
+      },
+      required: ["action"],
+    },
+  },
+
+  {
+    name: "manage_todos",
+    description: "Add, complete or list todos.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        action: {
+          type: Type.STRING,
+          enum: ["add", "complete", "list"],
+        },
+        title: { type: Type.STRING },
+        id: { type: Type.STRING },
+      },
+      required: ["action"],
+    },
+  },
+
+  {
+    name: "set_reminder",
+    description: "Set reminder with notification.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        message: { type: Type.STRING },
+        delayMinutes: { type: Type.NUMBER },
+      },
+      required: ["message", "delayMinutes"],
     },
   },
 ];

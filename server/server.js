@@ -442,6 +442,357 @@ app.post("/api/automation/shortcut", async (req, res) => {
 });
 
 // ============================================================================
+// ENDPOINTS SYSTEM CONTROL (NOUVELLES ROUTES)
+// ============================================================================
+
+/**
+ * POST /api/system/volume
+ * Contrôle volume audio
+ * Body: { action: "set"|"increase"|"decrease"|"mute"|"unmute", value?: 0-100 }
+ */
+app.post("/api/system/volume", async (req, res) => {
+  try {
+    const { action, value } = req.body;
+    if (!action) {
+      return res.status(400).json({ error: "Action requise" });
+    }
+
+    // Validation basique (module systemControl fera validation complète)
+    console.log(
+      `🔊 Volume ${action}${value !== undefined ? ` (${value}%)` : ""}`,
+    );
+
+    // Implémentation PowerShell pour contrôle volume Windows
+    const { exec } = await import("child_process");
+    const { promisify } = await import("util");
+    const execAsync = promisify(exec);
+
+    let command;
+    switch (action) {
+      case "set":
+        if (value === undefined || value < 0 || value > 100) {
+          return res.status(400).json({ error: "Volume invalide (0-100)" });
+        }
+        // PowerShell: définir volume (0-100)
+        command = `powershell -Command "(New-Object -ComObject WScript.Shell).SendKeys([char]174); Start-Sleep -Milliseconds 100; $wshell = New-Object -ComObject WScript.Shell; 1..50 | ForEach-Object { $wshell.SendKeys([char]174) }; 1..${value} | ForEach-Object { Start-Sleep -Milliseconds 10; $wshell.SendKeys([char]175) }"`;
+        break;
+
+      case "increase":
+        // Augmenter volume (+2%)
+        command = `powershell -Command "$wshell = New-Object -ComObject WScript.Shell; 1..2 | ForEach-Object { $wshell.SendKeys([char]175) }"`;
+        break;
+
+      case "decrease":
+        // Diminuer volume (-2%)
+        command = `powershell -Command "$wshell = New-Object -ComObject WScript.Shell; 1..2 | ForEach-Object { $wshell.SendKeys([char]174) }"`;
+        break;
+
+      case "mute":
+      case "unmute":
+        // Toggle mute (char 173)
+        command = `powershell -Command "(New-Object -ComObject WScript.Shell).SendKeys([char]173)"`;
+        break;
+
+      default:
+        return res.status(400).json({ error: "Action volume inconnue" });
+    }
+
+    await execAsync(command);
+    console.log(`   ✅ Volume ${action} exécuté`);
+
+    res.json({ success: true, message: `Volume ${action} avec succès` });
+  } catch (error) {
+    console.error("Erreur route volume:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * POST /api/system/brightness
+ * Contrôle luminosité écran
+ * Body: { action: "set"|"increase"|"decrease", value?: 0-100 }
+ */
+app.post("/api/system/brightness", async (req, res) => {
+  try {
+    const { action, value } = req.body;
+    if (!action) {
+      return res.status(400).json({ error: "Action requise" });
+    }
+
+    console.log(
+      `💡 Luminosité ${action}${value !== undefined ? ` (${value}%)` : ""}`,
+    );
+
+    // TODO: Implémenter contrôle luminosité
+    res.json({
+      success: true,
+      message: `Luminosité ${action} - À implémenter`,
+    });
+  } catch (error) {
+    console.error("Erreur route luminosité:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * POST /api/files/action
+ * Gestion fichiers et dossiers
+ * Body: { action: "create"|"delete"|"move"|"copy", path, destination?, type? }
+ */
+app.post("/api/files/action", async (req, res) => {
+  try {
+    const { action, path, destination, type } = req.body;
+
+    if (!action || !path) {
+      return res.status(400).json({ error: "Action et path requis" });
+    }
+
+    // Sécurité: bloquer system32
+    const forbidden = ["system32", "windows", "program files"];
+    if (forbidden.some((f) => path.toLowerCase().includes(f))) {
+      return res.status(403).json({ error: "Accès interdit à ce dossier" });
+    }
+
+    console.log(`📁 Fichier ${action}: ${path}`);
+
+    // Implémentation avec fs natif
+    const fs = await import("fs/promises");
+
+    switch (action) {
+      case "create":
+        if (type === "directory") {
+          await fs.mkdir(path, { recursive: true });
+          console.log(`   ✅ Dossier créé: ${path}`);
+          res.json({ success: true, message: `Dossier créé: ${path}` });
+        } else {
+          await fs.writeFile(path, "");
+          console.log(`   ✅ Fichier créé: ${path}`);
+          res.json({ success: true, message: `Fichier créé: ${path}` });
+        }
+        break;
+
+      case "delete":
+        const stats = await fs.stat(path);
+        if (stats.isDirectory()) {
+          await fs.rm(path, { recursive: true, force: true });
+          console.log(`   ✅ Dossier supprimé: ${path}`);
+          res.json({ success: true, message: `Dossier supprimé` });
+        } else {
+          await fs.unlink(path);
+          console.log(`   ✅ Fichier supprimé: ${path}`);
+          res.json({ success: true, message: `Fichier supprimé` });
+        }
+        break;
+
+      case "move":
+        if (!destination) {
+          return res.status(400).json({ error: "Destination requise" });
+        }
+        await fs.rename(path, destination);
+        console.log(`   ✅ Déplacé: ${path} → ${destination}`);
+        res.json({ success: true, message: `Déplacé vers ${destination}` });
+        break;
+
+      case "copy":
+        if (!destination) {
+          return res.status(400).json({ error: "Destination requise" });
+        }
+        await fs.copyFile(path, destination);
+        console.log(`   ✅ Copié: ${path} → ${destination}`);
+        res.json({ success: true, message: `Copié vers ${destination}` });
+        break;
+
+      default:
+        res.status(400).json({ error: "Action inconnue" });
+    }
+  } catch (error) {
+    console.error("Erreur route fichiers:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * GET /api/files/search
+ * Recherche fichiers
+ * Query: ?query=...&path=...&maxResults=...
+ */
+app.get("/api/files/search", async (req, res) => {
+  try {
+    const { query, path, maxResults } = req.query;
+
+    if (!query) {
+      return res.status(400).json({ error: "Query requise" });
+    }
+
+    console.log(`🔍 Recherche fichiers: ${query}`);
+
+    // Implémentation avec fast-glob
+    const fg = (await import("fast-glob")).default;
+    const basePath = path || process.env.USERPROFILE;
+    const limit = maxResults ? parseInt(maxResults) : 50;
+
+    const pattern = `${basePath}/**/*${query}*`;
+    const results = await fg(pattern, {
+      caseSensitiveMatch: false,
+      ignore: ["**/node_modules/**", "**/.git/**", "**/AppData/**"],
+      onlyFiles: true,
+      absolute: true,
+    });
+
+    const limitedResults = results.slice(0, limit);
+    console.log(`   ✅ Trouvé: ${limitedResults.length} fichiers`);
+
+    res.json({
+      success: true,
+      results: limitedResults,
+      total: results.length,
+    });
+  } catch (error) {
+    console.error("Erreur route recherche:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * POST /api/system/screenshot
+ * Capture d'écran
+ * Body: { savePath?: string }
+ */
+app.post("/api/system/screenshot", async (req, res) => {
+  try {
+    const { savePath } = req.body;
+
+    console.log(`📸 Capture d'écran${savePath ? ` → ${savePath}` : ""}`);
+
+    // Implémentation avec screenshot-desktop
+    const screenshot = (await import("screenshot-desktop")).default;
+    const fs = await import("fs/promises");
+    const pathModule = await import("path");
+
+    const desktopPath = pathModule.join(process.env.USERPROFILE, "Desktop");
+    const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+    const defaultPath = pathModule.join(
+      desktopPath,
+      `JARVIS_screenshot_${timestamp}.png`,
+    );
+
+    const finalPath = savePath || defaultPath;
+    const imgBuffer = await screenshot();
+    await fs.writeFile(finalPath, imgBuffer);
+
+    console.log(`   ✅ Capture sauvegardée: ${finalPath}`);
+    res.json({ success: true, path: finalPath });
+  } catch (error) {
+    console.error("Erreur route screenshot:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * POST /api/system/power
+ * Contrôle session (lock, shutdown, restart, sleep)
+ * Body: { action: "lock"|"shutdown"|"restart"|"sleep", delay?: number }
+ */
+app.post("/api/system/power", async (req, res) => {
+  try {
+    const { action, delay } = req.body;
+
+    if (!action) {
+      return res.status(400).json({ error: "Action requise" });
+    }
+
+    console.log(`🔒 Session ${action}${delay ? ` dans ${delay}s` : ""}`);
+
+    // Implémentation avec commandes Windows
+    const { exec } = await import("child_process");
+    const { promisify } = await import("util");
+    const execAsync = promisify(exec);
+
+    const delaySeconds = delay || 0;
+    let command;
+
+    switch (action) {
+      case "lock":
+        command = "rundll32.exe user32.dll,LockWorkStation";
+        break;
+
+      case "shutdown":
+        command = `shutdown /s /t ${delaySeconds}`;
+        break;
+
+      case "restart":
+        command = `shutdown /r /t ${delaySeconds}`;
+        break;
+
+      case "sleep":
+        command = "rundll32.exe powrprof.dll,SetSuspendState 0,1,0";
+        break;
+
+      default:
+        return res.status(400).json({ error: "Action session inconnue" });
+    }
+
+    await execAsync(command);
+    console.log(`   ✅ Session ${action} programmée`);
+
+    res.json({ success: true, message: `Session ${action} programmée` });
+  } catch (error) {
+    console.error("Erreur route power:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * POST /api/media/control
+ * Contrôle lecture média
+ * Body: { action: "play"|"pause"|"next"|"previous"|"stop" }
+ */
+app.post("/api/media/control", async (req, res) => {
+  try {
+    const { action } = req.body;
+
+    if (!action) {
+      return res.status(400).json({ error: "Action requise" });
+    }
+
+    console.log(`🎵 Média ${action}`);
+
+    // Implémentation avec touches média PowerShell
+    const { exec } = await import("child_process");
+    const { promisify } = await import("util");
+    const execAsync = promisify(exec);
+
+    let keyCode;
+    switch (action) {
+      case "play":
+      case "pause":
+        keyCode = "0xB3"; // Play/Pause
+        break;
+      case "next":
+        keyCode = "0xB0"; // Next track
+        break;
+      case "previous":
+        keyCode = "0xB1"; // Previous track
+        break;
+      case "stop":
+        keyCode = "0xB2"; // Stop
+        break;
+      default:
+        return res.status(400).json({ error: "Action média inconnue" });
+    }
+
+    const command = `powershell -Command "$wshell = New-Object -ComObject WScript.Shell; $wshell.SendKeys([char]${keyCode})"`;
+    await execAsync(command);
+
+    console.log(`   ✅ Média ${action} exécuté`);
+    res.json({ success: true, message: `Média ${action}` });
+  } catch (error) {
+    console.error("Erreur route média:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================================================
 // GLOBAL ERROR HANDLERS (Prévention crash serveur)
 // ============================================================================
 
