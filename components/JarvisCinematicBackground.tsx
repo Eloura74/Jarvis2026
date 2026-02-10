@@ -55,14 +55,14 @@ export const JarvisCinematicBackground: React.FC = () => {
       ctx.strokeStyle = "#00e5ff";
       ctx.lineWidth = 1.5;
 
-      const hexSize = 20;
-      const hexHeight = hexSize * Math.sqrt(1.5);
+      const hexSize = 18;
+      const hexHeight = hexSize * Math.sqrt(2.5);
       const hexWidth = hexSize * 2.2;
       const offsetX = 70; // Position visible à gauche
-      const offsetY = canvas.height * 0.3; // Centré verticalement
+      const offsetY = canvas.height * 0.48; // Centré verticalement
 
-      for (let row = 0; row < 15; row++) {
-        for (let col = 0; col < 6; col++) {
+      for (let row = 0; row < 10; row++) {
+        for (let col = 0; col < 5; col++) {
           const x = offsetX + col * hexWidth * 0.75;
           const y = offsetY + row * hexHeight + ((col % 2) * hexHeight) / 2;
 
