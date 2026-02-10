@@ -311,3 +311,68 @@ body {
     transform: perspective(500px) rotateX(60deg) translateY(60px);
   }
 }
+
+/* === NOUVELLES ANIMATIONS SESSION 3 === */
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.3s ease-out;
+}
+
+.animate-slideInUp {
+  animation: slideInUp 0.3s ease-out;
+}
+
+.animate-slideInDown {
+  animation: slideInDown 0.3s ease-out;
+}
+  
+/* === ANIMATIONS HUD === */  
+  
+@keyframes spin-slow {  
+  from { transform: rotate(0deg); }  
+  to { transform: rotate(360deg); }  
+}  
+  
+@keyframes spin-reverse {  
+  from { transform: rotate(360deg); }  
+  to { transform: rotate(0deg); }  
+}  
+  
+.animate-spin-slow {  
+  animation: spin-slow 8s linear infinite;  
+}  
+  
+.animate-spin-reverse {  
+  animation: spin-reverse 6s linear infinite;  
+} 

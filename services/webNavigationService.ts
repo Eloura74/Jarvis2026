@@ -1,24 +1,19 @@
 /**
- * Service de navigation web intelligente pour JARVIS
+ * Service de navigation web intelligente pour JARVIS (Frontend)
  *
  * Fonctionnalités :
- * - Recherche Google/YouTube/Wikipedia
+ * - Recherche Google/YouTube/Wikipedia/GitHub
  * - Navigation URLs directes
  * - Gestion favoris locaux
  *
  * @module webNavigationService
  */
 
-import { exec } from "child_process";
-import { promisify } from "util";
-
-const execAsync = promisify(exec);
-
 // ============================================================================
 // TYPES
 // ============================================================================
 
-export type SearchEngine = "google" | "youtube" | "wikipedia";
+export type SearchEngine = "google" | "youtube" | "wikipedia" | "github";
 
 export interface Bookmark {
   id: string;
@@ -42,28 +37,26 @@ export interface Bookmark {
 export function buildSearchUrl(engine: SearchEngine, query: string): string {
   const encodedQuery = encodeURIComponent(query);
 
-  const urls = {
+  const urls: Record<SearchEngine, string> = {
     google: `https://www.google.com/search?q=${encodedQuery}`,
     youtube: `https://www.youtube.com/results?search_query=${encodedQuery}`,
     wikipedia: `https://fr.wikipedia.org/wiki/${encodedQuery.replace(/%20/g, "_")}`,
+    github: `https://github.com/search?q=${encodedQuery}&type=repositories`,
   };
 
   return urls[engine];
 }
 
 /**
- * Ouvre une recherche dans le navigateur par défaut
+ * Ouvre une recherche dans un nouvel onglet
  *
  * @param engine - Moteur de recherche
  * @param query - Requête
  */
-export async function searchWeb(
-  engine: SearchEngine,
-  query: string,
-): Promise<boolean> {
+export function searchWeb(engine: SearchEngine, query: string): boolean {
   try {
     const url = buildSearchUrl(engine, query);
-    await openUrl(url);
+    window.open(url, "_blank");
 
     console.log(`🌐 Recherche ${engine}: "${query}"`);
     return true;
@@ -78,11 +71,11 @@ export async function searchWeb(
 // ============================================================================
 
 /**
- * Ouvre une URL dans le navigateur par défaut
+ * Ouvre une URL dans un nouvel onglet
  *
  * @param url - URL à ouvrir
  */
-export async function openUrl(url: string): Promise<boolean> {
+export function openUrl(url: string): boolean {
   try {
     // Normaliser URL (ajouter https:// si manquant)
     let normalizedUrl = url;
@@ -90,8 +83,7 @@ export async function openUrl(url: string): Promise<boolean> {
       normalizedUrl = `https://${url}`;
     }
 
-    // Commande Windows pour ouvrir URL
-    await execAsync(`start ${normalizedUrl}`);
+    window.open(normalizedUrl, "_blank");
 
     console.log(`🌐 URL ouverte: ${normalizedUrl}`);
     return true;
@@ -170,11 +162,11 @@ export function deleteBookmark(id: string): boolean {
 }
 
 /**
- * Ouvre un favori par titre
+ * Ouvre un favori par titre (recherche floue)
  *
- * @param title - Titre du favori (recherche floue)
+ * @param title - Titre du favori
  */
-export async function openBookmark(title: string): Promise<boolean> {
+export function openBookmark(title: string): boolean {
   const bookmarks = getBookmarks();
 
   // Recherche floue (normalisation lowercase)
@@ -183,7 +175,7 @@ export async function openBookmark(title: string): Promise<boolean> {
   );
 
   if (found) {
-    await openUrl(found.url);
+    openUrl(found.url);
     console.log(`⭐ Favori ouvert: ${found.title}`);
     return true;
   }

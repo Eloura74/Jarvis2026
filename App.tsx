@@ -50,6 +50,9 @@ export interface JarvisSettings {
 import { parseCommand } from "./services/geminiService";
 import { trackCommand } from "./services/predictionEngine";
 import { LogEntry, SystemStatus, OmniDecision } from "./types";
+import * as webNav from "./services/webNavigationService";
+import * as productivity from "./services/productivityService";
+import * as context from "./services/conversationContext";
 import { INITIAL_LOGS } from "./constants";
 import { APPS_DATABASE, searchApps } from "./appsDatabase";
 import { promptUserForAppPath, cacheAppPath } from "./services/appScanner";
@@ -70,6 +73,7 @@ import { useSystemStatus } from "./hooks/useSystemStatus";
 import { useAppMemory } from "./hooks/useAppMemory";
 import { useAutonomy } from "./hooks/useAutonomy";
 import { useWakeWord } from "./hooks/useWakeWord";
+import toast, { Toaster } from "react-hot-toast";
 
 const App: React.FC = () => {
   // ========================================
@@ -726,6 +730,136 @@ const App: React.FC = () => {
 
       setStatus(SystemStatus.IDLE);
     }
+    // --- 8. WEB NAVIGATION TOOLS ---
+    else if (toolName === "search_web") {
+      const { engine, query } = toolArgs;
+      setStatus(SystemStatus.EXECUTING);
+      addLog(`Searching ${engine}: "${query}"`, "SYSTEM", "info");
+
+      const success = webNav.searchWeb(engine, query);
+
+      if (success) {
+        addLog("Search opened in browser", "OMNI", "success");
+      } else {
+        addLog("Search failed", "SYSTEM", "error");
+      }
+      setStatus(SystemStatus.IDLE);
+    } else if (toolName === "open_url") {
+      const { url } = toolArgs;
+      setStatus(SystemStatus.EXECUTING);
+      addLog(`Opening URL: ${url}`, "SYSTEM", "info");
+
+      const success = webNav.openUrl(url);
+
+      if (success) {
+        addLog("URL opened in browser", "OMNI", "success");
+      } else {
+        addLog("Failed to open URL", "SYSTEM", "error");
+      }
+      setStatus(SystemStatus.IDLE);
+    } else if (toolName === "manage_bookmarks") {
+      const { action, title, url } = toolArgs;
+      setStatus(SystemStatus.EXECUTING);
+
+      if (action === "add" && title && url) {
+        webNav.addBookmark(title, url);
+        addLog(`Bookmark added: ${title}`, "OMNI", "success");
+      } else if (action === "open" && title) {
+        const found = webNav.openBookmark(title);
+        if (found) {
+          addLog(`Bookmark opened: ${title}`, "OMNI", "success");
+        } else {
+          addLog("Bookmark not found", "SYSTEM", "warning");
+        }
+      } else if (action === "list") {
+        const bookmarks = webNav.getBookmarks();
+        addLog(`${bookmarks.length} bookmarks`, "SYSTEM", "info");
+        bookmarks
+          .slice(0, 10)
+          .forEach((b) => addLog(`  - ${b.title}`, "SYSTEM", "info"));
+      }
+
+      setStatus(SystemStatus.IDLE);
+    }
+    // --- 9. PRODUCTIVITY TOOLS ---
+    else if (toolName === "set_timer") {
+      const { label, duration } = toolArgs;
+      setStatus(SystemStatus.EXECUTING);
+      addLog(`Timer set: ${label} (${duration}s)`, "SYSTEM", "info");
+
+      productivity.requestNotificationPermission();
+      productivity.startTimer(label, duration, () => {
+        addLog(`⏱️ Timer finished: ${label}`, "OMNI", "success");
+      });
+
+      addLog("Timer started", "OMNI", "success");
+      setStatus(SystemStatus.IDLE);
+    } else if (toolName === "manage_notes") {
+      const { action, content, query } = toolArgs;
+      setStatus(SystemStatus.EXECUTING);
+
+      if (action === "add" && content) {
+        productivity.addNote(content);
+        addLog(
+          `Note added: "${content.substring(0, 30)}..."`,
+          "OMNI",
+          "success",
+        );
+      } else if (action === "search" && query) {
+        const results = productivity.searchNotes(query);
+        addLog(`${results.length} notes found`, "SYSTEM", "info");
+        results
+          .slice(0, 5)
+          .forEach((n) =>
+            addLog(`  - ${n.content.substring(0, 50)}...`, "SYSTEM", "info"),
+          );
+      } else if (action === "list") {
+        const notes = productivity.getNotes();
+        addLog(`${notes.length} total notes`, "SYSTEM", "info");
+        notes
+          .slice(0, 5)
+          .forEach((n) =>
+            addLog(`  - ${n.content.substring(0, 50)}...`, "SYSTEM", "info"),
+          );
+      }
+
+      setStatus(SystemStatus.IDLE);
+    } else if (toolName === "manage_todos") {
+      const { action, title, id } = toolArgs;
+      setStatus(SystemStatus.EXECUTING);
+
+      if (action === "add" && title) {
+        productivity.addTodo(title);
+        addLog(`Todo added: ${title}`, "OMNI", "success");
+      } else if (action === "complete" && id) {
+        const success = productivity.completeTodo(id);
+        if (success) {
+          addLog("Todo completed ✓", "OMNI", "success");
+        } else {
+          addLog("Todo not found", "SYSTEM", "warning");
+        }
+      } else if (action === "list") {
+        const todos = productivity.getActiveTodos();
+        addLog(`${todos.length} active todos`, "SYSTEM", "info");
+        todos.forEach((t) => addLog(`  - ${t.title}`, "SYSTEM", "info"));
+      }
+
+      setStatus(SystemStatus.IDLE);
+    } else if (toolName === "set_reminder") {
+      const { message, delayMinutes } = toolArgs;
+      setStatus(SystemStatus.EXECUTING);
+      addLog(
+        `Reminder set: "${message}" in ${delayMinutes} min`,
+        "SYSTEM",
+        "info",
+      );
+
+      productivity.requestNotificationPermission();
+      productivity.addReminder(message, delayMinutes);
+
+      addLog("Reminder programmed ⏰", "OMNI", "success");
+      setStatus(SystemStatus.IDLE);
+    }
   };
 
   // --- RENDER ---
@@ -836,6 +970,46 @@ const App: React.FC = () => {
           onClose={() => setShowSettings(false)}
           onSettingsChange={setSettings}
           currentSettings={settings}
+        />
+
+        {/* Toast Notifications Premium */}
+        <Toaster
+          position="top-right"
+          toastOptions={{
+            duration: 3000,
+            style: {
+              background: "rgba(15, 23, 42, 0.95)",
+              color: "#60a5fa",
+              border: "1px solid rgba(96, 165, 250, 0.3)",
+              backdropFilter: "blur(12px)",
+              boxShadow: "0 8px 32px rgba(0, 0, 0, 0.4)",
+              fontFamily: "monospace",
+            },
+            success: {
+              iconTheme: {
+                primary: "#10b981",
+                secondary: "#fff",
+              },
+              style: {
+                border: "1px solid rgba(16, 185, 129, 0.3)",
+              },
+            },
+            error: {
+              iconTheme: {
+                primary: "#ef4444",
+                secondary: "#fff",
+              },
+              style: {
+                border: "1px solid rgba(239, 68, 68, 0.3)",
+              },
+            },
+            loading: {
+              iconTheme: {
+                primary: "#3b82f6",
+                secondary: "#fff",
+              },
+            },
+          }}
         />
       </Suspense>
     </div>

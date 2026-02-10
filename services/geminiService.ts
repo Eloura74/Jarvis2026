@@ -18,6 +18,7 @@ import { generateAppsListForPrompt } from "../appsDatabase";
 import { getCachedDecision, setCachedDecision } from "./geminiCache";
 import * as webNav from "./webNavigationService";
 import * as productivity from "./productivityService";
+import * as context from "./conversationContext";
 
 // ============================================================================
 // CONFIGURATION ET INITIALISATION
@@ -47,6 +48,12 @@ const ai = new GoogleGenAI({ apiKey: geminiApiKey });
 const generateSystemInstruction = (memorySummary: string) => `
 You are J.A.R.V.I.S., the ultimate autonomous interface.
 Tone: Highly intelligent, proactive, crisp, British wit.
+
+**CONVERSATIONAL CONTEXT:**
+${context.formatHistoryForPrompt()}
+
+**RECENT ENTITIES (for pronoun resolution):**
+${context.formatEntitiesForPrompt()}
 
 **USER HABITS / MEMORY:**
 ${memorySummary}
@@ -83,6 +90,9 @@ ${generateAppsListForPrompt()}
 **RULES:**
 - You can execute **MULTIPLE** tools in one response to create a "Workflow". 
   - Example: User says "Work Mode" → Launch Code Editor, Launch Spotify, Set Volume.
+- **PRONOUN RESOLUTION**: When user says "ouvre-le", "ferme ça", "marque-le fait", use RECENT ENTITIES above to resolve the reference.
+  - Example: If last entity is "YouTube" and user says "ferme-le" → close YouTube window
+  - Example: If last todo is "appeler Marie" and user says "marque fait" → complete that todo
 - When user request is ambiguous ("lance mon éditeur de code"), suggest the available options.
 - If the user asks something conversational, reply with 'text' only.
 - If the user asks for a complex task, break it down.
