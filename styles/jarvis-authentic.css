@@ -1,0 +1,502 @@
+/**
+ * ========================================
+ * JARVIS AUTHENTIC - Style Iron Man Film
+ * ========================================
+ * Interface minimaliste avec lignes ultra-fines
+ * Basé sur les HUD réels du film Iron Man
+ */
+
+/* ==================== VARIABLES ==================== */
+:root {
+  /* Couleur unique : cyan */
+  --jarvis-cyan: #00e5ff;
+  --jarvis-cyan-dim: rgba(0, 229, 255, 0.3);
+  --jarvis-cyan-subtle: rgba(0, 229, 255, 0.15);
+  
+  /* Ligne ultra-fine */
+  --line-thin: 0.5px;
+  --line-normal: 1px;
+  
+  /* Glow subtil */
+  --glow-small: 0 0 8px rgba(0, 229, 255, 0.6);
+  --glow-medium: 0 0 12px rgba(0, 229, 255, 0.4);
+}
+
+/* ==================== RESET & BASE ==================== */
+body {
+  background: #000000; /* Noir absolu */
+  overflow: hidden;
+}
+
+/* ==================== CERCLES HUD (Signature JARVIS) ==================== */
+
+/* Cercle de base - contour fin uniquement */
+.jarvis-circle {
+  position: relative;
+  border-radius: 50%;
+  border: var(--line-thin) solid var(--jarvis-cyan-dim);
+  background: transparent; /* Pas de fond ! */
+  box-shadow: var(--glow-small);
+}
+
+/* Cercles concentriques multiples */
+.jarvis-circles-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.jarvis-circle-ring {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  border: var(--line-thin) solid var(--jarvis-cyan-subtle);
+  background: transparent;
+  pointer-events: none;
+}
+
+/* Segments d'arc (style JARVIS authentique) */
+.jarvis-arc-segment {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  border-radius: 50%;
+  border: var(--line-normal) solid transparent;
+  background: transparent;
+  transform: translate(-50%, -50%);
+  transition: border-color 0.3s ease;
+}
+
+/* Variantes de segments */
+.jarvis-arc-segment.top {
+  border-top-color: var(--jarvis-cyan);
+  transform: translate(-50%, -50%) rotate(0deg);
+}
+
+.jarvis-arc-segment.right {
+  border-right-color: var(--jarvis-cyan-dim);
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.jarvis-arc-segment.bottom {
+  border-bottom-color: var(--jarvis-cyan-subtle);
+  transform: translate(-50%, -50%) rotate(90deg);
+}
+
+/* ==================== LIGNES ET GRILLES ==================== */
+
+/* Ligne horizontale ultra-fine */
+.jarvis-line-h {
+  width: 100%;
+  height: var(--line-thin);
+  background: var(--jarvis-cyan-dim);
+  box-shadow: var(--glow-small);
+}
+
+/* Ligne verticale ultra-fine */
+.jarvis-line-v {
+  width: var(--line-thin);
+  height: 100%;
+  background: var(--jarvis-cyan-dim);
+  box-shadow: var(--glow-small);
+}
+
+/* Grille technique fine */
+.jarvis-grid {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background-image: 
+    linear-gradient(var(--jarvis-cyan-subtle) var(--line-thin), transparent var(--line-thin)),
+    linear-gradient(90deg, var(--jarvis-cyan-subtle) var(--line-thin), transparent var(--line-thin));
+  background-size: 40px 40px;
+  opacity: 0.2;
+  pointer-events: none;
+}
+
+/* ==================== POINTS LUMINEUX ==================== */
+
+/* Point petit et précis */
+.jarvis-dot {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--jarvis-cyan);
+  box-shadow: var(--glow-small);
+}
+
+/* Point pulsant */
+.jarvis-dot-pulse {
+  animation: jarvisDotPulse 2s ease-in-out infinite;
+}
+
+@keyframes jarvisDotPulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scale(1.2);
+  }
+}
+
+/* ==================== TEXTE TECHNIQUE ==================== */
+
+/* Texte ultra-fin */
+.jarvis-text {
+  font-family: 'Rajdhani', 'JetBrains Mono', monospace;
+  font-weight: 300;
+  font-size: 11px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--jarvis-cyan);
+  text-shadow: var(--glow-small);
+}
+
+/* Texte de données (petits chiffres) */
+.jarvis-data {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  font-weight: 400;
+  color: var(--jarvis-cyan-dim);
+  letter-spacing: 1px;
+}
+
+/* Label technique */
+.jarvis-label {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--jarvis-cyan-subtle);
+}
+
+/* ==================== PANELS FLOTTANTS ==================== */
+
+/* Panel transparent avec contour fin uniquement */
+.jarvis-panel {
+  position: relative;
+  background: transparent;
+  border: var(--line-thin) solid var(--jarvis-cyan-dim);
+  padding: 20px;
+  box-shadow: var(--glow-small);
+}
+
+/* Panel avec coin coupé (style technique) */
+.jarvis-panel-cut {
+  clip-path: polygon(
+    0 8px,
+    8px 0,
+    100% 0,
+    100% calc(100% - 8px),
+    calc(100% - 8px) 100%,
+    0 100%
+  );
+}
+
+/* Panel minimaliste (juste des coins) */
+.jarvis-panel-corners {
+  position: relative;
+  background: transparent;
+  padding: 30px;
+}
+
+.jarvis-panel-corners::before,
+.jarvis-panel-corners::after {
+  content: '';
+  position: absolute;
+  width: 15px;
+  height: 15px;
+  border: var(--line-thin) solid var(--jarvis-cyan);
+}
+
+.jarvis-panel-corners::before {
+  top: 0;
+  left: 0;
+  border-right: none;
+  border-bottom: none;
+}
+
+.jarvis-panel-corners::after {
+  bottom: 0;
+  right: 0;
+  border-left: none;
+  border-top: none;
+}
+
+/* ==================== MARQUEURS ET INDICATEURS ==================== */
+
+/* Marqueur sur cercle */
+.jarvis-marker {
+  position: absolute;
+  width: 6px;
+  height: var(--line-normal);
+  background: var(--jarvis-cyan);
+  box-shadow: var(--glow-small);
+  transform-origin: center;
+}
+
+/* Croix de ciblage */
+.jarvis-crosshair {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.jarvis-crosshair::before,
+.jarvis-crosshair::after {
+  content: '';
+  position: absolute;
+  background: var(--jarvis-cyan);
+  box-shadow: var(--glow-small);
+}
+
+.jarvis-crosshair::before {
+  width: var(--line-normal);
+  height: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.jarvis-crosshair::after {
+  width: 100%;
+  height: var(--line-normal);
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+/* ==================== ANIMATIONS SUBTILES ==================== */
+
+/* Rotation lente et fluide */
+@keyframes jarvisRotateSlow {
+  from {
+    transform: translate(-50%, -50%) rotate(0deg);
+  }
+  to {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
+}
+
+.jarvis-rotate-slow {
+  animation: jarvisRotateSlow 20s linear infinite;
+}
+
+/* Rotation rapide (segments actifs) */
+@keyframes jarvisRotateFast {
+  from {
+    transform: translate(-50%, -50%) rotate(0deg);
+  }
+  to {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
+}
+
+.jarvis-rotate-fast {
+  animation: jarvisRotateFast 4s linear infinite;
+}
+
+/* Pulse subtil */
+@keyframes jarvisPulseSubtle {
+  0%, 100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.jarvis-pulse-subtle {
+  animation: jarvisPulseSubtle 3s ease-in-out infinite;
+}
+
+/* Scan line vertical */
+@keyframes jarvisScanLine {
+  0% {
+    transform: translateY(-100%);
+  }
+  100% {
+    transform: translateY(100%);
+  }
+}
+
+.jarvis-scan-line {
+  position: absolute;
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    var(--jarvis-cyan),
+    transparent
+  );
+  box-shadow: 0 0 10px var(--jarvis-cyan);
+  animation: jarvisScanLine 3s linear infinite;
+  pointer-events: none;
+}
+
+/* ==================== DÉTAILS TECHNIQUES ==================== */
+
+/* Segment de données (petite ligne avec chiffres) */
+.jarvis-data-segment {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0;
+}
+
+.jarvis-data-segment::before {
+  content: '';
+  width: 20px;
+  height: var(--line-thin);
+  background: var(--jarvis-cyan-dim);
+}
+
+/* Indicateur de statut (petit carré) */
+.jarvis-status-indicator {
+  width: 4px;
+  height: 4px;
+  background: var(--jarvis-cyan);
+  box-shadow: var(--glow-small);
+  animation: jarvisPulseSubtle 2s ease-in-out infinite;
+}
+
+/* Barre de progression minimaliste */
+.jarvis-progress {
+  position: relative;
+  width: 100%;
+  height: var(--line-normal);
+  background: rgba(0, 229, 255, 0.1);
+  overflow: hidden;
+}
+
+.jarvis-progress-bar {
+  height: 100%;
+  background: var(--jarvis-cyan);
+  box-shadow: var(--glow-small);
+  transition: width 0.5s ease;
+}
+
+/* ==================== EFFETS DE FOND ==================== */
+
+/* Scanline horizontale très subtile */
+.jarvis-scanlines {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 229, 255, 0.02) 2px,
+    rgba(0, 229, 255, 0.02) 4px
+  );
+  pointer-events: none;
+  z-index: 1000;
+}
+
+/* Vignette subtile */
+.jarvis-vignette {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(
+    circle at center,
+    transparent 0%,
+    rgba(0, 0, 0, 0.4) 100%
+  );
+  pointer-events: none;
+  z-index: 999;
+}
+
+/* ==================== BOUTONS MINIMALISTES ==================== */
+
+.jarvis-button {
+  position: relative;
+  padding: 10px 24px;
+  background: transparent;
+  border: var(--line-thin) solid var(--jarvis-cyan-dim);
+  color: var(--jarvis-cyan);
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  clip-path: polygon(
+    0 4px,
+    4px 0,
+    100% 0,
+    100% calc(100% - 4px),
+    calc(100% - 4px) 100%,
+    0 100%
+  );
+}
+
+.jarvis-button:hover {
+  border-color: var(--jarvis-cyan);
+  box-shadow: var(--glow-medium);
+  background: rgba(0, 229, 255, 0.05);
+}
+
+.jarvis-button:active {
+  transform: scale(0.98);
+}
+
+/* ==================== UTILITAIRES ==================== */
+
+/* Espacement standard JARVIS */
+.jarvis-spacing-sm { margin: 8px; }
+.jarvis-spacing-md { margin: 16px; }
+.jarvis-spacing-lg { margin: 32px; }
+
+/* Transparence totale */
+.jarvis-transparent {
+  background: transparent !important;
+  backdrop-filter: none !important;
+}
+
+/* Contour uniquement */
+.jarvis-outline-only {
+  background: transparent;
+  border: var(--line-thin) solid var(--jarvis-cyan-dim);
+}
+
+/* ==================== RESPONSIVE ==================== */
+
+@media (max-width: 768px) {
+  :root {
+    --line-thin: 0.75px;
+    --line-normal: 1.5px;
+  }
+  
+  .jarvis-text {
+    font-size: 10px;
+  }
+  
+  .jarvis-data {
+    font-size: 8px;
+  }
+}
+
+/* ==================== ACCESSIBILITÉ ==================== */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}

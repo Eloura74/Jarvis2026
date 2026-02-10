@@ -1,0 +1,569 @@
+/**
+ * ========================================
+ * JARVIS HOLOGRAPHIC EFFECTS - IRON MAN STYLE
+ * ========================================
+ * Effets holographiques avancés pour interface JARVIS professionnelle
+ */
+
+/* ==================== VARIABLES ==================== */
+:root {
+  /* Couleurs holographiques */
+  --holo-cyan: #00f3ff;
+  --holo-blue: #0affff;
+  --holo-purple: #b000ff;
+  --holo-pink: #ff006a;
+  --holo-gold: #ffd700;
+  
+  /* Intensités */
+  --glow-intensity: 20px;
+  --blur-strength: 12px;
+  
+  /* Timing */
+  --transition-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+/* ==================== EFFETS DE BASE ==================== */
+
+/* Effet Hologramme Principal */
+.holographic {
+  position: relative;
+  background: linear-gradient(
+    135deg,
+    rgba(0, 243, 255, 0.05) 0%,
+    rgba(10, 255, 255, 0.1) 50%,
+    rgba(176, 0, 255, 0.05) 100%
+  );
+  backdrop-filter: blur(var(--blur-strength)) saturate(180%);
+  -webkit-backdrop-filter: blur(var(--blur-strength)) saturate(180%);
+  border: 1px solid rgba(0, 243, 255, 0.3);
+  box-shadow: 
+    0 0 var(--glow-intensity) rgba(0, 243, 255, 0.2),
+    inset 0 0 var(--glow-intensity) rgba(0, 243, 255, 0.05),
+    0 4px 40px rgba(0, 0, 0, 0.6);
+}
+
+/* Scanline animée holographique */
+.holographic::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    rgba(0, 243, 255, 0.1) 50%,
+    transparent 100%
+  );
+  background-size: 100% 200%;
+  animation: scanlineMove 8s linear infinite;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Effet de bruit holographique */
+.holographic::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: 
+    repeating-linear-gradient(
+      0deg,
+      rgba(0, 243, 255, 0.03) 0px,
+      transparent 1px,
+      transparent 2px,
+      rgba(0, 243, 255, 0.03) 3px
+    );
+  opacity: 0.6;
+  pointer-events: none;
+  z-index: 1;
+  animation: noiseFlicker 0.3s steps(2) infinite;
+}
+
+/* ==================== EFFETS DE PROFONDEUR ==================== */
+
+/* Panel avec profondeur 3D */
+.depth-panel {
+  position: relative;
+  transform-style: preserve-3d;
+  transition: transform 0.6s var(--transition-smooth);
+}
+
+.depth-panel:hover {
+  transform: translateZ(20px);
+}
+
+/* Effet parallax sur hover */
+.parallax-hover {
+  transition: transform 0.3s var(--transition-smooth);
+}
+
+.parallax-hover:hover {
+  transform: scale(1.02) translateZ(10px);
+}
+
+/* ==================== GLOWS & LUMINESCENCES ==================== */
+
+/* Glow cyan intense */
+.glow-cyan {
+  box-shadow: 
+    0 0 10px rgba(0, 243, 255, 0.5),
+    0 0 20px rgba(0, 243, 255, 0.3),
+    0 0 30px rgba(0, 243, 255, 0.2),
+    0 0 40px rgba(0, 243, 255, 0.1);
+  transition: box-shadow 0.3s ease;
+}
+
+.glow-cyan:hover {
+  box-shadow: 
+    0 0 15px rgba(0, 243, 255, 0.7),
+    0 0 30px rgba(0, 243, 255, 0.5),
+    0 0 50px rgba(0, 243, 255, 0.3),
+    0 0 70px rgba(0, 243, 255, 0.2);
+}
+
+/* Glow purple */
+.glow-purple {
+  box-shadow: 
+    0 0 10px rgba(176, 0, 255, 0.5),
+    0 0 20px rgba(176, 0, 255, 0.3),
+    0 0 30px rgba(176, 0, 255, 0.2);
+}
+
+/* Glow gold (succès) */
+.glow-gold {
+  box-shadow: 
+    0 0 15px rgba(255, 215, 0, 0.6),
+    0 0 30px rgba(255, 215, 0, 0.4),
+    0 0 50px rgba(255, 215, 0, 0.2);
+}
+
+/* ==================== ANIMATIONS HOLOGRAPHIQUES ==================== */
+
+/* Scanline qui descend */
+@keyframes scanlineMove {
+  0% {
+    background-position: 0% 0%;
+  }
+  100% {
+    background-position: 0% 200%;
+  }
+}
+
+/* Bruit holographique */
+@keyframes noiseFlicker {
+  0%, 100% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}
+
+/* Pulse de glow */
+@keyframes glowPulse {
+  0%, 100% {
+    box-shadow: 
+      0 0 10px rgba(0, 243, 255, 0.3),
+      0 0 20px rgba(0, 243, 255, 0.2),
+      inset 0 0 10px rgba(0, 243, 255, 0.1);
+  }
+  50% {
+    box-shadow: 
+      0 0 20px rgba(0, 243, 255, 0.6),
+      0 0 40px rgba(0, 243, 255, 0.4),
+      inset 0 0 20px rgba(0, 243, 255, 0.2);
+  }
+}
+
+.animate-glow-pulse {
+  animation: glowPulse 3s ease-in-out infinite;
+}
+
+/* Rotation holographique */
+@keyframes holographicRotate {
+  0% {
+    background-position: 0% 50%;
+    transform: rotate(0deg);
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+    transform: rotate(360deg);
+  }
+}
+
+/* Effet de typing holographique */
+@keyframes holoTyping {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+/* Glitch effect */
+@keyframes glitch {
+  0%, 100% {
+    transform: translate(0);
+    filter: hue-rotate(0deg);
+  }
+  20% {
+    transform: translate(-2px, 2px);
+    filter: hue-rotate(10deg);
+  }
+  40% {
+    transform: translate(-2px, -2px);
+    filter: hue-rotate(-10deg);
+  }
+  60% {
+    transform: translate(2px, 2px);
+    filter: hue-rotate(10deg);
+  }
+  80% {
+    transform: translate(2px, -2px);
+    filter: hue-rotate(-10deg);
+  }
+}
+
+.glitch-effect {
+  animation: glitch 0.3s infinite;
+}
+
+/* ==================== ABERRATION CHROMATIQUE ==================== */
+
+/* Effet RGB split (aberration chromatique) */
+.chromatic-aberration {
+  position: relative;
+}
+
+.chromatic-aberration::before,
+.chromatic-aberration::after {
+  content: attr(data-text);
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0.8;
+  mix-blend-mode: screen;
+}
+
+.chromatic-aberration::before {
+  color: #ff00ff;
+  animation: chromaticShiftRed 2s infinite;
+}
+
+.chromatic-aberration::after {
+  color: #00ffff;
+  animation: chromaticShiftCyan 2s infinite reverse;
+}
+
+@keyframes chromaticShiftRed {
+  0%, 100% {
+    transform: translate(0);
+  }
+  50% {
+    transform: translate(2px, 0);
+  }
+}
+
+@keyframes chromaticShiftCyan {
+  0%, 100% {
+    transform: translate(0);
+  }
+  50% {
+    transform: translate(-2px, 0);
+  }
+}
+
+/* ==================== INTERFACES HUD ==================== */
+
+/* Cercle HUD style JARVIS */
+.hud-circle {
+  position: relative;
+  border-radius: 50%;
+  border: 2px solid rgba(0, 243, 255, 0.4);
+  background: radial-gradient(
+    circle at center,
+    rgba(0, 243, 255, 0.05) 0%,
+    transparent 70%
+  );
+  box-shadow: 
+    0 0 20px rgba(0, 243, 255, 0.3),
+    inset 0 0 20px rgba(0, 243, 255, 0.1);
+}
+
+/* Segments de cercle animés */
+.hud-ring {
+  position: absolute;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  border-top-color: var(--holo-cyan);
+  border-right-color: rgba(0, 243, 255, 0.5);
+  animation: hudRotate 4s linear infinite;
+}
+
+@keyframes hudRotate {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* Segments radial */
+.radial-segment {
+  position: absolute;
+  width: 2px;
+  height: 40%;
+  background: linear-gradient(
+    to bottom,
+    var(--holo-cyan),
+    transparent
+  );
+  transform-origin: center bottom;
+}
+
+/* ==================== BOUTONS HOLOGRAPHIQUES ==================== */
+
+.holo-button {
+  position: relative;
+  padding: 12px 32px;
+  background: linear-gradient(
+    135deg,
+    rgba(0, 243, 255, 0.1),
+    rgba(10, 255, 255, 0.05)
+  );
+  border: 1px solid rgba(0, 243, 255, 0.5);
+  color: var(--holo-cyan);
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  backdrop-filter: blur(10px);
+  transition: all 0.3s var(--transition-smooth);
+  overflow: hidden;
+  cursor: pointer;
+}
+
+/* Effet de survol */
+.holo-button::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(0, 243, 255, 0.3);
+  transform: translate(-50%, -50%);
+  transition: width 0.6s, height 0.6s;
+}
+
+.holo-button:hover::before {
+  width: 300px;
+  height: 300px;
+}
+
+.holo-button:hover {
+  border-color: var(--holo-cyan);
+  box-shadow: 
+    0 0 20px rgba(0, 243, 255, 0.5),
+    inset 0 0 20px rgba(0, 243, 255, 0.1);
+  transform: translateY(-2px);
+}
+
+.holo-button:active {
+  transform: translateY(0) scale(0.98);
+}
+
+/* ==================== TEXTE HOLOGRAPHIQUE ==================== */
+
+.holo-text {
+  color: var(--holo-cyan);
+  text-shadow: 
+    0 0 5px rgba(0, 243, 255, 0.8),
+    0 0 10px rgba(0, 243, 255, 0.6),
+    0 0 15px rgba(0, 243, 255, 0.4),
+    0 0 20px rgba(0, 243, 255, 0.2);
+  font-weight: 600;
+  letter-spacing: 1px;
+}
+
+/* Texte avec effet typing */
+.holo-typing {
+  position: relative;
+  display: inline-block;
+}
+
+.holo-typing::after {
+  content: '|';
+  position: absolute;
+  right: -10px;
+  animation: holoTyping 1s infinite;
+}
+
+/* ==================== CARTES HOLOGRAPHIQUES ==================== */
+
+.holo-card {
+  position: relative;
+  padding: 24px;
+  background: linear-gradient(
+    135deg,
+    rgba(0, 243, 255, 0.05) 0%,
+    rgba(10, 255, 255, 0.08) 50%,
+    rgba(176, 0, 255, 0.05) 100%
+  );
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  border: 1px solid rgba(0, 243, 255, 0.3);
+  border-radius: 12px;
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.6),
+    0 0 20px rgba(0, 243, 255, 0.2),
+    inset 0 0 20px rgba(0, 243, 255, 0.05);
+  transition: all 0.4s var(--transition-smooth);
+  overflow: hidden;
+}
+
+/* Effet de coins lumineux */
+.holo-card::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  background: linear-gradient(
+    45deg,
+    var(--holo-cyan) 0%,
+    transparent 30%,
+    transparent 70%,
+    var(--holo-cyan) 100%
+  );
+  opacity: 0;
+  transition: opacity 0.4s;
+  z-index: -1;
+  border-radius: 12px;
+}
+
+.holo-card:hover::before {
+  opacity: 0.3;
+}
+
+.holo-card:hover {
+  transform: translateY(-4px) scale(1.02);
+  border-color: var(--holo-cyan);
+  box-shadow: 
+    0 12px 48px rgba(0, 0, 0, 0.8),
+    0 0 40px rgba(0, 243, 255, 0.4),
+    inset 0 0 30px rgba(0, 243, 255, 0.1);
+}
+
+/* ==================== LOADING & PROGRESS ==================== */
+
+/* Barre de progression holographique */
+.holo-progress {
+  position: relative;
+  height: 4px;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.holo-progress::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--holo-cyan),
+    transparent
+  );
+  animation: progressShine 2s linear infinite;
+}
+
+@keyframes progressShine {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* Spinner holographique */
+.holo-spinner {
+  width: 50px;
+  height: 50px;
+  border: 3px solid rgba(0, 243, 255, 0.1);
+  border-top-color: var(--holo-cyan);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  box-shadow: 
+    0 0 20px rgba(0, 243, 255, 0.5),
+    inset 0 0 10px rgba(0, 243, 255, 0.3);
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ==================== GRILLE TECH ==================== */
+
+.tech-grid {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background-image: 
+    linear-gradient(rgba(0, 243, 255, 0.1) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 243, 255, 0.1) 1px, transparent 1px);
+  background-size: 50px 50px;
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+/* ==================== RESPONSIVE ==================== */
+
+@media (max-width: 768px) {
+  :root {
+    --glow-intensity: 15px;
+    --blur-strength: 8px;
+  }
+  
+  .holo-card {
+    padding: 16px;
+  }
+  
+  .holo-button {
+    padding: 10px 24px;
+  }
+}
+
+/* ==================== UTILITAIRES ==================== */
+
+/* Désactiver les effets pour performance réduite */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
