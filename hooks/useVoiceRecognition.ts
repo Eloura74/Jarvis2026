@@ -80,8 +80,8 @@ export function useVoiceRecognition(
           // OPTIMISATION : INTERIM RESULTS
           // ========================================
           // Configuration optimisée pour feedback instantané
-          // NOTE: continuous=false pour éviter conflits avec wake word
-          recognition.continuous = false; // ❌ Mode continu désactivé (conflit wake word)
+          // ✅ Mode continu ACTIVÉ pour conversation fluide
+          recognition.continuous = true; // Mode continu (permet enchaînement naturel)
           recognition.interimResults = true; // ✅ Résultats intermédiaires activés
           recognition.lang = "fr-FR"; // Langue française (J.A.R.V.I.S. français)
           recognition.maxAlternatives = 1; // Une seule alternative pour performance

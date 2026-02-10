@@ -368,25 +368,6 @@ const toolDeclarations: FunctionDeclaration[] = [
     },
   },
 
-  // OUTIL 13 : Contrôle lecture média
-  // Permet à Gemini de contrôler la musique/vidéo
-  // Exemples : "pause la musique", "chanson suivante", "piste précédente"
-  {
-    name: "control_media",
-    description: "Control media playback (play, pause, next, previous, stop).",
-    parameters: {
-      type: Type.OBJECT,
-      properties: {
-        action: {
-          type: Type.STRING,
-          enum: ["play", "pause", "next", "previous", "stop"],
-          description: "Media control action",
-        },
-      },
-      required: ["action"],
-    },
-  },
-
   // ========================================
   // OUTILS NAVIGATION WEB
   // ========================================
