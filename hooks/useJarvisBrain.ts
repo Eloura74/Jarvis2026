@@ -12,12 +12,13 @@ import { parseCommand } from "../services/geminiService";
 import { trackCommand } from "../services/predictionEngine";
 import * as handlers from "../handlers";
 import { CommandInfo, HandlerContext } from "../types/app.types";
-import { LogEntry, SystemStatus } from "../types";
+import { LogEntry, SystemStatus, AppMemory } from "../types";
+import { AppPath } from "./useAppPaths";
 
 interface UseJarvisBrainProps {
-  appMemory: any;
-  updateMemory: (key: string, value: any) => void;
-  findApp: (query: string) => any;
+  appMemory: AppMemory[];
+  updateMemory: (appName: string, path: string) => void;
+  findApp: (query: string) => AppPath | null;
   addLog: (
     message: string,
     source?: LogEntry["source"],
@@ -26,6 +27,9 @@ interface UseJarvisBrainProps {
   setStatus: (status: SystemStatus) => void;
   speak: (text: string) => void;
   setActiveOverlay: (overlay: string | null) => void;
+  // NOUVEAU : Props pour la mémoire conversationnelle
+  addConversationMessage?: (role: "user" | "model", text: string) => void;
+  getConversationContext?: () => string;
 }
 
 export function useJarvisBrain({
@@ -36,6 +40,8 @@ export function useJarvisBrain({
   setStatus,
   speak,
   setActiveOverlay,
+  addConversationMessage,
+  getConversationContext,
 }: UseJarvisBrainProps) {
   const [commandHistory, setCommandHistory] = useState<CommandInfo[]>([]);
   const [successTrigger, setSuccessTrigger] = useState(0);
@@ -48,6 +54,7 @@ export function useJarvisBrain({
     const ctx: HandlerContext = { addLog, setStatus };
 
     // Dépendances additionnelles
+    // NOTE: on passe findApp tel quel, les handlers devront gérer AppPath | null
     const additionalDeps = {
       setActiveOverlay,
       appMemory,
@@ -149,6 +156,11 @@ export function useJarvisBrain({
     async (text: string) => {
       if (!text.trim()) return;
 
+      // 1. Sauvegarder message utilisateur
+      if (addConversationMessage) {
+        addConversationMessage("user", text);
+      }
+
       const newCommand: CommandInfo = {
         text,
         timestamp: Date.now(),
@@ -160,7 +172,13 @@ export function useJarvisBrain({
       addLog(`Analyzing: "${text}"`, "USER", "info");
 
       try {
-        const result = await parseCommand(text, appMemory);
+        // 2. Récupérer contexte
+        const conversationContext = getConversationContext
+          ? getConversationContext()
+          : "";
+
+        // 3. Envoyer à Gemini
+        const result = await parseCommand(text, appMemory, conversationContext);
 
         if (
           result.type === "TOOL_CALL" &&
@@ -186,11 +204,18 @@ export function useJarvisBrain({
                 : c,
             ),
           );
-          speak("Commande exécutée avec succès.");
+
+          const successMsg = "Commande exécutée avec succès.";
+          speak(successMsg);
+          if (addConversationMessage)
+            addConversationMessage("model", successMsg);
         } else if (result.type === "TEXT_RESPONSE" && result.text) {
           addLog(`Intent: Conversation`, "OMNI", "info");
           speak(result.text);
           addLog(result.text, "OMNI", "success");
+
+          if (addConversationMessage)
+            addConversationMessage("model", result.text);
 
           setCommandHistory((prev) =>
             prev.map((c) =>
@@ -202,13 +227,18 @@ export function useJarvisBrain({
           setStatus(SystemStatus.IDLE);
         } else {
           setStatus(SystemStatus.IDLE);
-          speak("Je n'ai pas compris.");
+          const errorMsg = "Je n'ai pas compris.";
+          speak(errorMsg);
+          if (addConversationMessage) addConversationMessage("model", errorMsg);
         }
       } catch (error) {
         console.error("Command Error:", error);
         setStatus(SystemStatus.ERROR);
         addLog("Erreur traitement commande", "SYSTEM", "error");
-        speak("Désolé, une erreur est survenue.");
+
+        const errorMsg = "Désolé, une erreur est survenue.";
+        speak(errorMsg);
+        if (addConversationMessage) addConversationMessage("model", errorMsg);
 
         setCommandHistory((prev) =>
           prev.map((c) =>
@@ -228,6 +258,8 @@ export function useJarvisBrain({
       updateMemory,
       findApp,
       setActiveOverlay,
+      addConversationMessage,
+      getConversationContext,
     ],
   );
 

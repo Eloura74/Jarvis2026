@@ -1,79 +1,57 @@
 /**
  * Composant Principal OMNI / J.A.R.V.I.S.
  *
- * Interface web immersive simulant un système d'exploitation intelligent.
- * Architecture Refactorisée : Orchestration via Hooks Spécialisés.
+ * Architecture :
+ * 1. KernelProvider : Fournit l'état global (Logs, Status, Memory)
+ * 2. JarvisShell : Consomme le Kernel et gère l'orchestration (Brain, Interaction, UI)
  */
 
-import React, { useState, useCallback, useRef } from "react";
+import React, { useState, useRef } from "react";
 import { Toaster } from "react-hot-toast";
 
-// Composants & Styles
-import { PremiumLayout } from "./components/PremiumLayout";
-import { INITIAL_LOGS } from "./constants";
-import { toasterConfig } from "./utils/toasterConfig";
-import { LogEntry, SystemStatus } from "./types";
+// Context
+import { KernelProvider, useKernel } from "./contexts/KernelContext";
 
-// Hooks Spécialisés (Architecture Modulaire)
+// Composants UI
+import { PremiumLayout } from "./components/PremiumLayout";
+import { toasterConfig } from "./utils/toasterConfig";
+import { SystemStatus } from "./types";
+import { CommandInfo } from "./types/app.types";
+
+// Hooks Spécialisés
 import { useJarvisInteraction } from "./hooks/useJarvisInteraction";
 import { useJarvisBrain } from "./hooks/useJarvisBrain";
-import { useAppMemory } from "./hooks/useAppMemory";
-import { useAppPaths } from "./hooks/useAppPaths";
 import { useAutonomy } from "./hooks/useAutonomy";
-import { useSystemStatus } from "./hooks/useSystemStatus";
 
-const App: React.FC = () => {
-  // ========================================
-  // ÉTAT GLOBAL & SERVICES PARTAGÉS
-  // ========================================
-  const [logs, setLogs] = useState<LogEntry[]>(INITIAL_LOGS);
+// ============================================================================
+// SHELL (Composant Interne avec accès au Kernel)
+// ============================================================================
+
+const JarvisShell: React.FC = () => {
+  // Accès au "Noyau" via Context
+  const { status, setStatus, logs, addLog, appMemory, updateMemory, findApp } =
+    useKernel();
+
+  // État local UI (non-partagé)
   const [activeOverlay, setActiveOverlay] = useState<string | null>(null);
-  const { status, setStatus } = useSystemStatus();
-  const { memory: appMemory, updateMemory } = useAppMemory();
-  const { findApp } = useAppPaths();
-
-  // Gestion centralisée des logs
-  const addLog = useCallback(
-    (
-      message: string,
-      source: LogEntry["source"] = "SYSTEM",
-      type: LogEntry["type"] = "info",
-    ) => {
-      const newLog: LogEntry = {
-        id: Date.now().toString() + Math.random().toString(),
-        timestamp: new Date().toISOString(),
-        message,
-        source,
-        type: type as any,
-      };
-      setLogs((prev) => [newLog, ...prev].slice(0, 100));
-    },
-    [],
-  );
 
   // ========================================
-  // CERVEAU & INTERACTION (Cyclic Dependency resolved via Refs)
+  // CERVEAU & INTERACTION
   // ========================================
 
-  // 1. Brain Ref (pour être appelé par Interaction)
   const brainRef = useRef<any>(null);
 
-  // 2. Interaction (Gère Voix, Micro, Synthèse)
-  // Elle a besoin de savoir quoi faire quand une commande arrive
+  // Interaction (Voix/Micro)
   const interaction = useJarvisInteraction({
     status,
     setStatus,
     addLog,
     onCommandReceived: (text) => {
-      // Redirection vers le cerveau via la ref
-      if (brainRef.current) {
-        brainRef.current.processCommand(text);
-      }
+      brainRef.current?.processCommand(text);
     },
   });
 
-  // 3. Brain (Gère Gemini, Outils, Historique)
-  // Il a besoin de parler (speak)
+  // Cerveau (Logique)
   const brain = useJarvisBrain({
     appMemory,
     updateMemory,
@@ -84,12 +62,12 @@ const App: React.FC = () => {
     setActiveOverlay,
   });
 
-  // Mise à jour de la ref pour boucler la boucle
   brainRef.current = brain;
 
   // ========================================
-  // MODULES AUTONOMES
+  // AUTONOMIE
   // ========================================
+
   useAutonomy({
     enabled: status === SystemStatus.IDLE,
     onAction: (msg) => addLog(msg, "OMNI", "info"),
@@ -98,6 +76,7 @@ const App: React.FC = () => {
   // ========================================
   // RENDER UI
   // ========================================
+
   return (
     <>
       <PremiumLayout
@@ -110,27 +89,38 @@ const App: React.FC = () => {
                 ? "processing"
                 : "speaking"
         }
-        // Données du Cerveau
+        // Données Cerveau (Commande & Historique)
         commandCount={brain.commandHistory.length}
         successTrigger={brain.successTrigger}
         onCommand={brain.processCommand}
-        // Données d'Interaction
+        // Données Interaction (Micro)
         isListening={interaction.isListening}
         onMicrophoneClick={interaction.handleMicrophoneClick}
-        // Données Système
-        cpuUsage={Math.floor(20 + Math.random() * 15)} // Simulation
+        // Données Système (Via Context Kernel)
+        cpuUsage={Math.floor(20 + Math.random() * 15)}
         memoryUsage="4.2 GB"
         logs={logs.map((log) => ({
           source: log.source,
           message: log.message,
-          type: log.type as "info" | "success" | "error" | "warning",
+          type: log.type as any,
         }))}
         isProcessing={status === SystemStatus.PROCESSING}
         processingMessage={activeOverlay || "🤖 JARVIS analyse..."}
       />
-
       <Toaster {...toasterConfig} />
     </>
+  );
+};
+
+// ============================================================================
+// APP ROOT (Wrapper Provider)
+// ============================================================================
+
+const App: React.FC = () => {
+  return (
+    <KernelProvider>
+      <JarvisShell />
+    </KernelProvider>
   );
 };
 

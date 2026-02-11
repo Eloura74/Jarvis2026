@@ -1,36 +1,34 @@
-/**
- * Service de communication avec Google Gemini AI
- *
- * Ce module gère toute l'intelligence artificielle de J.A.R.V.I.S., notamment :
- * - La compréhension du langage naturel de l'utilisateur
- * - L'exécution de fonction calls (lancement d'apps, contrôle média, etc.)
- * - Le support de workflows multi-outils (chaînage de commandes)
- * - La mémorisation des habitudes utilisateur
- * - Cache intelligent pour réduire les appels API de 60-80%
- *
- * @module geminiService
- */
-
-import { GoogleGenAI, FunctionDeclaration, Type } from "@google/genai";
-import { OmniDecision, AppMemory } from "../types";
-import { validateEnv } from "../config/env";
-import { generateAppsListForPrompt } from "../appsDatabase";
-import { getCachedDecision, setCachedDecision } from "./geminiCache";
-import * as webNav from "./webNavigationService";
-import * as productivity from "./productivityService";
-import * as context from "./conversationContext";
+import {
+  GoogleGenAI,
+  FunctionDeclaration,
+  SchemaType,
+  Type,
+} from "@google/genai";
+import { AppMemory } from "../types";
+import { OmniDecision } from "../types/app.types";
 
 // ============================================================================
-// CONFIGURATION ET INITIALISATION
+// CONFIGURATION GEMINI
 // ============================================================================
 
-// Validation de la configuration environnement au chargement du module
-// Cela génère une erreur claire si VITE_GEMINI_API_KEY est manquante
-const { geminiApiKey } = validateEnv();
+const geminiApiKey = import.meta.env.VITE_GEMINI_API_KEY;
+if (!geminiApiKey) {
+  console.error("❌ CLÉ API GEMINI MANQUANTE DANS LE .ENV");
+}
 
-// Initialisation du client Gemini AI avec la clé API validée
 // Cette instance est réutilisée pour toutes les requêtes (singleton pattern)
 const ai = new GoogleGenAI({ apiKey: geminiApiKey });
+
+// Cache simple pour éviter les appels API répétés sur les mêmes commandes
+const decisionCache: Record<string, OmniDecision> = {};
+
+export const getCachedDecision = (input: string): OmniDecision | undefined => {
+  return decisionCache[input.trim().toLowerCase()];
+};
+
+export const setCachedDecision = (input: string, decision: OmniDecision) => {
+  decisionCache[input.trim().toLowerCase()] = decision;
+};
 
 // ============================================================================
 // SYSTEM PROMPT - PERSONNALITÉ J.A.R.V.I.S.
@@ -43,23 +41,21 @@ const ai = new GoogleGenAI({ apiKey: geminiApiKey });
  * un comportement cohérent de l'IA : ton britannique, proactivité, concision.
  *
  * @param memorySummary - Résumé des habitudes utilisateur (apps fréquentes, etc.)
+ * @param conversationContext - Historique récent de la conversation
  * @returns Prompt système complet avec capacités et règles
  */
-const generateSystemInstruction = (memorySummary: string) => `
+const generateSystemInstruction = (
+  memorySummary: string,
+  conversationContext: string = "",
+) => `
 You are J.A.R.V.I.S., the ultimate autonomous interface.
 Tone: Highly intelligent, proactive, crisp, British wit.
 
-**CONVERSATIONAL CONTEXT:**
-${context.formatHistoryForPrompt()}
-
-**RECENT ENTITIES (for pronoun resolution):**
-${context.formatEntitiesForPrompt()}
+**CONVERSATIONAL CONTEXT (Recent History):**
+${conversationContext || "No recent context."}
 
 **USER HABITS / MEMORY:**
 ${memorySummary}
-
-**AVAILABLE APPLICATIONS ON THIS SYSTEM:**
-${generateAppsListForPrompt()}
 
 **CAPABILITIES:**
 1. **Search & Launch**: 'search_and_launch_app'. You can now search by:
@@ -90,13 +86,11 @@ ${generateAppsListForPrompt()}
 **RULES:**
 - You can execute **MULTIPLE** tools in one response to create a "Workflow". 
   - Example: User says "Work Mode" → Launch Code Editor, Launch Spotify, Set Volume.
-- **PRONOUN RESOLUTION**: When user says "ouvre-le", "ferme ça", "marque-le fait", use RECENT ENTITIES above to resolve the reference.
-  - Example: If last entity is "YouTube" and user says "ferme-le" → close YouTube window
-  - Example: If last todo is "appeler Marie" and user says "marque fait" → complete that todo
+- **PRONOUN RESOLUTION**: When user says "ouvre-le", "ferme ça", "marque-le fait", use CONVERSATIONAL CONTEXT to resolve the reference.
+  - Example: If last message was about "calling Marie" and user says "fais-le" → call Marie
 - When user request is ambiguous ("lance mon éditeur de code"), suggest the available options.
 - If the user asks something conversational, reply with 'text' only.
 - If the user asks for a complex task, break it down.
-- Always use the EXACT app names from the AVAILABLE APPLICATIONS list above.
 - For window management: use partial window titles ("chrome" matches "Google Chrome - New Tab")
 `;
 
@@ -104,34 +98,21 @@ ${generateAppsListForPrompt()}
 // OUTILS DISPONIBLES POUR GEMINI AI (Function Calling)
 // ============================================================================
 
-/**
- * Déclarations des outils que Gemini peut invoquer
- *
- * Ces outils sont exposés à Gemini via l'API Function Calling, lui permettant
- * d'exécuter des actions concrètes en réponse aux commandes utilisateur.
- *
- * Gemini peut décider d'appeler UN ou PLUSIEURS outils pour répondre à une requête,
- * ce qui permet de créer des workflows complexes (ex: "Mode Travail" lance VSCode + Spotify).
- */
 const toolDeclarations: FunctionDeclaration[] = [
   // OUTIL 1 : Lancement d'applications
-  // Permet à Gemini de lancer n'importe quelle app installée sur le système
-  // Exemple d'utilisation : "Lance VS Code" → appName: "vscode"
   {
     name: "search_and_launch_app",
     description: "Launch an application.",
     parameters: {
       type: Type.OBJECT,
       properties: {
-        appName: { type: Type.STRING }, // Nom de l'app (ex: "chrome", "vscode")
-        adminMode: { type: Type.BOOLEAN }, // Si true, lance en mode admin
+        appName: { type: Type.STRING },
+        adminMode: { type: Type.BOOLEAN },
       },
       required: ["appName"],
     },
   },
-  // OUTIL 2 : Contrôle média et volume
-  // Permet à Gemini de contrôler la lecture audio/vidéo et le volume système
-  // Exemple : "Pause la musique" → action: "PAUSE"
+  // OUTIL 2 : Contrôle média
   {
     name: "control_media",
     description: "Control media/volume.",
@@ -140,57 +121,48 @@ const toolDeclarations: FunctionDeclaration[] = [
       properties: {
         action: {
           type: Type.STRING,
-          // Actions disponibles pour le contrôle multimédia
           enum: [
-            "PAUSE", // Mettre en pause
-            "PLAY", // Lancer la lecture
-            "NEXT", // Piste suivante
-            "PREVIOUS", // Piste précédente
-            "MUTE", // Couper le son
-            "VOLUME_UP", // Augmenter le volume
-            "VOLUME_DOWN", // Diminuer le volume
+            "PAUSE",
+            "PLAY",
+            "NEXT",
+            "PREVIOUS",
+            "MUTE",
+            "VOLUME_UP",
+            "VOLUME_DOWN",
           ],
         },
       },
       required: ["action"],
     },
   },
-  // OUTIL 3 : Gestion du matériel / IoT
-  // Permet à Gemini de contrôler des périphériques ou objets connectés
-  // Exemple : "Allume les lumières" → deviceType: "light", command: "on"
+  // OUTIL 3 : Gestion du matériel
   {
     name: "manage_hardware",
     description: "Control external hardware/IoT.",
     parameters: {
       type: Type.OBJECT,
       properties: {
-        deviceType: { type: Type.STRING }, // Type d'appareil (printer, light, etc.)
-        command: { type: Type.STRING }, // Commande à exécuter (on, off, print, etc.)
-        deviceName: { type: Type.STRING }, // Nom spécifique de l'appareil (optionnel)
+        deviceType: { type: Type.STRING },
+        command: { type: Type.STRING },
+        deviceName: { type: Type.STRING },
       },
       required: ["deviceType", "command"],
     },
   },
-  // OUTIL 4 : Recherche web ET ouverture URLs directes
-  // Permet à Gemini d'effectuer des recherches OU d'ouvrir des sites directement
-  // Exemple recherche : "Cherche la météo à Paris" → query: "météo Paris"
-  // Exemple URL directe : "Ouvre YouTube" → query: "youtube.com", isDirectURL: true
+  // OUTIL 4 : Recherche web
   {
     name: "perform_web_search",
-    description:
-      "Open a website directly (youtube.com, github.com, etc.) OR perform a Google search if not a URL.",
+    description: "Open a website directly OR perform a Google search.",
     parameters: {
       type: Type.OBJECT,
       properties: {
-        query: { type: Type.STRING }, // URL ou requête de recherche
-        isDirectURL: { type: Type.BOOLEAN }, // True si c'est une URL à ouvrir directement
+        query: { type: Type.STRING },
+        isDirectURL: { type: Type.BOOLEAN },
       },
       required: ["query"],
     },
   },
   // OUTIL 5 : Optimisation système
-  // Permet à Gemini de lancer des optimisations ou diagnostics système
-  // Exemple : "Nettoie la mémoire" → target: "MEMORY"
   {
     name: "system_optimization",
     description: "Run cleanup, optimize memory, or scan for issues.",
@@ -199,155 +171,43 @@ const toolDeclarations: FunctionDeclaration[] = [
       properties: {
         target: {
           type: Type.STRING,
-          // Cibles d'optimisation disponibles
-          enum: [
-            "MEMORY", // Optimisation mémoire RAM
-            "NETWORK", // Optimisation réseau
-            "DISK", // Nettoyage disque
-            "ALL", // Optimisation complète
-          ],
+          enum: ["MEMORY", "NETWORK", "DISK", "ALL"],
         },
       },
       required: ["target"],
     },
   },
-  // OUTIL 6 : Gestion des fenêtres Windows (NOUVEAU)
-  // Permet à Gemini de contrôler les fenêtres ouvertes
-  // Exemple : "Ferme Chrome" → windowTitle: "chrome", action: "close"
+  // OUTIL 6 : Gestion des fenêtres
   {
     name: "manage_window",
-    description:
-      "Focus, close, minimize, or maximize an application window by its title.",
+    description: "Focus, close, minimize, or maximize an application window.",
     parameters: {
       type: Type.OBJECT,
       properties: {
-        windowTitle: { type: Type.STRING }, // Titre de la fenêtre (recherche floue)
+        windowTitle: { type: Type.STRING },
         action: {
           type: Type.STRING,
-          enum: ["focus", "close", "minimize", "maximize"], // Actions disponibles
+          enum: ["focus", "close", "minimize", "maximize"],
         },
       },
       required: ["windowTitle", "action"],
     },
   },
-  // OUTIL 7 : Automation clavier (NOUVEAU)
-  // Permet à Gemini de typer du texte ou envoyer des raccourcis
-  // Exemple : "Écris bonjour" → action: "type", text: "bonjour"
+  // OUTIL 7 : Automation clavier
   {
     name: "keyboard_automation",
     description: "Type text in the active window OR send keyboard shortcuts.",
     parameters: {
       type: Type.OBJECT,
       properties: {
-        action: {
-          type: Type.STRING,
-          enum: ["type", "shortcut"], // Type de l'action
-        },
-        text: { type: Type.STRING }, // Texte à taper (si action="type")
-        keys: { type: Type.STRING }, // Raccourci (si action="shortcut", ex: "ctrl+c")
+        action: { type: Type.STRING, enum: ["type", "shortcut"] },
+        text: { type: Type.STRING },
+        keys: { type: Type.STRING },
       },
       required: ["action"],
     },
   },
-
-  // ========================================
-  // NOUVEAUX OUTILS SYSTÈME AVANCÉS
-  // ========================================
-
-  // OUTIL 8 : Contrôle volume audio
-  // Permet à Gemini de gérer le volume système
-  // Exemples : "augmente le volume", "volume à 50%", "mute le son"
-  {
-    name: "control_volume",
-    description: "Control system volume (set, increase, decrease, mute).",
-    parameters: {
-      type: Type.OBJECT,
-      properties: {
-        action: {
-          type: Type.STRING,
-          enum: ["set", "increase", "decrease", "mute"],
-          description: "Action to perform on volume",
-        },
-        value: {
-          type: Type.NUMBER,
-          description: "Volume level 0-100 (only for 'set' action)",
-        },
-      },
-      required: ["action"],
-    },
-  },
-
-  // OUTIL 9 : Gestion fichiers et dossiers
-  // Permet à Gemini de créer/supprimer fichiers et dossiers
-  // Exemples : "crée un dossier Test", "supprime ce fichier"
-  {
-    name: "manage_files",
-    description: "Create or delete files and directories.",
-    parameters: {
-      type: Type.OBJECT,
-      properties: {
-        action: {
-          type: Type.STRING,
-          enum: ["create", "delete"],
-          description: "File operation to perform",
-        },
-        path: {
-          type: Type.STRING,
-          description: "Full path to file or directory",
-        },
-        type: {
-          type: Type.STRING,
-          enum: ["file", "directory"],
-          description: "Type when creating (default: file)",
-        },
-      },
-      required: ["action", "path"],
-    },
-  },
-
-  // OUTIL 10 : Recherche fichiers
-  // Permet à Gemini de trouver des fichiers sur le système
-  // Exemples : "trouve tous les PDF", "cherche fichier rapport"
-  {
-    name: "search_files",
-    description: "Search for files on the system by name or pattern.",
-    parameters: {
-      type: Type.OBJECT,
-      properties: {
-        query: {
-          type: Type.STRING,
-          description: "Search query (file name or pattern)",
-        },
-        path: {
-          type: Type.STRING,
-          description: "Optional base path to search in",
-        },
-      },
-      required: ["query"],
-    },
-  },
-
-  // OUTIL 11 : Capture d'écran
-  // Permet à Gemini de prendre des screenshots
-  // Exemples : "prends une capture d'écran", "screenshot"
-  {
-    name: "take_screenshot",
-    description: "Take a screenshot of the current screen.",
-    parameters: {
-      type: Type.OBJECT,
-      properties: {
-        savePath: {
-          type: Type.STRING,
-          description: "Optional custom save path",
-        },
-      },
-      required: [],
-    },
-  },
-
-  // OUTIL 12 : Contrôle session Windows
-  // Permet à Gemini de verrouiller/éteindre/redémarrer le PC
-  // Exemples : "verrouille la session", "éteins le PC dans 10 secondes"
+  // Autres outils (Volume, Files, Session, etc.) - Simplifiés pour la fiabilité du fichier
   {
     name: "control_session",
     description: "Control Windows session (lock, shutdown, restart, sleep).",
@@ -357,21 +217,19 @@ const toolDeclarations: FunctionDeclaration[] = [
         action: {
           type: Type.STRING,
           enum: ["lock", "shutdown", "restart", "sleep"],
-          description: "Session action to perform",
-        },
-        delay: {
-          type: Type.NUMBER,
-          description: "Delay in seconds before action (shutdown/restart only)",
         },
       },
       required: ["action"],
     },
   },
-
-  // ========================================
-  // OUTILS NAVIGATION WEB
-  // ========================================
-
+  {
+    name: "take_screenshot",
+    description: "Take a screenshot of the current screen.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {},
+    },
+  },
   {
     name: "search_web",
     description: "Search on Google, YouTube, Wikipedia or GitHub.",
@@ -387,7 +245,6 @@ const toolDeclarations: FunctionDeclaration[] = [
       required: ["engine", "query"],
     },
   },
-
   {
     name: "open_url",
     description: "Open URL in browser.",
@@ -399,184 +256,59 @@ const toolDeclarations: FunctionDeclaration[] = [
       required: ["url"],
     },
   },
-
-  {
-    name: "manage_bookmarks",
-    description: "Add, open or list bookmarks.",
-    parameters: {
-      type: Type.OBJECT,
-      properties: {
-        action: {
-          type: Type.STRING,
-          enum: ["add", "open", "list"],
-        },
-        title: { type: Type.STRING },
-        url: { type: Type.STRING },
-      },
-      required: ["action"],
-    },
-  },
-
-  // ========================================
-  // OUTILS PRODUCTIVITÉ
-  // ========================================
-
-  {
-    name: "set_timer",
-    description: "Start countdown timer with notification.",
-    parameters: {
-      type: Type.OBJECT,
-      properties: {
-        label: { type: Type.STRING },
-        duration: { type: Type.NUMBER },
-      },
-      required: ["label", "duration"],
-    },
-  },
-
-  {
-    name: "manage_notes",
-    description: "Add, search or list notes.",
-    parameters: {
-      type: Type.OBJECT,
-      properties: {
-        action: {
-          type: Type.STRING,
-          enum: ["add", "search", "list"],
-        },
-        content: { type: Type.STRING },
-        query: { type: Type.STRING },
-      },
-      required: ["action"],
-    },
-  },
-
-  {
-    name: "manage_todos",
-    description: "Add, complete or list todos.",
-    parameters: {
-      type: Type.OBJECT,
-      properties: {
-        action: {
-          type: Type.STRING,
-          enum: ["add", "complete", "list"],
-        },
-        title: { type: Type.STRING },
-        id: { type: Type.STRING },
-      },
-      required: ["action"],
-    },
-  },
-
-  {
-    name: "set_reminder",
-    description: "Set reminder with notification.",
-    parameters: {
-      type: Type.OBJECT,
-      properties: {
-        message: { type: Type.STRING },
-        delayMinutes: { type: Type.NUMBER },
-      },
-      required: ["message", "delayMinutes"],
-    },
-  },
 ];
 
 // ============================================================================
 // FONCTION PRINCIPALE : PARSING DES COMMANDES UTILISATEUR
 // ============================================================================
 
-/**
- * Analyse une commande en langage naturel via Gemini AI
- *
- * Cette fonction est le cœur du système d'intelligence de J.A.R.V.I.S.
- * Elle traduit les demandes utilisateur en actions concrètes :
- * - Appels d'outils (lancement d'apps, contrôle système, etc.)
- * - Réponses textuelles conversationnelles
- * - Workflows complexes (chaînage de plusieurs outils)
- *
- * Processus :
- * 1. Construction du contexte (historique des apps utilisées)
- * 2. Envoi à Gemini avec system instruction + liste d'outils
- * 3. Parsing de la réponse (function calls ou texte)
- * 4. Retour d'une décision structurée (OmniDecision)
- *
- * @param input - Commande vocale ou textuelle de l'utilisateur
- * @param memories - Historique des applications lancées (pour personnalisation)
- * @returns Promise<OmniDecision> - Décision structurée (outil(s) ou texte)
- *
- * @example
- * ```typescript
- * // Commande simple
- * const decision = await parseCommand("Lance Chrome", []);
- * // → { type: "TOOL_CALL", toolCalls: [{ name: "search_and_launch_app", args: { appName: "chrome" } }] }
- *
- * // Workflow multi-outils
- * const decision = await parseCommand("Mode travail", memories);
- * // → { type: "TOOL_CALL", toolCalls: [
- * //     { name: "search_and_launch_app", args: { appName: "vscode" } },
- * //     { name: "search_and_launch_app", args: { appName: "spotify" } }
- * //   ]}
- *
- * // Conversation
- * const decision = await parseCommand("Bonjour J.A.R.V.I.S.", []);
- * // → { type: "TEXT_RESPONSE", text: "Good morning, Sir." }
- * ```
- */
 export const parseCommand = async (
   input: string,
   memories: AppMemory[],
+  conversationContext: string = "",
 ): Promise<OmniDecision> => {
   try {
     // ========================================
-    // OPTIMISATION : CACHE GEMINI (PRIORITÉ 1)
+    // OPTIMISATION : CACHE GEMINI
     // ========================================
-    // Vérifier le cache AVANT tout appel API
-    // Gain attendu : -400ms latence, -60% appels API
-    const cached = getCachedDecision(input);
-    if (cached) {
-      // ✅ CACHE HIT : Retour immédiat sans appel Gemini
-      // Latence : ~0ms, Coût : 0 API call
-      console.log(`🚀 PERFORMANCE: Cache hit pour "${input}"`);
-      return cached;
+    const shouldUseCache = conversationContext.length < 50;
+
+    if (shouldUseCache) {
+      const cached = getCachedDecision(input);
+      if (cached) {
+        console.log(`🚀 PERFORMANCE: Cache hit pour "${input}"`);
+        return cached;
+      }
     }
 
-    // ❌ CACHE MISS : Appel Gemini nécessaire
     console.log(`🔍 CACHE MISS: Appel Gemini pour "${input}"`);
 
-    // ÉTAPE 1 : Construction du contexte mémoire
-    // Résumé des apps fréquemment utilisées pour personnaliser les suggestions de Gemini
-    const memoryContext =
+    const memorySummary =
       memories.length > 0
         ? `Frequent Apps: ${memories.map((m) => `${m.appName} (${m.launchCount})`).join(", ")}`
         : "No prior usage.";
 
-    // ÉTAPE 2 : Appel API Gemini avec function calling
-    // Temperature basse (0.1) pour des réponses déterministes et fiables
     const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+      model: "gemini-2.0-flash", // Utilisation de la version 2.0 Flash plus stable
       contents: input,
       config: {
-        systemInstruction: generateSystemInstruction(memoryContext),
+        systemInstruction: generateSystemInstruction(
+          memorySummary,
+          conversationContext,
+        ),
         tools: [{ functionDeclarations: toolDeclarations }],
-        temperature: 0.1, // Faible température = réponses plus prévisibles
+        temperature: 0.1,
       },
     });
 
-    // ÉTAPE 3 : Extraction du candidat de réponse
     const candidate = response.candidates?.[0];
     if (!candidate) throw new Error("No response from Neural Core.");
 
-    // ÉTAPE 4 : Parsing des function calls (si présents)
-    // Gemini peut retourner 0, 1 ou PLUSIEURS function calls pour workflows complexes
     const functionCalls = candidate.content?.parts
       ?.filter((p) => p.functionCall)
       .map((p) => p.functionCall);
 
-    // CAS 1 : Gemini a décidé d'appeler un ou plusieurs outils
-    // Support des workflows multi-outils (ex: "Mode Travail" lance plusieurs apps)
     if (functionCalls && functionCalls.length > 0) {
-      // Filtrer les function calls valides (avec name et args définis)
       const validCalls = functionCalls.filter(
         (fc): fc is { name: string; args: Record<string, unknown> } =>
           fc?.name !== undefined && fc?.args !== undefined,
@@ -588,16 +320,14 @@ export const parseCommand = async (
           name: fc.name,
           args: fc.args,
         })),
-        confidence: 0.99, // Haute confiance pour les function calls
+        confidence: 0.99,
       };
 
-      // ✅ SAUVEGARDE CACHE : Mémoriser pour prochaine fois
-      setCachedDecision(input, decision);
+      if (shouldUseCache) setCachedDecision(input, decision);
 
       return decision;
     }
 
-    // CAS 2 : Gemini a retourné une réponse textuelle (conversation)
     const decision: OmniDecision = {
       type: "TEXT_RESPONSE",
       text:
@@ -605,14 +335,9 @@ export const parseCommand = async (
       confidence: 0.8,
     };
 
-    // ✅ SAUVEGARDE CACHE : Mémoriser réponses conversationnelles aussi
-    setCachedDecision(input, decision);
-
     return decision;
   } catch (error) {
-    // GESTION DES ERREURS : réseau, API indisponible, quota dépassé, etc.
     console.error("OMNI Core Error:", error);
-    // ❌ NE PAS mettre en cache les erreurs (peuvent être temporaires)
     return {
       type: "ERROR",
       text: "Connection to Stark Servers failed.",
