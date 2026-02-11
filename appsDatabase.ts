@@ -42,13 +42,13 @@ export const APPS_DATABASE: Record<string, AppEntry> = {
     description: "Google Chrome web browser",
   },
   opera: {
-    path: "C:\\Users\\Admin\\AppData\\Local\\Programs\\Opera\\launcher.exe",
+    path: "C:\\Users\\faber\\AppData\\Local\\Programs\\Opera\\opera.exe",
     category: "browser",
     keywords: ["web", "internet", "navigation", "browser"],
     description: "Opera web browser",
   },
   "opera gx": {
-    path: "C:\\Users\\Admin\\AppData\\Local\\Programs\\Opera GX\\launcher.exe",
+    path: "C:\\Users\\faber\\AppData\\Local\\Programs\\Opera GX\\launcher.exe",
     category: "browser",
     keywords: ["web", "internet", "navigation", "gaming", "browser"],
     description: "Opera GX gaming browser",
@@ -71,7 +71,7 @@ export const APPS_DATABASE: Record<string, AppEntry> = {
   // IDEs & DÉVELOPPEMENT
   // ============================================================================
   vscode: {
-    path: "C:\\Users\\Admin\\AppData\\Local\\Programs\\Microsoft VS Code\\Code.exe",
+    path: "C:\\Users\\faber\\AppData\\Local\\Programs\\Microsoft VS Code\\Code.exe",
     category: "ide",
     keywords: [
       "code",
@@ -86,7 +86,7 @@ export const APPS_DATABASE: Record<string, AppEntry> = {
     aliases: ["vs code", "visual studio code", "code"],
   },
   windsurf: {
-    path: "C:\\Users\\Admin\\AppData\\Local\\Programs\\Windsurf\\Windsurf.exe",
+    path: "A:LogicielsWindsurfWindsurf.exe",
     category: "ide",
     keywords: [
       "code",
@@ -144,14 +144,14 @@ export const APPS_DATABASE: Record<string, AppEntry> = {
   // CRÉATION & 3D
   // ============================================================================
   bambu: {
-    path: "C:\\Program Files\\Bambu Studio\\Bambu Studio.exe",
+    path: "A:\\Logiciels\\Bambu Studio\\bambu-studio.exe",
     category: "3d-printing",
     keywords: ["3d", "printing", "printer", "slicer", "3d printing", "bambu"],
     description: "Bambu Studio - 3D printing slicer",
     aliases: ["bambu studio", "bambu slicer"],
   },
   "bambu studio": {
-    path: "C:\\Program Files\\Bambu Studio\\Bambu Studio.exe",
+    path: "A:\\Logiciels\\Bambu Studio\\bambu-studio.exe",
     category: "3d-printing",
     keywords: ["3d", "printing", "printer", "slicer", "3d printing", "bambu"],
     description: "Bambu Studio - 3D printing slicer",
@@ -256,7 +256,7 @@ export const searchApps = (query: string, maxResults: number = 5): string[] => {
     else if (
       appData.keywords.some(
         (keyword) =>
-          queryLower.includes(keyword) || keyword.includes(queryLower),
+          queryLower.includes(keyword) || keyword.includes(queryLower)
       )
     ) {
       score = 50;

@@ -30,12 +30,13 @@ export const handleSearchAndLaunchApp = async (
     setActiveOverlay: (text: string | null) => void;
     appMemory: any[];
     updateMemory: (app: string, path: string) => void;
+    findAppPath?: (query: string) => { name: string; path: string } | null; // ✨ Nouvelle fonction de recherche configurée
   },
 ) => {
   const { appName, adminMode } = args;
   const targetApp = appName.toLowerCase();
   const { addLog, setStatus } = ctx;
-  const { setActiveOverlay, appMemory, updateMemory } = additionalDeps;
+  const { setActiveOverlay, appMemory, updateMemory, findAppPath } = additionalDeps;
 
   setStatus(SystemStatus.SEARCHING);
   setActiveOverlay(
@@ -46,7 +47,34 @@ export const handleSearchAndLaunchApp = async (
 
   let foundPath = "";
 
-  // ÉTAPE 1 : Mémoire utilisateur
+  // ÉTAPE 0 : Configuration utilisateur (PRIORITÉ ABSOLUE) ✨
+  if (findAppPath) {
+    const configuredApp = findAppPath(targetApp);
+    if (configuredApp) {
+      foundPath = configuredApp.path;
+      addLog(`✅ Using configured path for "${configuredApp.name}": ${foundPath}`, "SYSTEM", "success");
+      // Mettre à jour la mémoire avec le chemin configuré
+      updateMemory(targetApp, foundPath);
+      // Passer directement au lancement
+      setActiveOverlay(`LAUNCHING: ${configuredApp.name.toUpperCase()}`);
+      
+      try {
+        const result = await launchAppOnBackend(foundPath);
+        if (result) {
+          addLog(`Application "${configuredApp.name}" launched successfully`, "SYSTEM", "success");
+          setStatus(SystemStatus.IDLE);
+          setActiveOverlay(null);
+          return { status: "success", message: `${configuredApp.name} lancé` };
+        }
+      } catch (error) {
+        addLog(`Failed to launch: ${error instanceof Error ? error.message : String(error)}`, "SYSTEM", "error");
+      }
+    } else {
+      addLog(`⚠️ No configured path for "${targetApp}", falling back to search...`, "SYSTEM", "warning");
+    }
+  }
+
+  // ÉTAPE 1 : Mémoire utilisateur (fallback)
   const memoryMatch = appMemory.find(
     (m) => m.appName.toLowerCase() === targetApp,
   );

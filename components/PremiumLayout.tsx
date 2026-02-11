@@ -3,13 +3,14 @@
  * Interface minimaliste fidèle au film avec HUD circulaire
  */
 
-import React from "react";
+import React, { useState } from "react";
 import { JarvisHUDAuthentic } from "./JarvisHUDAuthentic";
 import { JarvisCinematicBackground } from "./JarvisCinematicBackground";
 import { AudioWave } from "./AudioWave";
 import { CircularVisualizer } from "./CircularVisualizer";
 import { LoadingOverlay } from "./LoadingOverlay";
 import { SuccessRipple } from "./SuccessRipple";
+import { AppPathsManager } from "./AppPathsManager";
 
 interface PremiumLayoutProps {
   // HUD status
@@ -49,6 +50,8 @@ export const PremiumLayout: React.FC<PremiumLayoutProps> = ({
   processingMessage,
   successTrigger,
 }) => {
+  // État pour gérer l'ouverture du panneau de configuration des applications
+  const [isAppPathsOpen, setIsAppPathsOpen] = useState(false);
   const currentTime = new Date().toLocaleTimeString("fr-FR", {
     hour: "2-digit",
     minute: "2-digit",
@@ -336,6 +339,22 @@ export const PremiumLayout: React.FC<PremiumLayoutProps> = ({
                 24H 37M
               </span>
             </div>
+            
+            {/* Bouton Config Applications */}
+            <div className="jarvis-line-h my-3" />
+            <button
+              onClick={() => setIsAppPathsOpen(true)}
+              className="w-full flex items-center gap-2 px-3 py-2 jarvis-button text-xs"
+              style={{
+                borderColor: '#00e5ff',
+                boxShadow: '0 0 10px rgba(0, 229, 255, 0.4)'
+              }}
+            >
+              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z" />
+              </svg>
+              <span>CONFIG APPS</span>
+            </button>
           </div>
         </div>
       </div>
@@ -597,6 +616,12 @@ export const PremiumLayout: React.FC<PremiumLayoutProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Gestionnaire Chemins Applications */}
+      <AppPathsManager
+        isOpen={isAppPathsOpen}
+        onClose={() => setIsAppPathsOpen(false)}
+      />
 
       {/* Overlays */}
       <LoadingOverlay isVisible={isProcessing} message={processingMessage} />

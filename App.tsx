@@ -26,6 +26,7 @@ import { useSystemStatus } from "./hooks/useSystemStatus";
 import { useAppMemory } from "./hooks/useAppMemory";
 import { useAutonomy } from "./hooks/useAutonomy";
 import { useWakeWord } from "./hooks/useWakeWord";
+import { useAppPaths } from "./hooks/useAppPaths";
 
 export interface JarvisSettings {
   wakeWordEnabled: boolean;
@@ -141,6 +142,7 @@ const App: React.FC = () => {
 
   const { status, setStatus } = useSystemStatus();
   const { memory: appMemory, updateMemory } = useAppMemory();
+  const { findApp } = useAppPaths(); // ✨ Hook pour chemins configurables
 
   // useAutonomy
   useAutonomy({
@@ -247,6 +249,7 @@ const App: React.FC = () => {
       setActiveOverlay,
       appMemory,
       updateMemory,
+      findAppPath: (query: string) => findApp(query), // ✨ Fonction de recherche configurée
     };
 
     // Router modulaire - Délégation vers handlers spécialisés
