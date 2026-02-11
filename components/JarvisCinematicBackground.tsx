@@ -47,55 +47,6 @@ export const JarvisCinematicBackground: React.FC = () => {
       ctx.fillStyle = gradient;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      // ========================================
-      // PATTERN HEXAGONAL (Nid d'abeille) - GAUCHE
-      // ========================================
-      ctx.save();
-      ctx.globalAlpha = 0.2;
-      ctx.strokeStyle = "#00e5ff";
-      ctx.lineWidth = 1.5;
-
-      const hexSize = 18;
-      const hexHeight = hexSize * Math.sqrt(2.5);
-      const hexWidth = hexSize * 2.2;
-      const offsetX = 70; // Position visible à gauche
-      const offsetY = canvas.height * 0.48; // Centré verticalement
-
-      for (let row = 0; row < 10; row++) {
-        for (let col = 0; col < 5; col++) {
-          const x = offsetX + col * hexWidth * 0.75;
-          const y = offsetY + row * hexHeight + ((col % 2) * hexHeight) / 2;
-
-          // Dessiner hexagone
-          ctx.beginPath();
-          for (let i = 0; i < 6; i++) {
-            const angle = (Math.PI / 3) * i;
-            const hx = x + hexSize * Math.cos(angle);
-            const hy = y + hexSize * Math.sin(angle);
-            if (i === 0) ctx.moveTo(hx, hy);
-            else ctx.lineTo(hx, hy);
-          }
-          ctx.closePath();
-
-          // Effet glow léger
-          ctx.shadowBlur = 5;
-          ctx.shadowColor = "#00e5ff";
-          ctx.stroke();
-        }
-      }
-
-      ctx.shadowBlur = 0;
-      ctx.restore();
-
-      /*
-      // ========================================
-      // GRILLE PERSPECTIVE (DÉSACTIVÉE - Demande User)
-      // ========================================
-      // 
-      // const horizonY = canvas.height * 0.68;
-      // ... (code supprimé pour nettoyer l'affichage)
-      */
-
       // Incrément grille
       gridOffset += 0.3;
 

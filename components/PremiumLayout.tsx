@@ -127,9 +127,11 @@ export const PremiumLayout: React.FC<PremiumLayoutProps> = ({
           <ParticleSphere
             isActive={status === "speaking"}
             isListening={isListening || status === "listening"}
+            // Niveau audio simulé (Pourrait être connecté à un analyser réel)
+            audioLevel={status === "speaking" ? 80 : isListening ? 60 : 0}
             size={400}
             baseColor="#00e5ff"
-            activeColor="#ffd700" // Couleur Or quand il répond
+            activeColor="#ff0033" // Rouge Néon
           />
         </div>
 
@@ -377,12 +379,12 @@ export const PremiumLayout: React.FC<PremiumLayoutProps> = ({
           ======================================== */}
       <div className="fixed top-8 left-1/2 transform -translate-x-1/2 z-40 text-center">
         <div className="relative">
-          {/* Effet de glow doré derrière le texte - RENFORCÉ */}
+          {/* Effet de glow blanc/bleuté derrière le texte */}
           <div
             className="absolute inset-0 blur-2xl"
             style={{
               background:
-                "radial-gradient(circle, rgba(255, 215, 0, 0.6) 0%, rgba(255, 215, 0, 0.3) 50%, transparent 70%)",
+                "radial-gradient(circle, rgba(200, 200, 255, 0.4) 0%, rgba(0, 229, 255, 0.2) 50%, transparent 70%)",
               transform: "scale(2)",
             }}
           />
@@ -392,7 +394,7 @@ export const PremiumLayout: React.FC<PremiumLayoutProps> = ({
             className="absolute inset-0 blur-xl"
             style={{
               background:
-                "radial-gradient(circle, rgba(0, 229, 255, 0.3) 0%, transparent 60%)",
+                "radial-gradient(circle, rgba(255, 255, 255, 0.3) 0%, transparent 60%)",
               transform: "scale(1.8)",
             }}
           />
@@ -403,16 +405,15 @@ export const PremiumLayout: React.FC<PremiumLayoutProps> = ({
               className="text-7xl font-bold tracking-wider"
               style={{
                 fontFamily: "Rajdhani, sans-serif",
-                color: "#ffd700",
+                color: "#f0f0f0", // Gris blanc
                 textShadow: `
-                0 0 30px rgba(255, 215, 0, 1),
-                0 0 50px rgba(255, 215, 0, 0.8),
-                0 0 70px rgba(255, 215, 0, 0.6),
-                0 0 100px rgba(0, 229, 255, 0.4),
+                0 0 20px rgba(255, 255, 255, 0.8),
+                0 0 40px rgba(200, 200, 255, 0.5),
+                0 0 70px rgba(0, 229, 255, 0.4),
                 2px 2px 6px rgba(0, 0, 0, 0.9)
               `,
                 letterSpacing: "0.3em",
-                filter: "brightness(1.2)",
+                filter: "brightness(1.1)",
               }}
             >
               J.A.R.V.I.S.
@@ -422,7 +423,10 @@ export const PremiumLayout: React.FC<PremiumLayoutProps> = ({
               <div className="jarvis-line-h w-16" />
               <div
                 className="jarvis-dot-pulse"
-                style={{ boxShadow: "0 0 10px rgba(255, 215, 0, 0.8)" }}
+                style={{
+                  backgroundColor: "#ffffff",
+                  boxShadow: "0 0 10px rgba(255, 255, 255, 0.8)",
+                }}
               />
               <div className="jarvis-line-h w-16" />
             </div>
@@ -431,7 +435,8 @@ export const PremiumLayout: React.FC<PremiumLayoutProps> = ({
               style={{
                 letterSpacing: "0.5em",
                 opacity: 0.8,
-                textShadow: "0 0 10px rgba(0, 229, 255, 0.6)",
+                color: "#a0a0a0",
+                textShadow: "0 0 5px rgba(255, 255, 255, 0.3)",
               }}
             >
               JUST A RATHER VERY INTELLIGENT SYSTEM
@@ -452,14 +457,14 @@ export const PremiumLayout: React.FC<PremiumLayoutProps> = ({
       {/* ========================================
           LOGS SYSTÈME (Centre droite)
           ======================================== */}
-      <div className="fixed top-32 right-1/6 w-80 max-h-56 z-30">
-        <div className="jarvis-panel-corners p-5">
-          <div className="relative">
+      <div className="fixed top-32 right-1/6 w-80 max-h-96 z-30">
+        <div className="jarvis-panel-corners p-5 h-full">
+          <div className="relative h-full flex flex-col">
             {/* Scan line */}
             <div className="jarvis-scan-line" />
 
             {/* Header */}
-            <div className="flex items-center gap-4 mb-4 relative z-10">
+            <div className="flex items-center gap-4 mb-4 relative z-10 flex-shrink-0">
               <div className="jarvis-marker w-4" />
               <div className="jarvis-text">SYSTEM LOGS</div>
               <div className="flex-1 jarvis-line-h" />
@@ -468,8 +473,8 @@ export const PremiumLayout: React.FC<PremiumLayoutProps> = ({
             </div>
 
             {/* Logs */}
-            <div className="space-y-1 relative z-10 max-h-40 overflow-y-auto">
-              {logs.slice(-6).map((log, i) => (
+            <div className="space-y-1 relative z-10 overflow-y-auto flex-1 pr-2 custom-scrollbar">
+              {logs.slice(-15).map((log, i) => (
                 <div
                   key={i}
                   className="flex items-start gap-3 animate-slideInUp"
