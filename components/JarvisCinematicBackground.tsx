@@ -40,7 +40,7 @@ export const JarvisCinematicBackground: React.FC = () => {
         0,
         canvas.width / 2,
         canvas.height / 2,
-        canvas.width * 0.8
+        canvas.width * 0.8,
       );
       gradient.addColorStop(0, "#0a1628");
       gradient.addColorStop(1, "#000000");
@@ -87,59 +87,14 @@ export const JarvisCinematicBackground: React.FC = () => {
       ctx.shadowBlur = 0;
       ctx.restore();
 
+      /*
       // ========================================
-      // GRILLE PERSPECTIVE (Dorée/Cyan)
+      // GRILLE PERSPECTIVE (DÉSACTIVÉE - Demande User)
       // ========================================
-      ctx.save();
-
-      const horizonY = canvas.height * 0.68;
-      const gridSize = 50;
-
-      // Lignes horizontales (dégradé cyan -> doré)
-      for (let i = 0; i < 20; i++) {
-        const y =
-          horizonY +
-          Math.pow(i / 20, 1.5) * (canvas.height - horizonY) +
-          (gridOffset % gridSize);
-        const ratio = i / 20;
-
-        // Dégradé de couleur
-        const gradient = ctx.createLinearGradient(0, y, canvas.width, y);
-        gradient.addColorStop(0, `rgba(0, 229, 255, ${0.4 - ratio * 0.3})`); // Cyan
-        gradient.addColorStop(0.5, `rgba(255, 215, 0, ${0.5 - ratio * 0.3})`); // Doré
-        gradient.addColorStop(1, `rgba(0, 229, 255, ${0.4 - ratio * 0.3})`); // Cyan
-
-        ctx.strokeStyle = gradient;
-        ctx.lineWidth = 1.5;
-        ctx.shadowBlur = 10;
-        ctx.shadowColor = "#ffd700";
-        ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.lineTo(canvas.width, y);
-        ctx.stroke();
-      }
-
-      ctx.shadowBlur = 0;
-
-      // Lignes verticales
-      const lineCount = 25;
-      for (let i = 0; i <= lineCount; i++) {
-        const ratio = i / lineCount;
-        const x = ratio * canvas.width;
-        const perspectiveX = canvas.width / 2 + (x - canvas.width / 2) * 1.3;
-
-        ctx.strokeStyle =
-          ratio < 0.3 || ratio > 0.7
-            ? "rgba(0, 229, 255, 0.3)" // Cyan sur les côtés
-            : "rgba(255, 215, 0, 0.3)"; // Doré au centre
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.moveTo(x, horizonY);
-        ctx.lineTo(perspectiveX, canvas.height);
-        ctx.stroke();
-      }
-
-      ctx.restore();
+      // 
+      // const horizonY = canvas.height * 0.68;
+      // ... (code supprimé pour nettoyer l'affichage)
+      */
 
       // Incrément grille
       gridOffset += 0.3;

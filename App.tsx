@@ -95,31 +95,51 @@ const App: React.FC = () => {
   // ========================================
   // SYNTHÈSE VOCALE avec callback onEnd
   // ========================================
+  // ========================================
+  // SYNTHÈSE VOCALE avec callback onEnd
+  // ========================================
+  const previousStatusRef = useRef<SystemStatus>(SystemStatus.IDLE);
+
   const { speak: rawSpeak, stop: stopSpeech } = useVoiceSynthesis({
     enabled: true,
     onStart: async () => {
       // 🛑 Marquer que Jarvis parle + arrêter le micro COMPLÈTEMENT
       isSpeakingRef.current = true;
-      console.log("🛑 Jarvis commence à parler - arrêt TOTAL du micro jusqu'à la fin...");
-      
+
+      // Sauvegarder le statut précédent (sauf si c'était déjà SPEAKING ou LISTENING)
+      if (
+        status !== SystemStatus.SPEAKING &&
+        status !== SystemStatus.LISTENING
+      ) {
+        previousStatusRef.current = status;
+      }
+
+      // Mettre à jour le statut pour l'UI (déclenche l'avatar vidéo)
+      setStatus(SystemStatus.SPEAKING);
+
+      console.log(
+        "🛑 Jarvis commence à parler - arrêt TOTAL du micro jusqu'à la fin...",
+      );
+
       if (isListening) {
         await stopAndWait();
-        console.log("✅ Reconnaissance arrêtée - micro restera éteint jusqu'à la fin");
+        console.log(
+          "✅ Reconnaissance arrêtée - micro restera éteint jusqu'à la fin",
+        );
       }
-      
-      // ❌ PLUS DE RÉACTIVATION PENDANT LA PAROLE
-      // Le micro ne redémarrera QUE dans onEnd
-      // Sacrifice de l'interruption pour éliminer l'auto-écoute
     },
     onEnd: () => {
       // 🔊 Nettoyage après la fin
       console.log("🔊 Jarvis a terminé de parler");
-      
+
+      // Restaurer le statut (IDLE par défaut)
+      setStatus(SystemStatus.IDLE);
+
       // Délai de sécurité de 1000ms pour éviter tout écho
       setTimeout(() => {
         isSpeakingRef.current = false;
         setCurrentSpeechText(""); // Réinitialiser le texte prononcé
-        
+
         // Redémarrer le micro UNIQUEMENT si mode conversation actif
         if (conversationModeRef.current) {
           console.log("🎤 Redémarrage micro - prêt pour nouvelle question...");
@@ -210,7 +230,7 @@ const App: React.FC = () => {
       // ✅ COMMANDE VALIDE - Traiter normalement
       // ========================================
       console.log(`✅ Commande reçue : "${text}"`);
-      
+
       // Appeler handleCommand via ref (défini plus tard)
       if (text && handleCommandRef.current) {
         handleCommandRef.current(text);

@@ -11,6 +11,7 @@ import { CircularVisualizer } from "./CircularVisualizer";
 import { LoadingOverlay } from "./LoadingOverlay";
 import { SuccessRipple } from "./SuccessRipple";
 import { AppPathsManager } from "./AppPathsManager";
+import { ParticleSphere } from "./ParticleSphere";
 
 interface PremiumLayoutProps {
   // HUD status
@@ -118,6 +119,17 @@ export const PremiumLayout: React.FC<PremiumLayoutProps> = ({
               />
             </div>
           ))}
+        </div>
+
+        <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
+          {/* Visualiseur Sphère de Particules (Réactif) */}
+          <ParticleSphere
+            isActive={status === "speaking"}
+            isListening={isListening || status === "listening"}
+            size={400}
+            baseColor="#00e5ff"
+            activeColor="#ffd700" // Couleur Or quand il répond
+          />
         </div>
 
         <JarvisHUDAuthentic status={status} size={550} showDetails={true} />
@@ -339,15 +351,15 @@ export const PremiumLayout: React.FC<PremiumLayoutProps> = ({
                 24H 37M
               </span>
             </div>
-            
+
             {/* Bouton Config Applications */}
             <div className="jarvis-line-h my-3" />
             <button
               onClick={() => setIsAppPathsOpen(true)}
               className="w-full flex items-center gap-2 px-3 py-2 jarvis-button text-xs"
               style={{
-                borderColor: '#00e5ff',
-                boxShadow: '0 0 10px rgba(0, 229, 255, 0.4)'
+                borderColor: "#00e5ff",
+                boxShadow: "0 0 10px rgba(0, 229, 255, 0.4)",
               }}
             >
               <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
