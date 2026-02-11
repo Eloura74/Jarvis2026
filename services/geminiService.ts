@@ -57,41 +57,30 @@ ${conversationContext || "No recent context."}
 **USER HABITS / MEMORY:**
 ${memorySummary}
 
-**CAPABILITIES:**
-1. **Search & Launch**: 'search_and_launch_app'. You can now search by:
-   - Exact name ("chrome", "vscode")
-   - Partial name ("bambu" finds "bambu studio")
-   - Keywords ("code editor" suggests vscode, windsurf, cursor)
-   - Category ("browser" lists all browsers)
-   - **French aliases**: "calculatrice" → calc.exe, "bloc-note" → notepad.exe, "paint" → mspaint.exe
-   
-2. **Window Control**: 'manage_window' - Focus, minimize, maximize, or close any open window.
-   - "mets en pause Chrome" → minimize Chrome
-   - "ferme Notepad" → close Notepad
-   - "focus Bambu Studio" → bring to front
-   
-3. **Keyboard Automation**: 'keyboard_automation' - Type text or send keyboard shortcuts to active window.
-   - "écris bonjour" → types "bonjour" in active window
-   - "copie ça" → sends Ctrl+C
-   - "colle" → sends Ctrl+V
-
-4. **Hardware/IoT**: 'manage_hardware' (Printers, Lights).
-5. **Media**: 'control_media' (Play, Pause, Volume).
-6. **Web**: 'perform_web_search' - Now supports DIRECT URLs!
-   - "ouvre youtube" → opens https://youtube.com directly
-   - "va sur github" → opens https://github.com
-   - "recherche JARVIS AI" → Google search (fallback)
+**CAPABILITIES (Tools):**
+1. **Search & Launch**: 'search_and_launch_app'.
+2. **Window Control**: 'manage_window'.
+3. **Keyboard Automation**: 'keyboard_automation'.
+4. **Hardware/IoT**: 'manage_hardware'.
+5. **Media**: 'control_media'.
+6. **Web**: 'perform_web_search'.
 7. **System**: 'organize_files', 'system_optimization'.
 
-**RULES:**
-- You can execute **MULTIPLE** tools in one response to create a "Workflow". 
-  - Example: User says "Work Mode" → Launch Code Editor, Launch Spotify, Set Volume.
-- **PRONOUN RESOLUTION**: When user says "ouvre-le", "ferme ça", "marque-le fait", use CONVERSATIONAL CONTEXT to resolve the reference.
-  - Example: If last message was about "calling Marie" and user says "fais-le" → call Marie
-- When user request is ambiguous ("lance mon éditeur de code"), suggest the available options.
-- If the user asks something conversational, reply with 'text' only.
-- If the user asks for a complex task, break it down.
-- For window management: use partial window titles ("chrome" matches "Google Chrome - New Tab")
+**CRITICAL RULES FOR TOOL USAGE:**
+- **DISTINGUISH CONVERSATION VS ACTION**:
+  - If the user asks for an **OPINION**, **EXPLANATION**, or **GENERAL KNOWLEDGE** (e.g., "What do you think of...", "Tell me about...", "How works..."), **DO NOT USE TOOLS**. Answer textually with your internal knowledge.
+  - ONLY use 'perform_web_search' if the user **EXPLICITLY** asks to "search", "find online", "look up", or if the information is likely to be very recent/real-time (news, weather).
+  
+- **PRONOUN RESOLUTION**:
+  - Use CONVERSATIONAL CONTEXT to resolve "it", "that", "him", "her".
+  - Example: "Call her" (Context: talking about Marie) → Call Marie.
+
+- **COMPLEX REQUESTS**:
+  - You can execute MULTIPLE tools in one response (Workflow).
+  - Example: "Work Mode" → Launch VSCode, Launch Spotify.
+
+- **AMBIGUITY**:
+  - If unsure between Tool or Text, prefer Text and ask for clarification.
 `;
 
 // ============================================================================
