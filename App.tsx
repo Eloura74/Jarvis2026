@@ -49,16 +49,6 @@ const App: React.FC = () => {
   const [currentSpeechText, setCurrentSpeechText] = useState<string>(""); // 🗣️ Texte que Jarvis prononce actuellement
   const lastMicActivationTime = useRef<number>(0); // ⏱️ Timestamp de la dernière activation micro (pour période de grâce)
 
-  // Settings utilisateur (État gardé pour future implémentation configuration)
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [settings] = useState<JarvisSettings>({
-    wakeWordEnabled: false,
-    voiceLanguage: "fr-FR",
-    wakeWordThreshold: 0.8,
-    voiceVolume: 0.8,
-    theme: "classic",
-  });
-
   // ========================================
   // GESTION DES LOGS (Déclaré en premier pour être utilisé par les hooks)
   // ========================================
@@ -581,11 +571,6 @@ const App: React.FC = () => {
         isProcessing={status === SystemStatus.PROCESSING}
         processingMessage={activeOverlay || "🤖 JARVIS analyse..."}
         successTrigger={successTrigger}
-        suggestions={[
-          { label: "Ouvrir Chrome", command: "ouvre chrome", icon: "🌐" },
-          { label: "Rechercher React", command: "recherche react", icon: "🔍" },
-          { label: "Créer note", command: "crée une note", icon: "📝" },
-        ]}
       />
 
       <Toaster {...toasterConfig} />

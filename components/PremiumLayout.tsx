@@ -25,6 +25,7 @@ interface PremiumLayoutProps {
   // Command
   onMicrophoneClick: () => void;
   isListening: boolean;
+  onCommand?: (command: string) => void;
 
   // Logs
   logs: Array<{
