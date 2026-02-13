@@ -6,8 +6,6 @@
 import React, { useState } from "react";
 import { JarvisHUDAuthentic } from "./JarvisHUDAuthentic";
 import { JarvisCinematicBackground } from "./JarvisCinematicBackground";
-import { AudioWave } from "./AudioWave";
-import { CircularVisualizer } from "./CircularVisualizer";
 import { LoadingOverlay } from "./LoadingOverlay";
 import { SuccessRipple } from "./SuccessRipple";
 import { AppPathsManager } from "./AppPathsManager";
@@ -69,31 +67,41 @@ export const PremiumLayout: React.FC<PremiumLayoutProps> = ({
   });
 
   return (
-    <div className="relative w-full min-h-screen overflow-hidden bg-black">
+    <div className="relative w-full min-h-screen overflow-hidden bg-transparent">
       {/* ========================================
           ARRIÈRE-PLAN CINÉMATIQUE
           ======================================== */}
+      {/* ========================================
+          ARRIÈRE-PLAN CINÉMATIQUE
+          ======================================== */}
+      {/* Image de fond directe pour garantir la visibilité */}
+      <img
+        src="/bg-wires.png"
+        alt="Background"
+        className="fixed inset-0 w-full h-full object-cover opacity-80 z-0"
+      />
       <JarvisCinematicBackground />
 
       {/* ========================================
           EFFETS DE FOND
           ======================================== */}
-      <div className="jarvis-scanlines" />
-      <div className="jarvis-vignette" />
+      {/* Scanlines réduites */}
+      <div className="jarvis-scanlines opacity-30" />
+      <div className="jarvis-vignette opacity-60" />
 
       {/* ========================================
           HUD CENTRAL AUTHENTIQUE (Non-interactif)
           ======================================== */}
       <div className="fixed inset-0 flex items-center justify-center pointer-events-none z-20">
-        {/* Glow intense derrière le HUD - AMÉLIORÉ */}
+        {/* Glow intense derrière le HUD - CYAN UNIQUEMENT */}
         <div className="absolute inset-0 flex items-center justify-center">
           <div
             className="w-96 h-96 rounded-full"
             style={{
               background:
-                "radial-gradient(circle, rgba(255, 215, 0, 0.25) 0%, rgba(0, 229, 255, 0.15) 40%, transparent 70%)",
+                "radial-gradient(circle, rgba(0, 229, 255, 0.15) 0%, transparent 70%)",
               filter: "blur(50px)",
-              animation: "pulse 3s ease-in-out infinite",
+              animation: "pulse 4s ease-in-out infinite",
             }}
           />
         </div>
@@ -133,9 +141,9 @@ export const PremiumLayout: React.FC<PremiumLayoutProps> = ({
             isListening={isListening || status === "listening"}
             // Niveau audio simulé (Pourrait être connecté à un analyser réel)
             audioLevel={status === "speaking" ? 80 : isListening ? 60 : 0}
-            size={400}
+            size={800}
             baseColor="#00e5ff"
-            activeColor="#ff0033" // Rouge Néon
+            activeColor="#00e5ff" // Cyan aussi pour écoute, peut-être plus brillant ?
           />
         </div>
 
@@ -476,13 +484,8 @@ export const PremiumLayout: React.FC<PremiumLayoutProps> = ({
       </div>
 
       {/* ========================================
-          ONDE AUDIO (Quand on parle) - CENTRÉE
+          ONDE AUDIO (SUPPRIMÉE)
           ======================================== */}
-      {isListening && (
-        <div className="fixed top-3/4 left-1/3 w-2/3 max-w-2xl h-24 z-15 pointer-events-none">
-          <AudioWave isActive={isListening} color="#ffd700" />
-        </div>
-      )}
 
       {/* ========================================
           LOGS SYSTÈME (Centre droite)
@@ -532,17 +535,18 @@ export const PremiumLayout: React.FC<PremiumLayoutProps> = ({
       </div>
 
       {/* ========================================
-          VISUALISEUR CIRCULAIRE (Droite milieu)
+          VISUALISEUR CIRCULAIRE (SUPPRIMÉ)
           ======================================== */}
-      <div className="fixed bottom-40 right-24 z-30">
-        <div className="relative w-40 h-40 flex items-center justify-center">
-          <CircularVisualizer
-            isActive={isListening || status === "speaking"}
-            size={160}
-          />
-          {/* Empreinte au centre du cercle */}
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <FingerprintScanner size={100} isActive={true} />
+
+      {/* ========================================
+          EMPREINTE DIGITALE (Alignée sous Activity Log)
+          ======================================== */}
+      {/* Container aligné sur le panneau Activity Log (right-8 w-72) */}
+      <div className="fixed bottom-40 right-8 w-72 z-30 flex flex-col items-center justify-center">
+        <div className="flex flex-col items-center gap-2">
+          <FingerprintScanner size={90} isActive={true} />
+          <div className="jarvis-data text-[10px] tracking-[0.3em] text-cyan-400 font-bold opacity-80 mt-2">
+            BIOMETRIC SCAN
           </div>
         </div>
       </div>
@@ -550,7 +554,7 @@ export const PremiumLayout: React.FC<PremiumLayoutProps> = ({
       {/* ========================================
           CONTRÔLES MICRO (Bas droit) - Style Cinématique
           ======================================== */}
-      <div className="fixed bottom-6 right-24 z-30">
+      <div className="fixed bottom-12 right-12 z-40">
         <div className="relative">
           {/* Glow doré si actif */}
           {isListening && (

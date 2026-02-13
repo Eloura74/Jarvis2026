@@ -24,7 +24,9 @@
 
 /* ==================== RESET & BASE ==================== */
 body {
-  background: #000000; /* Noir absolu */
+  /* Arrière-plan généré "Câbles Core" */
+  background: url("/bg-wires.png") no-repeat center center fixed;
+  background-size: cover;
   overflow: hidden;
 }
 
@@ -209,20 +211,66 @@ body {
   );
 }
 
-/* Panel minimaliste (juste des coins) */
+/* Panel "Tech Glass" Complexe (Style Image Fournie) */
 .jarvis-panel-corners {
   position: relative;
-  background: transparent;
+  background:
+    /* Gradient subtil pour effet verre */
+    linear-gradient(
+      135deg,
+      rgba(0, 243, 255, 0.05) 0%,
+      rgba(0, 0, 0, 0) 50%,
+      rgba(0, 243, 255, 0.05) 100%
+    ),
+    /* Motif Circuit Board (Lignes techniques) */
+    repeating-linear-gradient(
+        90deg,
+        transparent 0,
+        transparent 48px,
+        rgba(0, 243, 255, 0.05) 48px,
+        rgba(0, 243, 255, 0.05) 50px
+      ),
+    repeating-linear-gradient(
+      0deg,
+      transparent 0,
+      transparent 48px,
+      rgba(0, 243, 255, 0.05) 48px,
+      rgba(0, 243, 255, 0.05) 50px
+    ),
+    /* Fond sombre */ rgba(5, 15, 30, 0.6);
+
   padding: 30px;
+
+  /* Bordure exterieure plus fine */
+  border: 1px solid rgba(0, 243, 255, 0.3);
+  border-radius: 12px;
+  box-shadow:
+    0 0 10px rgba(0, 243, 255, 0.1),
+    inset 0 0 15px rgba(0, 243, 255, 0.05);
+
+  backdrop-filter: blur(4px);
+  clip-path: polygon(
+    0 15px,
+    15px 0,
+    100% 0,
+    100% calc(100% - 15px),
+    calc(100% - 15px) 100%,
+    0 100%
+  );
 }
 
+/* Coins renforcés (Style "Bracket") - Plus fins */
 .jarvis-panel-corners::before,
 .jarvis-panel-corners::after {
   content: "";
   position: absolute;
-  width: 15px;
-  height: 15px;
-  border: var(--line-thin) solid var(--jarvis-cyan);
+  width: 30px;
+  height: 30px;
+  border: 2px solid var(--jarvis-cyan); /* Réduit de 4px à 2px */
+  box-shadow: 0 0 8px var(--jarvis-cyan);
+  transition: all 0.3s ease;
+  opacity: 0.8;
+  z-index: 10;
 }
 
 .jarvis-panel-corners::before {
@@ -230,6 +278,7 @@ body {
   left: 0;
   border-right: none;
   border-bottom: none;
+  border-top-left-radius: 8px; /* Douceur sur le coin coupé */
 }
 
 .jarvis-panel-corners::after {
@@ -237,165 +286,24 @@ body {
   right: 0;
   border-left: none;
   border-top: none;
+  border-bottom-right-radius: 8px;
 }
 
-/* ==================== MARQUEURS ET INDICATEURS ==================== */
-
-/* Marqueur sur cercle */
-.jarvis-marker {
-  position: absolute;
-  width: 6px;
-  height: var(--line-normal);
-  background: var(--jarvis-cyan);
-  box-shadow: var(--glow-small);
-  transform-origin: center;
-}
-
-/* Croix de ciblage */
-.jarvis-crosshair {
-  position: absolute;
-  width: 20px;
-  height: 20px;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-}
-
-.jarvis-crosshair::before,
-.jarvis-crosshair::after {
+/* Effet de courbure d'écran et vignette prononcée - RÉDUIT POUR VOIR BACKGROUND */
+body::after {
   content: "";
-  position: absolute;
-  background: var(--jarvis-cyan);
-  box-shadow: var(--glow-small);
-}
-
-.jarvis-crosshair::before {
-  width: var(--line-normal);
-  height: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-}
-
-.jarvis-crosshair::after {
-  width: 100%;
-  height: var(--line-normal);
-  top: 50%;
-  transform: translateY(-50%);
-}
-
-/* ==================== ANIMATIONS SUBTILES ==================== */
-
-/* Rotation lente et fluide */
-@keyframes jarvisRotateSlow {
-  from {
-    transform: translate(-50%, -50%) rotate(0deg);
-  }
-  to {
-    transform: translate(-50%, -50%) rotate(360deg);
-  }
-}
-
-.jarvis-rotate-slow {
-  animation: jarvisRotateSlow 20s linear infinite;
-}
-
-/* Rotation rapide (segments actifs) */
-@keyframes jarvisRotateFast {
-  from {
-    transform: translate(-50%, -50%) rotate(0deg);
-  }
-  to {
-    transform: translate(-50%, -50%) rotate(360deg);
-  }
-}
-
-.jarvis-rotate-fast {
-  animation: jarvisRotateFast 4s linear infinite;
-}
-
-/* Pulse subtil */
-@keyframes jarvisPulseSubtle {
-  0%,
-  100% {
-    opacity: 0.5;
-  }
-  50% {
-    opacity: 1;
-  }
-}
-
-.jarvis-pulse-subtle {
-  animation: jarvisPulseSubtle 3s ease-in-out infinite;
-}
-
-/* Scan line vertical */
-@keyframes jarvisScanLine {
-  0% {
-    transform: translateY(-100%);
-  }
-  100% {
-    transform: translateY(100%);
-  }
-}
-
-.jarvis-scan-line {
-  position: absolute;
-  width: 100%;
-  height: 2px;
-  background: linear-gradient(
-    to bottom,
-    transparent,
-    var(--jarvis-cyan),
-    transparent
-  );
-  box-shadow: 0 0 10px var(--jarvis-cyan);
-  animation: jarvisScanLine 3s linear infinite;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  /* Vignetage plus léger */
+  background: radial-gradient(circle, transparent 60%, rgba(0, 0, 0, 0.8) 120%);
   pointer-events: none;
+  z-index: 9999;
+  /* Effet de lignes de balayage CRT subtiles - Opacité réduite */
+  box-shadow: inset 0 0 100px rgba(0, 0, 0, 0.5);
 }
-
-/* ==================== DÉTAILS TECHNIQUES ==================== */
-
-/* Segment de données (petite ligne avec chiffres) */
-.jarvis-data-segment {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 4px 0;
-}
-
-.jarvis-data-segment::before {
-  content: "";
-  width: 20px;
-  height: var(--line-thin);
-  background: var(--jarvis-cyan-dim);
-}
-
-/* Indicateur de statut (petit carré) */
-.jarvis-status-indicator {
-  width: 4px;
-  height: 4px;
-  background: var(--jarvis-cyan);
-  box-shadow: var(--glow-small);
-  animation: jarvisPulseSubtle 2s ease-in-out infinite;
-}
-
-/* Barre de progression minimaliste */
-.jarvis-progress {
-  position: relative;
-  width: 100%;
-  height: var(--line-normal);
-  background: rgba(0, 229, 255, 0.1);
-  overflow: hidden;
-}
-
-.jarvis-progress-bar {
-  height: 100%;
-  background: var(--jarvis-cyan);
-  box-shadow: var(--glow-small);
-  transition: width 0.5s ease;
-}
-
-/* ==================== EFFETS DE FOND ==================== */
 
 /* Scanline horizontale très subtile */
 .jarvis-scanlines {
@@ -408,27 +316,13 @@ body {
     0deg,
     transparent,
     transparent 2px,
-    rgba(0, 229, 255, 0.005) 2px,
-    rgba(0, 229, 255, 0.005) 4px
+    rgba(0, 229, 255, 0.01) 2px,
+    rgba(0, 229, 255, 0.01) 4px
   );
   pointer-events: none;
   z-index: 1000;
-}
-
-/* Vignette subtile */
-.jarvis-vignette {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: radial-gradient(
-    circle at center,
-    transparent 0%,
-    rgba(0, 0, 0, 0.4) 100%
-  );
-  pointer-events: none;
-  z-index: 999;
+  /* Légère distortion pour effet courbe */
+  /* transform: scale(1.01); */
 }
 
 /* ==================== BOUTONS MINIMALISTES ==================== */

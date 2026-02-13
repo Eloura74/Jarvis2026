@@ -15,12 +15,12 @@ import "./CommandFeedback.css";
 
 /** États possibles d'une commande */
 export type CommandState =
-  | "listening" // 🎤 Écoute en cours
-  | "processing" // 🧠 Traitement IA
-  | "searching" // 🔍 Recherche app
-  | "executing" // 🚀 Exécution
-  | "success" // ✅ Succès
-  | "error"; // ❌ Erreur
+  | "listening" //  Écoute en cours
+  | "processing" //  Traitement IA
+  | "searching" //  Recherche app
+  | "executing" //  Exécution
+  | "success" //  Succès
+  | "error"; //  Erreur
 
 /** Informations d'une commande */
 export interface CommandInfo {

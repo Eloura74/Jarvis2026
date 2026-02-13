@@ -33,7 +33,10 @@ export const JarvisCinematicBackground: React.FC = () => {
     let animationId: number;
 
     const draw = () => {
-      // Fond noir avec gradient subtil
+      // Fond sombre avec transparence extrême pour laisser voir pleinement l'image CSS
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      /*
       const gradient = ctx.createRadialGradient(
         canvas.width / 2,
         canvas.height / 2,
@@ -42,11 +45,14 @@ export const JarvisCinematicBackground: React.FC = () => {
         canvas.height / 2,
         canvas.width * 1.0,
       );
-      gradient.addColorStop(0, "#0f1c30"); // Bleu nuit profond
-      gradient.addColorStop(0.6, "#050a12"); // Transition sombre
-      gradient.addColorStop(1, "#000000"); // Noir pur
+      // Ajustement pour être quasi-transparent mais garder un effet vignette léger
+      gradient.addColorStop(0, "rgba(15, 28, 48, 0.1)"); // Très transparent
+      gradient.addColorStop(0.6, "rgba(5, 10, 18, 0.2)"); // Très transparent
+      gradient.addColorStop(1, "rgba(0, 0, 0, 0.4)"); // Bords un peu moins transparents
+
       ctx.fillStyle = gradient;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
+      */
 
       // Incrément grille
       gridOffset += 0.3;
