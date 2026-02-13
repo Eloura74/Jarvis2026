@@ -17,6 +17,7 @@ import { MediaWidget } from "./MediaWidget";
 import { WeatherWidget } from "./WeatherWidget";
 import { NetworkWidget } from "./NetworkWidget";
 import { CameraWidget } from "./CameraWidget";
+import { HomeControlWidget } from "./HomeControlWidget";
 
 interface PremiumLayoutProps {
   status: "idle" | "listening" | "processing" | "speaking";
@@ -181,13 +182,19 @@ export const PremiumLayout: React.FC<PremiumLayoutProps> = ({
             <MediaWidget />
           </motion.div>
 
-          {/* CAMERA WIDGET (NEW) */}
+          {/* CAMERA WIDGET & HOME CONTROL */}
           <motion.div
             initial={{ x: -100, opacity: 0 }}
             animate={{ x: 0, opacity: 1 }}
             transition={{ delay: 0.5, duration: 0.8 }}
+            className="flex gap-4 h-64" // Fixed height to align both widgets
           >
-            <CameraWidget />
+            <div className="flex-1 h-full">
+              <CameraWidget />
+            </div>
+            <div className="h-full">
+              <HomeControlWidget />
+            </div>
           </motion.div>
 
           {/* NETWORK WIDGET (NEW) */}
