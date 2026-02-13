@@ -19,3 +19,6 @@ export * from "./webHandlers";
 
 // Productivity (timer, notes, todos, reminders)
 export * from "./productivityHandlers";
+
+// Vision (Gemini Vision - screen analysis)
+export * from "./visionHandlers";

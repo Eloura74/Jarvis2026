@@ -44,7 +44,7 @@ function loadMemoryFromStorage(): AppMemory[] {
       return [];
     }
 
-    console.log(`📚 Mémoire chargée: ${parsed.length} application(s)`);
+    // console.log(`📚 Mémoire chargée: ${parsed.length} application(s)`);
     return parsed;
   } catch (error) {
     console.error("❌ Erreur chargement mémoire:", error);

@@ -251,7 +251,7 @@ export const useAppPaths = () => {
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(appPaths));
-      console.log('💾 Chemins applications sauvegardés');
+      // console.log('💾 Chemins applications sauvegardés');
     } catch (error) {
       console.error('❌ Erreur sauvegarde app paths:', error);
     }

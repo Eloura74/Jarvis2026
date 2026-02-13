@@ -22,6 +22,7 @@ import {
 import * as windowManager from "./windowManager.js";
 import * as automation from "./automation.js";
 import { getSystemStats, getLightStats } from "./systemStats.js";
+import * as fileSystem from "./fileSystem.js";
 
 const app = express();
 const PORT = 3001;
@@ -133,10 +134,10 @@ app.get("/api/search", (req, res) => {
 /**
  * POST /api/launch
  * Lance une application
- * Body: { "path": "C:\\Program Files\\..." }
+ * Body: { "path": "C:\\Program Files\\...", "args": ["url"] }
  */
 app.post("/api/launch", async (req, res) => {
-  const { path } = req.body;
+  const { path, args } = req.body;
 
   if (!path) {
     return res.status(400).json({
@@ -145,6 +146,9 @@ app.post("/api/launch", async (req, res) => {
   }
 
   console.log(`🚀 [LAUNCH REQUEST] Path: ${path}`);
+  if (args && args.length > 0) {
+    console.log(`   📋 Arguments: ${JSON.stringify(args)}`);
+  }
 
   try {
     // Vérifier que le fichier existe (prévention crash)
@@ -162,8 +166,9 @@ app.post("/api/launch", async (req, res) => {
 
     console.log(`   📂 Spawning process...`);
 
-    // Lancer l'application en arrière-plan
-    const child = spawn(path, [], {
+    // Lancer l'application en arrière-plan avec arguments optionnels
+    const spawnArgs = args && Array.isArray(args) ? args : [];
+    const child = spawn(path, spawnArgs, {
       detached: true,
       stdio: "ignore",
       shell: false, // Pas de shell pour éviter injection
@@ -836,6 +841,114 @@ app.post("/api/media/control", async (req, res) => {
   } catch (error) {
     console.error("Erreur route média:", error);
     res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================================================
+// ENDPOINTS FILE EXPLORER
+// ============================================================================
+
+/**
+ * GET /api/files/list?path=C:\Users
+ * Liste les fichiers et dossiers d'un répertoire
+ */
+app.get("/api/files/list", async (req, res) => {
+  try {
+    const os = await import("os");
+    const dirPath = req.query.path || os.homedir();
+    const showHidden = req.query.showHidden === "true";
+
+    const result = await fileSystem.listDirectory(dirPath, showHidden);
+    res.json({
+      success: true,
+      data: result,
+    });
+  } catch (error) {
+    console.error("❌ Erreur listage fichiers:", error.message);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+});
+
+/**
+ * GET /api/files/search?path=C:\Users&query=test
+ * Recherche des fichiers
+ */
+app.get("/api/files/search", async (req, res) => {
+  try {
+    const os = await import("os");
+    const searchPath = req.query.path || os.homedir();
+    const query = req.query.query;
+
+    if (!query) {
+      return res.status(400).json({
+        success: false,
+        error: "Paramètre 'query' manquant",
+      });
+    }
+
+    const results = await fileSystem.searchFiles(searchPath, query, 50);
+    res.json({
+      success: true,
+      data: results,
+    });
+  } catch (error) {
+    console.error("❌ Erreur recherche fichiers:", error.message);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+});
+
+/**
+ * GET /api/files/quick-access
+ * Retourne les dossiers d'accès rapide
+ */
+app.get("/api/files/quick-access", (req, res) => {
+  try {
+    const folders = fileSystem.getQuickAccessFolders();
+    res.json({
+      success: true,
+      data: folders,
+    });
+  } catch (error) {
+    console.error("❌ Erreur quick access:", error.message);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+});
+
+/**
+ * GET /api/files/read?path=C:\file.txt
+ * Lit le contenu d'un fichier texte
+ */
+app.get("/api/files/read", async (req, res) => {
+  try {
+    const filePath = req.query.path;
+
+    if (!filePath) {
+      return res.status(400).json({
+        success: false,
+        error: "Paramètre 'path' manquant",
+      });
+    }
+
+    const content = await fileSystem.readTextFile(filePath);
+    res.json({
+      success: true,
+      data: { content },
+    });
+  } catch (error) {
+    console.error("❌ Erreur lecture fichier:", error.message);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+    });
   }
 });
 

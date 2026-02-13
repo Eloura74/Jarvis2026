@@ -95,16 +95,16 @@ export function useAutonomy({
     // Démarrage de l'interval
     intervalRef.current = window.setInterval(autonomyTick, intervalMs);
 
-    console.log(
-      `🤖 Boucle autonomie démarrée (${intervalMs}ms, ${probability * 100}% chance)`,
-    );
+    // console.log(
+    //   `🤖 Boucle autonomie démarrée (${intervalMs}ms, ${probability * 100}% chance)`,
+    // );
 
     // Cleanup : arrêt de l'interval au démontage ou changement de dépendances
     return () => {
       if (intervalRef.current !== null) {
         clearInterval(intervalRef.current);
         intervalRef.current = null;
-        console.log("🤖 Boucle autonomie arrêtée");
+        // console.log("🤖 Boucle autonomie arrêtée");
       }
     };
   }, [enabled, intervalMs, onAction, probability]);

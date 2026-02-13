@@ -36,7 +36,12 @@ export const APPS_DATABASE: Record<string, AppEntry> = {
   // NAVIGATEURS WEB
   // ============================================================================
   chrome: {
-    path: "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+    // Note: Vérifiez le bon chemin selon votre installation
+    // Options possibles:
+    // - C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe (64-bit)
+    // - C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe (32-bit)
+    // - C:\\Users\\USERNAME\\AppData\\Local\\Google\\Chrome\\Application\\chrome.exe (installation utilisateur)
+    path: "C:\\Users\\faber\\AppData\\Local\\Google\\Chrome\\Application\\chrome.exe",
     category: "browser",
     keywords: ["web", "internet", "navigation", "google", "browser"],
     description: "Google Chrome web browser",

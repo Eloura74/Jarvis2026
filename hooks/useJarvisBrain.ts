@@ -136,6 +136,10 @@ export function useJarvisBrain({
         case "set_reminder":
           return await handlers.handleSetReminder(toolArgs, ctx);
 
+        // === VISION (Gemini Vision - GRATUIT) ===
+        case "analyze_screen":
+          return await handlers.handleAnalyzeScreen(toolArgs, ctx);
+
         default:
           addLog(`⚠ Unknown tool: "${toolName}"`, "SYSTEM", "error");
           setStatus(SystemStatus.ERROR);
@@ -185,31 +189,42 @@ export function useJarvisBrain({
         // 3. Envoyer à Gemini
         const result = await parseCommand(text, appMemory, conversationContext);
 
-        // CAS 1 : APPEL D'OUTIL (Outil seul)
+        // CAS 1 : APPEL D'OUTIL (Un ou plusieurs outils)
         if (
           result.type === "TOOL_CALL" &&
           result.toolCalls &&
           result.toolCalls.length > 0
         ) {
-          const toolCall = result.toolCalls[0];
-          addLog(`Intent: Tool ${toolCall.name}`, "OMNI", "info");
-          trackCommand(text);
+          const toolCount = result.toolCalls.length;
           addLog(
-            `Executing: ${toolCall.name} (${JSON.stringify(toolCall.args)})`,
-            "KERNEL",
-            "warning",
+            `Intent: ${toolCount} tool${toolCount > 1 ? "s" : ""} to execute`,
+            "OMNI",
+            "info"
           );
-          await executeTool(toolCall.name, toolCall.args);
+          trackCommand(text);
+
+          // Exécution séquentielle de tous les outils
+          for (let i = 0; i < result.toolCalls.length; i++) {
+            const toolCall = result.toolCalls[i];
+            addLog(
+              `[${i + 1}/${toolCount}] Executing: ${toolCall.name}`,
+              "KERNEL",
+              "warning",
+            );
+            await executeTool(toolCall.name, toolCall.args);
+          }
 
           setSuccessTrigger(Date.now());
           setCommandHistory((prev) =>
             prev.map((c) =>
               c.timestamp === newCommand.timestamp
-                ? { ...c, status: "success", result: "Executed" }
+                ? { ...c, status: "success", result: `${toolCount} action${toolCount > 1 ? "s" : ""} exécutée${toolCount > 1 ? "s" : ""}` }
                 : c,
             ),
           );
-          const successMsg = "Commande exécutée avec succès.";
+          const successMsg = toolCount > 1 
+            ? `${toolCount} commandes exécutées avec succès.`
+            : "Commande exécutée avec succès.";
           speak(successMsg);
           if (addConversationMessage)
             addConversationMessage("model", successMsg);

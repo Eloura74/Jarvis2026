@@ -77,6 +77,27 @@ ${memorySummary}
 - User: "A quoi ressemble Iron Man ?" -> Tool: show_images("Iron Man Marvel")
 - User: "Cherche des infos sur Mars" -> Tool: perform_web_search("Mars planet info")
 - User: "Que penses-tu de..." -> Tool: show_images("...") + Text Opinion.
+
+**MULTI-TOOL COMMANDS (Compose Multiple Actions):**
+You can execute MULTIPLE tools in sequence for complex requests:
+- User: "Lance Chrome ET ouvre YouTube" -> Tool: search_and_launch_app({appName: "chrome", url: "https://youtube.com"})
+- User: "Ouvre Opera ET va sur YouTube" -> Tool: search_and_launch_app({appName: "opera", url: "https://youtube.com"})
+- User: "Lance Firefox ET recherche Python" -> Tool: search_and_launch_app({appName: "firefox", url: "https://google.com/search?q=python"})
+- User: "Lance VSCode et ouvre mon projet React" -> Tools: [search_and_launch_app("vscode"), keyboard_automation("type", "cd react-project")]
+- User: "Montre-moi un chat et un chien" -> Tools: [show_images("chat"), show_images("chien")]
+- User: "Lance Spotify et mets le volume au max" -> Tools: [search_and_launch_app("spotify"), control_media("VOLUME_UP")]
+
+**CRITICAL RULE - WEBSITES vs APPLICATIONS**:
+- "YouTube", "Google", "Facebook", "Twitter", "Reddit", "Wikipedia", "GitHub" etc. are WEBSITES, NOT applications
+- For websites, ALWAYS use open_url() with the full URL
+- Examples:
+  * User: "ouvre YouTube" -> open_url("https://youtube.com")
+  * User: "va sur Google" -> open_url("https://google.com")
+  * User: "recherche Python" -> open_url("https://google.com/search?q=python")
+- NEVER use search_and_launch_app() for website names!
+- search_and_launch_app() is ONLY for desktop applications (Chrome, Opera, VSCode, Spotify, etc.)
+
+**IMPORTANT**: For complex workflows, return an ARRAY of toolCalls in the correct execution order.
 `;
 
 // ============================================================================
@@ -87,12 +108,13 @@ const toolDeclarations: FunctionDeclaration[] = [
   // OUTIL 1 : Lancement d'applications
   {
     name: "search_and_launch_app",
-    description: "Launch an application.",
+    description: "Launch an application, optionally with a URL (for browsers).",
     parameters: {
       type: Type.OBJECT,
       properties: {
-        appName: { type: Type.STRING },
-        adminMode: { type: Type.BOOLEAN },
+        appName: { type: Type.STRING, description: "Application name (e.g., 'chrome', 'opera', 'vscode')" },
+        adminMode: { type: Type.BOOLEAN, description: "Launch with admin privileges" },
+        url: { type: Type.STRING, description: "Optional URL to open (for web browsers only)" },
       },
       required: ["appName"],
     },
@@ -241,7 +263,7 @@ const toolDeclarations: FunctionDeclaration[] = [
       required: ["url"],
     },
   },
-  // OUTIL 13 : Affichage d'images (NOUVEAU)
+  // OUTIL 13 : Affichage d'images
   // Permet à Gemini d'illustrer ses propos avec des images du web
   // Exemple : "Montre-moi des chats" → query: "chats"
   {
@@ -254,6 +276,29 @@ const toolDeclarations: FunctionDeclaration[] = [
         query: { type: Type.STRING },
       },
       required: ["query"],
+    },
+  },
+  // OUTIL 14 : Analyse d'écran (Gemini Vision - GRATUIT)
+  // Capture et analyse le contenu de l'écran
+  // Exemples : "Analyse mon écran", "Lis ce texte", "Trouve les erreurs"
+  {
+    name: "analyze_screen",
+    description:
+      "Capture and analyze the current screen using Gemini Vision (FREE). Use when user asks to 'analyze screen', 'read screen', 'find errors', 'what's on my screen', etc.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        type: {
+          type: Type.STRING,
+          enum: ["general", "ocr", "code", "ui", "error"],
+          description:
+            "Type of analysis: general (default), ocr (read text), code (analyze code), ui (analyze interface), error (find errors)",
+        },
+        prompt: {
+          type: Type.STRING,
+          description: "Custom prompt for the analysis (optional)",
+        },
+      },
     },
   },
 ];

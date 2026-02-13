@@ -24,7 +24,7 @@ import {
  * handleSearchAndLaunchApp({ appName: 'chrome' }, ctx)
  */
 export const handleSearchAndLaunchApp = async (
-  args: { appName: string; adminMode?: boolean },
+  args: { appName: string; adminMode?: boolean; url?: string },
   ctx: HandlerContext,
   additionalDeps: {
     setActiveOverlay: (text: string | null) => void;
@@ -33,7 +33,7 @@ export const handleSearchAndLaunchApp = async (
     findAppPath?: (query: string) => { name: string; path: string } | null; // ✨ Nouvelle fonction de recherche configurée
   },
 ) => {
-  const { appName, adminMode } = args;
+  const { appName, adminMode, url } = args;
   const targetApp = appName.toLowerCase();
   const { addLog, setStatus } = ctx;
   const { setActiveOverlay, appMemory, updateMemory, findAppPath } = additionalDeps;
@@ -59,12 +59,17 @@ export const handleSearchAndLaunchApp = async (
       setActiveOverlay(`LAUNCHING: ${configuredApp.name.toUpperCase()}`);
       
       try {
-        const result = await launchAppOnBackend(foundPath);
+        // Si une URL est fournie, la passer comme argument au navigateur
+        const launchArgs = url ? [url] : undefined;
+        const result = await launchAppOnBackend(foundPath, launchArgs);
         if (result) {
-          addLog(`Application "${configuredApp.name}" launched successfully`, "SYSTEM", "success");
+          const message = url 
+            ? `${configuredApp.name} lancé avec ${url}`
+            : `Application "${configuredApp.name}" launched successfully`;
+          addLog(message, "SYSTEM", "success");
           setStatus(SystemStatus.IDLE);
           setActiveOverlay(null);
-          return { status: "success", message: `${configuredApp.name} lancé` };
+          return { status: "success", message };
         }
       } catch (error) {
         addLog(`Failed to launch: ${error instanceof Error ? error.message : String(error)}`, "SYSTEM", "error");
@@ -136,19 +141,28 @@ export const handleSearchAndLaunchApp = async (
 
     addLog(`Ready to launch: ${foundPath}`, "SYSTEM", "info");
 
-    const launched = await launchAppOnBackend(foundPath);
+    // Si une URL est fournie, la passer comme argument au navigateur
+    const launchArgs = url ? [url] : undefined;
+    const launched = await launchAppOnBackend(foundPath, launchArgs);
 
     if (launched) {
-      addLog(`Application launched successfully`, "SYSTEM", "success");
+      const message = url 
+        ? `${targetApp} lancé avec ${url}`
+        : "Application launched successfully";
+      addLog(message, "SYSTEM", "success");
       updateMemory(targetApp, foundPath);
       setStatus(SystemStatus.IDLE);
+      return { status: "success", message };
     } else {
       addLog(`Failed to launch application`, "SYSTEM", "error");
       // ... retry logic (voir App.tsx lignes 573-617)
       setStatus(SystemStatus.ERROR);
       setTimeout(() => setStatus(SystemStatus.IDLE), 2000);
+      return { status: "error", message: "Failed to launch" };
     }
   }
+  
+  return { status: "error", message: "No path found" };
 };
 
 /**

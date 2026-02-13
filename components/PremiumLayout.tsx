@@ -18,6 +18,7 @@ import { WeatherWidget } from "./WeatherWidget";
 import { NetworkWidget } from "./NetworkWidget";
 import { CameraWidget } from "./CameraWidget";
 import { HomeControlWidget } from "./HomeControlWidget";
+import { FileExplorer } from "./FileExplorer";
 
 interface PremiumLayoutProps {
   status: "idle" | "listening" | "processing" | "speaking";
@@ -50,6 +51,7 @@ export const PremiumLayout: React.FC<PremiumLayoutProps> = ({
   successTrigger,
 }) => {
   const [isAppPathsOpen, setIsAppPathsOpen] = useState(false);
+  const [isFileExplorerOpen, setIsFileExplorerOpen] = useState(false);
   const currentTime = new Date().toLocaleTimeString("fr-FR", {
     hour: "2-digit",
     minute: "2-digit",
@@ -375,6 +377,16 @@ export const PremiumLayout: React.FC<PremiumLayoutProps> = ({
           >
             CONFIG APPS
           </motion.button>
+
+          <motion.button
+            initial={{ x: 100, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            transition={{ delay: 0.6, duration: 0.8 }}
+            onClick={() => setIsFileExplorerOpen(true)}
+            className="w-full py-3 border border-cyan-400/30 rounded text-sm tracking-widest hover:bg-cyan-500/20 transition-all bg-black/30 backdrop-blur-sm text-cyan-300 hover:text-cyan-100 shadow-[0_0_10px_rgba(0,229,255,0.1)]"
+          >
+            FICHIERS
+          </motion.button>
         </div>
       </div>
 
@@ -382,6 +394,10 @@ export const PremiumLayout: React.FC<PremiumLayoutProps> = ({
       <AppPathsManager
         isOpen={isAppPathsOpen}
         onClose={() => setIsAppPathsOpen(false)}
+      />
+      <FileExplorer
+        isOpen={isFileExplorerOpen}
+        onClose={() => setIsFileExplorerOpen(false)}
       />
       <LoadingOverlay isVisible={isProcessing} message={processingMessage} />
       <SuccessRipple trigger={successTrigger} />

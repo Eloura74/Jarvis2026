@@ -45,15 +45,17 @@ export async function searchAppOnBackend(query: string): Promise<any[]> {
 
 /**
  * Lance une application via le backend
+ * @param path - Chemin de l'application
+ * @param args - Arguments optionnels (ex: URL pour navigateur)
  */
-export async function launchAppOnBackend(path: string): Promise<boolean> {
+export async function launchAppOnBackend(path: string, args?: string[]): Promise<boolean> {
   try {
     const response = await fetch(`${BACKEND_URL}/api/launch`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ path }),
+      body: JSON.stringify({ path, args }),
     });
 
     if (!response.ok) {
