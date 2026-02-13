@@ -107,13 +107,13 @@ export function useVoiceSynthesis({
         );
       }
 
-      // Configuration des paramètres vocaux (style JARVIS - Posé, Sensuel, Professionnel)
-      utterance.pitch = 0.85; // Plus grave et sensuel
-      utterance.rate = 0.85; // Très posé et calme (comme JARVIS parlant à Tony)
+      // Configuration des paramètres vocaux (style NATUREL, DOUX, FLUIDE)
+      utterance.pitch = 1.0; // Pitch neutre = plus naturel et moins robotique
+      utterance.rate = 0.95; // Légèrement plus rapide = plus fluide et moins haché
       utterance.volume = volume; // Volume depuis settings
       
       // Log pour debug
-      console.log(`🎙️ Voix configurée : Pitch ${utterance.pitch} | Rate ${utterance.rate}`);
+      console.log(`🎙️ Voix configurée : Pitch ${utterance.pitch} | Rate ${utterance.rate} (Naturelle & Fluide)`);
 
       // Synchronisation avec l'état du système
       utterance.onstart = () => {
