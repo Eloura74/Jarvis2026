@@ -171,24 +171,8 @@ export const ParticleSphere: React.FC<ParticleSphereProps> = ({
       // --- 2. ANNEAUX (RINGS) - SUPPRIMÉS ---
       // L'utilisateur veut uniquement la sphère, sans traits autour.
 
-      // --- 3. DÉCORS & TEXTE ---
-      let statusText = "STANDBY";
-      let statusColor = baseColor;
-
-      if (isListening) {
-        statusText = "LISTENING";
-        statusColor = "#ef4444";
-      } else if (isActive) {
-        statusText = "ACTIVE";
-        statusColor = "#00e5ff";
-      }
-
-      ctx.font = "bold 14px Rajdhani, monospace";
-      ctx.fillStyle = statusColor;
-      ctx.textAlign = "center";
-      ctx.letterSpacing = "2px";
-      // Positionné juste sous la sphère
-      ctx.fillText(statusText, centerX, centerY + radius * 1.2);
+      // --- 3. DÉCORS (TEXTE SUPPRIMÉ) ---
+      // Le texte est géré par JarvisHUDAuthentic pour un meilleur alignement.
 
       animationId = requestAnimationFrame(render);
     };
