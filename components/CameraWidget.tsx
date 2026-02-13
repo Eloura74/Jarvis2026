@@ -16,15 +16,31 @@ export const CameraWidget: React.FC = () => {
   const HA_TOKEN = import.meta.env.VITE_HA_TOKEN || "";
 
   const cameras = [
-    { id: "camera.camera_ext_1", label: "EXTERIEUR", icon: "create" },
-    { id: "camera.camera_salon", label: "SALON", icon: "sofa" },
+    {
+      id: "camera.camera_ext_1",
+      label: "EXTERIEUR",
+      icon: "create",
+      mode: "stream",
+    },
+    { id: "camera.camera_salon", label: "SALON", icon: "sofa", mode: "stream" },
     {
       id: "camera.a1mini_0309da452500192_camera",
       label: "A1 MINI",
       icon: "box",
+      mode: "stream",
     },
-    { id: "camera.mainsail_picam", label: "MAINSAIL", icon: "server" },
-    { id: "camera.vz330_plateau", label: "VZ330", icon: "printer" },
+    {
+      id: "camera.mainsail_picam",
+      label: "MAINSAIL",
+      icon: "server",
+      mode: "snapshot",
+    },
+    {
+      id: "camera.vz330_plateau",
+      label: "VZ330",
+      icon: "printer",
+      mode: "snapshot",
+    },
   ] as const;
 
   const [activeCameraId, setActiveCameraId] = useState<string>(cameras[0].id);
@@ -32,6 +48,7 @@ export const CameraWidget: React.FC = () => {
 
   // Simulation d'un effet de glitch aléatoire pour le "réalisme"
   const [glitch, setGlitch] = useState(false);
+  const [imgError, setImgError] = useState(false);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -43,11 +60,31 @@ export const CameraWidget: React.FC = () => {
     return () => clearInterval(interval);
   }, []);
 
-  const currentCam = cameras.find((c) => c.id === activeCameraId);
+  // Refresh pour simuler un stream si MJPEG natif échoue
+  const [refreshTrigger, setRefreshTrigger] = useState(Date.now());
 
-  // Construction de l'URL du flux MJPEG (Token injecté par le proxy Vite)
-  // Utilisation de /api/camera_proxy_stream/{entity_id}
-  const streamUrl = `/api/camera_proxy_stream/${activeCameraId}`;
+  useEffect(() => {
+    // Reset error state on camera switch
+    setImgError(false);
+  }, [activeCameraId]);
+
+  useEffect(() => {
+    // Rafraichissement toutes les 1s (Snapshot mode) pour éviter le lag stream
+    const interval = setInterval(() => {
+      setRefreshTrigger(Date.now());
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const currentCam = cameras.find((c) => c.id === activeCameraId);
+  const isSnapshot = currentCam?.mode === "snapshot";
+
+  // Construction dynamique de l'URL selon le mode
+  const streamUrl = HA_TOKEN
+    ? isSnapshot
+      ? `/api/camera_proxy/${activeCameraId}?token=${HA_TOKEN}&t=${refreshTrigger}`
+      : `/api/camera_proxy_stream/${activeCameraId}?token=${HA_TOKEN}`
+    : "";
 
   return (
     <div className="w-full relative overflow-hidden rounded-xl border border-cyan-400/30 bg-black/20 backdrop-blur-xl group hover:border-cyan-400/50 transition-all duration-500 shadow-[0_0_15px_rgba(0,229,255,0.1)] flex flex-col">
@@ -75,11 +112,13 @@ export const CameraWidget: React.FC = () => {
 
       {/* VIDEO PREVIEW AREA */}
       <div className="relative aspect-video bg-black/50 overflow-hidden group-hover:brightness-110 transition-all">
-        {HA_TOKEN ? (
+        {HA_TOKEN && !imgError ? (
           <img
+            key={activeCameraId + (isSnapshot ? "snap" : "stream")} // Force remount on camera change
             src={streamUrl}
             alt={currentCam?.label}
             className="absolute inset-0 w-full h-full object-cover"
+            onError={() => setImgError(true)}
           />
         ) : (
           <>
