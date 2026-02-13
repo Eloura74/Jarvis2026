@@ -1,41 +1,35 @@
 /**
- * PremiumLayout - Layout JARVIS Authentique (Style Iron Man)
- * Interface minimaliste fidèle au film avec HUD circulaire
+ * PremiumLayout - Layout JARVIS Mark 2
+ * Interface authentique avec Glassmorphism, animations et widgets interactifs.
  */
 
 import React, { useState } from "react";
+import { motion } from "framer-motion";
 import { JarvisHUDAuthentic } from "./JarvisHUDAuthentic";
 import { JarvisCinematicBackground } from "./JarvisCinematicBackground";
 import { LoadingOverlay } from "./LoadingOverlay";
 import { SuccessRipple } from "./SuccessRipple";
 import { AppPathsManager } from "./AppPathsManager";
 import { ParticleSphere } from "./ParticleSphere";
-import { VoiceWave } from "./VoiceWave";
 import { FingerprintScanner } from "./FingerprintScanner";
+import { NeuralFeed } from "./NeuralFeed";
+import { MediaWidget } from "./MediaWidget";
+import { WeatherWidget } from "./WeatherWidget";
+import { NetworkWidget } from "./NetworkWidget";
 
 interface PremiumLayoutProps {
-  // HUD status
   status: "idle" | "listening" | "processing" | "speaking";
-
-  // Stats
-  commandCount: number;
   cpuUsage?: number;
   memoryUsage?: string;
-  processes?: number; // NOUVEAU
-
-  // Command
+  processes?: number;
   onMicrophoneClick: () => void;
   isListening: boolean;
   onCommand?: (command: string) => void;
-
-  // Logs
   logs: Array<{
     source: string;
     message: string;
     type: "info" | "success" | "error" | "warning";
   }>;
-
-  // Loading/Success
   isProcessing: boolean;
   processingMessage?: string;
   successTrigger: number;
@@ -43,601 +37,319 @@ interface PremiumLayoutProps {
 
 export const PremiumLayout: React.FC<PremiumLayoutProps> = ({
   status,
-  commandCount,
   cpuUsage = 0,
   memoryUsage = "0 GB",
-  processes = 24, // Valeur par défaut
+  processes = 24,
   onMicrophoneClick,
   isListening,
-  logs,
+  logs, // Utilisé pour générer le NeuralFeed initial si besoin
   isProcessing,
   processingMessage,
   successTrigger,
 }) => {
-  // État pour gérer l'ouverture du panneau de configuration des applications
   const [isAppPathsOpen, setIsAppPathsOpen] = useState(false);
   const currentTime = new Date().toLocaleTimeString("fr-FR", {
     hour: "2-digit",
     minute: "2-digit",
   });
-
   const currentDate = new Date().toLocaleDateString("fr-FR", {
-    day: "2-digit",
-    month: "short",
+    weekday: "long",
+    day: "numeric",
+    month: "long",
   });
 
+  // Mock messages for Neural Feed demonstration (replace with real data later)
+  const mockMessages = logs
+    .map((log, i) => ({
+      id: `msg-${i}`,
+      text: log.message,
+      sender: log.source === "USER" ? "user" : "jarvis",
+      timestamp: new Date(),
+    }))
+    .filter((m) => m.sender === "user" || m.sender === "jarvis"); // Filter only chat-like messages
+
   return (
-    <div className="relative w-full min-h-screen overflow-hidden bg-transparent">
+    <div className="relative w-full min-h-screen overflow-hidden bg-black text-cyan-500 font-rajdhani selection:bg-cyan-500/30">
       {/* ========================================
-          ARRIÈRE-PLAN CINÉMATIQUE
+          BACKGROUND LAYER
           ======================================== */}
-      {/* ========================================
-          ARRIÈRE-PLAN CINÉMATIQUE
-          ======================================== */}
-      {/* Image de fond directe pour garantir la visibilité */}
-      <img
-        src="/bg-wires1.png"
-        alt="Background"
-        className="fixed inset-0 w-full h-full object-cover opacity-50 z-0"
-      />
-      <JarvisCinematicBackground />
-
-      {/* ========================================
-          EFFETS DE FOND
-          ======================================== */}
-      {/* Scanlines réduites */}
-      <div className="jarvis-scanlines opacity-30" />
-      <div className="jarvis-vignette opacity-60" />
-
-      {/* ========================================
-          HUD CENTRAL AUTHENTIQUE (Non-interactif)
-          ======================================== */}
-      <div className="fixed inset-0 flex items-center justify-center pointer-events-none z-20">
-        {/* Glow intense derrière le HUD - CYAN UNIQUEMENT */}
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div
-            className="w-96 h-96 rounded-full"
-            style={{
-              background:
-                "radial-gradient(circle, rgba(0, 229, 255, 0.15) 0%, transparent 70%)",
-              filter: "blur(50px)",
-              animation: "pulse 4s ease-in-out infinite",
-            }}
-          />
-        </div>
-
-        {/* Mini-cercles décoratifs autour du HUD - Plus éloignés */}
-        <div className="absolute inset-0 flex items-center justify-center">
-          {[45, 135, 225, 315].map((angle) => (
-            <div
-              key={angle}
-              className="absolute"
-              style={{
-                transform: `rotate(${angle}deg) translateY(-360px)`,
-                width: "30px",
-                height: "30px",
-              }}
-            >
-              <div
-                className="jarvis-circle w-full h-full"
-                style={{
-                  borderColor: "#00e5ff",
-                  boxShadow: "0 0 10px rgba(0, 229, 255, 0.5)",
-                  opacity: 0.5,
-                }}
-              />
-              <div
-                className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 jarvis-dot"
-                style={{ width: "4px", height: "4px" }}
-              />
-            </div>
-          ))}
-        </div>
-
-        <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
-          {/* Visualiseur Sphère de Particules (Réactif) */}
-          <ParticleSphere
-            isActive={status === "speaking"}
-            isListening={isListening || status === "listening"}
-            // Niveau audio simulé (Pourrait être connecté à un analyser réel)
-            audioLevel={status === "speaking" ? 80 : isListening ? 60 : 0}
-            size={800}
-            baseColor="#00e5ff"
-            activeColor="#00e5ff" // Cyan aussi pour écoute, peut-être plus brillant ?
-          />
-        </div>
-
-        <JarvisHUDAuthentic status={status} size={550} showDetails={true} />
+      <div className="absolute inset-0 z-0">
+        <img
+          src="/bg-wires1.png"
+          alt="Background"
+          className="fixed inset-0 w-full h-full object-cover opacity-30 z-0"
+        />
+        <JarvisCinematicBackground />
+        <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black opacity-80" />
+        <div className="jarvis-scanlines opacity-20" />
+        <div className="jarvis-vignette opacity-50" />
       </div>
 
       {/* ========================================
-          STATS PÉRIPHÉRIQUES (Style authentique)
+          MAIN HUD LAYER (Interactive)
           ======================================== */}
+      <div className="relative z-10 w-full h-screen grid grid-cols-[350px_1fr_350px] p-6 gap-6 pointer-events-none">
+        {/* === LEFT COLUMN === */}
+        <div className="flex flex-col gap-6 pointer-events-auto z-20">
+          {/* SYSTEM STATUS PANEL */}
+          <motion.div
+            initial={{ x: -100, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            transition={{ duration: 0.8, ease: "easeOut" }}
+            className="jarvis-panel-glass p-6 rounded-2xl border border-cyan-500/20 bg-black/40 backdrop-blur-xl relative overflow-hidden group hover:border-cyan-500/40 transition-all duration-500"
+          >
+            <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
 
-      {/* Coin supérieur gauche - Système - ENRICHI */}
-      <div className="fixed top-8 left-8 w-72 z-30">
-        <div
-          className="jarvis-panel-corners p-4"
-          style={{
-            boxShadow: "0 0 20px rgba(0, 229, 255, 0.3)",
-          }}
-        >
-          <div className="flex items-center gap-2 mb-2">
-            <div className="jarvis-marker w-4" />
-            <div className="jarvis-label">SYSTEM STATUS</div>
-            <div className="flex-1" />
-            <div className="jarvis-dot-pulse" />
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-bold tracking-widest text-cyan-400">
+                SYS.STATUS
+              </h2>
+              <div className="w-2 h-2 bg-cyan-400 rounded-full animate-pulse shadow-[0_0_10px_#00e5ff]" />
+            </div>
+
+            <div className="space-y-6">
+              {/* CPU */}
+              <div>
+                <div className="flex justify-between text-xs mb-1 opacity-70 tracking-wider">
+                  <span>CPU LOAD</span>
+                  <span>{cpuUsage}%</span>
+                </div>
+                <div className="h-1 bg-cyan-900/50 rounded-full overflow-hidden">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${cpuUsage}%` }}
+                    className="h-full bg-cyan-400 shadow-[0_0_10px_#00e5ff]"
+                  />
+                </div>
+              </div>
+
+              {/* MEMORY */}
+              <div>
+                <div className="flex justify-between text-xs mb-1 opacity-70 tracking-wider">
+                  <span>RAM USAGE</span>
+                  <span>{memoryUsage}</span>
+                </div>
+                <div className="h-1 bg-cyan-900/50 rounded-full overflow-hidden">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${parseFloat(memoryUsage)}%` }} // Adjust max as needed
+                    className="h-full bg-cyan-400 shadow-[0_0_10px_#00e5ff]"
+                  />
+                </div>
+              </div>
+
+              {/* PROCESSES */}
+              <div className="flex justify-between items-center border-t border-cyan-500/20 pt-4">
+                <span className="text-xs opacity-70 tracking-wider">
+                  ACTIVE PROCESSES
+                </span>
+                <span className="text-xl font-bold">{processes}</span>
+              </div>
+            </div>
+
+            {/* DECORATIVE CORNER */}
+            <div className="absolute top-0 right-0 p-2 opacity-50">
+              <svg width="20" height="20" viewBox="0 0 20 20">
+                <path
+                  d="M0 0 L20 0 L20 20"
+                  fill="none"
+                  stroke="#00e5ff"
+                  strokeWidth="2"
+                />
+              </svg>
+            </div>
+          </motion.div>
+
+          {/* WEATHER WIDGET */}
+          <motion.div
+            initial={{ x: -100, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            transition={{ delay: 0.2, duration: 0.8 }}
+          >
+            <WeatherWidget />
+          </motion.div>
+
+          {/* MEDIA WIDGET */}
+          <motion.div
+            initial={{ x: -100, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            transition={{ delay: 0.4, duration: 0.8 }}
+          >
+            <MediaWidget />
+          </motion.div>
+
+          {/* NETWORK WIDGET (NEW) */}
+          <motion.div
+            initial={{ x: -100, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            transition={{ delay: 0.6, duration: 0.8 }}
+            className="mt-auto mb-10" // Push to bottom if space is available
+          >
+            <NetworkWidget />
+          </motion.div>
+        </div>
+
+        {/* === CENTER COLUMN (HUD) === */}
+        <div className="relative flex items-center justify-center">
+          {/* CENTRAL HUD */}
+          <div className="absolute inset-0 flex items-center justify-center z-0">
+            <JarvisHUDAuthentic status={status} size={600} showDetails={true} />
           </div>
 
-          <div className="flex items-baseline gap-2 mb-2">
-            <span
-              className="jarvis-text"
-              style={{
-                fontSize: "42px",
-                fontWeight: 300,
-                textShadow: "0 0 10px rgba(0, 229, 255, 0.6)",
-              }}
-            >
-              {cpuUsage}
-            </span>
-            <span className="jarvis-data">%</span>
-          </div>
-
-          <div className="jarvis-progress mb-2" style={{ height: "6px" }}>
-            <div
-              className="jarvis-progress-bar"
-              style={{
-                width: `${cpuUsage}%`,
-                boxShadow: "0 0 10px rgba(0, 229, 255, 0.8)",
-              }}
+          {/* PARTICLE SPHERE OVERLAY - INCREASED VISIBILITY & Z-INDEX */}
+          <div className="absolute inset-0 flex items-center justify-center z-10 mix-blend-screen pointer-events-none filter brightness-125 contrast-125">
+            <ParticleSphere
+              isActive={status === "speaking"}
+              isListening={isListening || status === "listening"}
+              audioLevel={status === "speaking" ? 80 : 0}
+              size={850}
+              baseColor="#00e5ff"
+              activeColor="#00e5ff"
             />
           </div>
 
-          <div className="space-y-2">
-            <div className="flex justify-between items-center">
-              <span className="jarvis-data">CPU LOAD</span>
-              <span className="jarvis-text" style={{ fontSize: "12px" }}>
-                {cpuUsage}%
-              </span>
-            </div>
-            {/* Mini-graphique CPU Animé */}
-            <div className="flex gap-1 h-8 items-end">
-              {[...Array(12)].map((_, i) => {
-                // Simulation d'un historique basé sur le CPU actuel + bruit
-                const height = Math.min(
-                  100,
-                  Math.max(10, cpuUsage + (Math.random() - 0.5) * 40),
-                );
-                return (
-                  <div
-                    key={i}
-                    className="flex-1 bg-cyan-500/20 transition-all duration-300 ease-in-out"
-                    style={{
-                      height: `${height}%`,
-                      backgroundColor:
-                        i === 11
-                          ? "var(--jarvis-cyan)"
-                          : "rgba(0, 243, 255, 0.3)",
-                      boxShadow:
-                        i === 11 ? "0 0 10px var(--jarvis-cyan)" : "none",
-                    }}
-                  />
-                );
-              })}
-            </div>
-
-            <div className="jarvis-line-h" />
-            <div className="flex justify-between items-center">
-              <span className="jarvis-data">MEMORY</span>
-              <span className="jarvis-text" style={{ fontSize: "12px" }}>
-                {memoryUsage}
-              </span>
-            </div>
-            <div className="jarvis-line-h" />
-            <div className="flex justify-between items-center">
-              <span className="jarvis-data">PROCESSES</span>
-              <span className="jarvis-text" style={{ fontSize: "12px" }}>
-                {processes}
-              </span>
-            </div>
-
-            {/* Animation Voice Wave - Styles néon cyan */}
-            <div className="jarvis-line-h" />
-            <div className="flex justify-center pt-1">
-              <VoiceWave
-                barCount={9}
-                color="#00f3ff"
-                maxHeight={25}
-                isActive={true}
-              />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Coin supérieur droit - Commandes - ENRICHI (ACTIVITY LOG) */}
-      <div className="fixed top-8 right-8 w-72 z-30">
-        <div
-          className="jarvis-panel-corners p-5"
-          style={{
-            boxShadow: "0 0 20px rgba(0, 229, 255, 0.3)",
-          }}
-        >
-          <div className="flex items-center gap-2 mb-4">
-            <div className="jarvis-marker w-4" />
-            <div className="jarvis-label">ACTIVITY LOG</div>
-          </div>
-
-          <div
-            className="jarvis-text mb-2"
-            style={{
-              fontSize: "42px",
-              fontWeight: 300,
-              textShadow: "0 0 10px rgba(0, 229, 255, 0.6)",
-            }}
+          {/* LOGO */}
+          <motion.div
+            initial={{ y: -50, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ duration: 1, delay: 0.5 }}
+            className="absolute top-24 text-center z-0"
           >
-            {commandCount}
-          </div>
-
-          <div className="jarvis-data mb-4">TOTAL COMMANDS</div>
-
-          {/* Cercles de progression */}
-          <div className="flex gap-4 mb-4 justify-center">
-            {[60, 80, 45].map((percent, i) => (
-              <div key={i} className="relative w-12 h-12">
-                <svg className="transform -rotate-90 w-full h-full">
-                  <circle
-                    cx="24"
-                    cy="24"
-                    r="20"
-                    stroke="rgba(0, 229, 255, 0.2)"
-                    strokeWidth="2"
-                    fill="none"
-                  />
-                  <circle
-                    cx="24"
-                    cy="24"
-                    r="20"
-                    stroke="#00e5ff"
-                    strokeWidth="2"
-                    fill="none"
-                    strokeDasharray={`${2 * Math.PI * 20}`}
-                    strokeDashoffset={`${
-                      2 * Math.PI * 20 * (1 - percent / 100)
-                    }`}
-                    style={{
-                      filter: "drop-shadow(0 0 5px rgba(0, 229, 255, 0.8))",
-                    }}
-                  />
-                </svg>
-                <div
-                  className="absolute inset-0 flex items-center justify-center jarvis-data"
-                  style={{ fontSize: "9px" }}
-                >
-                  {percent}
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="jarvis-dot" />
-                <span className="jarvis-data">VOICE</span>
-              </div>
-              <span className="jarvis-text" style={{ fontSize: "12px" }}>
-                ACTIVE
-              </span>
-            </div>
-            <div className="jarvis-line-h" />
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div
-                  className={
-                    status !== "idle" ? "jarvis-dot-pulse" : "jarvis-dot"
-                  }
-                />
-                <span className="jarvis-data">STATUS</span>
-              </div>
-              <span className="jarvis-text" style={{ fontSize: "12px" }}>
-                {status.toUpperCase()}
-              </span>
-            </div>
-            <div className="jarvis-line-h" />
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="jarvis-dot" />
-                <span className="jarvis-data">AI MODEL</span>
-              </div>
-              <span className="jarvis-text" style={{ fontSize: "12px" }}>
-                GEMINI
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Coin inférieur gauche - Time & Status (LOCAL TIME) */}
-      <div className="fixed bottom-8 left-8 w-72 z-30">
-        <div className="jarvis-panel-corners p-5">
-          <div className="flex items-center gap-2 mb-3">
-            <div className="jarvis-marker w-4" />
-            <div className="jarvis-label">LOCAL TIME</div>
-          </div>
-          <div
-            className="jarvis-text mb-2"
-            style={{ fontSize: "28px", fontWeight: 300 }}
-          >
-            {currentTime}
-          </div>
-          <div className="jarvis-data mb-4">{currentDate.toUpperCase()}</div>
-
-          <div className="jarvis-line-h mb-3" />
-
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="jarvis-data">TIMEZONE</span>
-              <span className="jarvis-text" style={{ fontSize: "11px" }}>
-                UTC+1
-              </span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="jarvis-data">UPTIME</span>
-              <span className="jarvis-text" style={{ fontSize: "11px" }}>
-                24H 37M
-              </span>
-            </div>
-
-            <div className="jarvis-line-h my-3" />
-
-            {/* Authentification Biométrique - Déplacé */}
-
-            {/* Bouton Config Applications */}
-            <div className="jarvis-line-h my-3" />
-            <button
-              onClick={() => setIsAppPathsOpen(true)}
-              className="w-full flex items-center gap-2 px-3 py-2 jarvis-button text-xs"
-              style={{
-                borderColor: "#00e5ff",
-                boxShadow: "0 0 10px rgba(0, 229, 255, 0.4)",
-              }}
-            >
-              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z" />
-              </svg>
-              <span>CONFIG APPS</span>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* ========================================
-          LOGO J.A.R.V.I.S 3D EN HAUT - AMÉLIORÉ
-          ======================================== */}
-      <div className="fixed top-8 left-1/2 transform -translate-x-1/2 z-40 text-center pointer-events-none opacity-0">
-        {" "}
-        {/* Caché temporairement/désactivé pour ne pas gêner */}
-        {/* ... (Logo code omitted/hidden via opacity to satisfy user request implicitly since logic changed) - Wait, I shouldn't hide logo unless requested. But System Logs might overlap. I'll just change System Logs position. Logo is centered. */}
-      </div>
-
-      {/* RÉTABLISSEMENT LOGO NORMAL */}
-      <div className="fixed top-8 left-1/2 transform -translate-x-1/2 z-40 text-center">
-        <div className="relative">
-          {/* Effet de glow blanc/bleuté derrière le texte */}
-          <div
-            className="absolute inset-0 blur-2xl"
-            style={{
-              background:
-                "radial-gradient(circle, rgba(200, 200, 255, 0.4) 0%, rgba(0, 229, 255, 0.2) 50%, transparent 70%)",
-              transform: "scale(2)",
-            }}
-          />
-
-          {/* Deuxième couche de glow cyan */}
-          <div
-            className="absolute inset-0 blur-xl"
-            style={{
-              background:
-                "radial-gradient(circle, rgba(255, 255, 255, 0.3) 0%, transparent 60%)",
-              transform: "scale(1.8)",
-            }}
-          />
-
-          {/* Logo principal */}
-          <div className="relative">
-            <h1
-              className="text-7xl font-bold tracking-wider"
-              style={{
-                fontFamily: "Rajdhani, sans-serif",
-                color: "#f0f0f0", // Gris blanc
-                textShadow: `
-                0 0 10px rgba(255, 255, 255, 0.8),
-                0 0 20px rgba(200, 200, 255, 0.5),
-                0 0 40px rgba(0, 229, 255, 0.4),
-                2px 2px 4px rgba(0, 0, 0, 0.9)
-              `,
-                letterSpacing: "0.3em",
-                filter: "brightness(1.1)",
-              }}
-            >
+            <h1 className="text-6xl font-bold tracking-[0.5em] text-white/90 drop-shadow-[0_0_15px_rgba(0,229,255,0.5)]">
               J.A.R.V.I.S.
             </h1>
-            {/* Lignes décoratives sous le logo */}
-            <div className="flex items-center justify-center gap-3 mt-3 mb-2">
-              <div className="jarvis-line-h w-16" />
-              <div
-                className="jarvis-dot-pulse"
-                style={{
-                  backgroundColor: "#ffffff",
-                  boxShadow: "0 0 10px rgba(255, 255, 255, 0.8)",
-                }}
-              />
-              <div className="jarvis-line-h w-16" />
-            </div>
-            <p
-              className="jarvis-data mt-2"
-              style={{
-                letterSpacing: "0.5em",
-                opacity: 0.8,
-                color: "#a0a0a0",
-                textShadow: "0 0 5px rgba(255, 255, 255, 0.3)",
-              }}
-            >
+            <div className="text-[10px] tracking-[1em] opacity-60 text-cyan-200 mt-2">
               JUST A RATHER VERY INTELLIGENT SYSTEM
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* ========================================
-          ONDE AUDIO (SUPPRIMÉE)
-          ======================================== */}
-
-      {/* ========================================
-          LOGS SYSTÈME (Aligné en haut à gauche de Activity Log)
-          ======================================== */}
-      {/* Positionné à top-8 et décalé à gauche de Activity Log (right-[22rem]) */}
-      <div className="fixed top-8 right-[22rem] w-80 h-[28rem] z-30">
-        <div className="jarvis-panel-corners p-5 h-full">
-          <div className="relative h-full flex flex-col">
-            {/* Scan line */}
-            <div className="jarvis-scan-line" />
-
-            {/* Header */}
-            <div className="flex items-center gap-4 mb-4 relative z-10 flex-shrink-0">
-              <div className="jarvis-marker w-4" />
-              <div className="jarvis-text">SYSTEM LOGS</div>
-              <div className="flex-1 jarvis-line-h" />
-              <div className="jarvis-data">TOTAL: {logs.length}</div>
-              <div className="jarvis-status-indicator" />
             </div>
+          </motion.div>
 
-            {/* Logs */}
-            <div className="space-y-1 relative z-10 overflow-y-auto flex-1 pr-2 custom-scrollbar">
-              {logs.slice(-15).map((log, i) => (
-                <div
-                  key={i}
-                  className="flex items-start gap-3 animate-slideInUp"
-                  style={{ animationDelay: `${i * 30}ms` }}
-                >
-                  <div className="jarvis-marker w-2 mt-0.5" />
-                  <span className="jarvis-data w-20 flex-shrink-0 opacity-60">
-                    {new Date().toLocaleTimeString("en-US", {
-                      hour12: false,
-                      hour: "2-digit",
-                      minute: "2-digit",
-                      second: "2-digit",
-                    })}
-                  </span>
-                  <span className="jarvis-data w-28 flex-shrink-0 opacity-40">
-                    {log.source}
-                  </span>
-                  <span className="jarvis-data flex-1">{log.message}</span>
-                  <div className="jarvis-dot" style={{ opacity: 0.3 }} />
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
+          {/* MICROPHONE BUTTON (Floating at bottom center) - ENHANCED */}
+          <motion.div
+            className="absolute bottom-10 left-1/2 transform -translate-x-1/2 pointer-events-auto z-50 py-10"
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            <div className="relative group flex flex-col items-center justify-center">
+              {/* Outer Rotating Ring */}
+              <div className="absolute inset-0 rounded-full border border-cyan-500/30 w-32 h-32 -ml-[16px] -mt-[16px] animate-[spin_10s_linear_infinite]" />
+              <div className="absolute inset-0 rounded-full border border-cyan-500/20 w-40 h-40 -ml-[32px] -mt-[32px] animate-[spin_15s_linear_infinite_reverse]" />
 
-      {/* ========================================
-          VISUALISEUR CIRCULAIRE (SUPPRIMÉ)
-          ======================================== */}
-
-      {/* ========================================
-          EMPREINTE DIGITALE & MICROPHONE
-          ======================================== */}
-      {/* Container aligné sur le panneau Activity Log */}
-      <div className="fixed bottom-28 right-72 w-72 z-30 flex flex-col items-center justify-center gap-12">
-        {/* --- ÉLÉMENT 1 : BOUTON MICRO --- */}
-        <div className="relative group flex flex-col items-center">
-          {/* Glow doré si actif */}
-          {isListening && (
-            <div className="absolute top-1/2 left-1/2 -ml-6 -mt-6 w-12 h-12 pointer-events-none z-0">
               <div
-                className="w-full h-full rounded-full"
-                style={{
-                  background:
-                    "radial-gradient(circle, rgba(255, 215, 0, 0.4) 0%, transparent 70%)",
-                  filter: "blur(15px)",
-                  animation: "pulse 2s ease-in-out infinite",
-                }}
+                className={`absolute inset-0 rounded-full blur-2xl transition-all duration-300 w-24 h-24 ${isListening ? "bg-red-500/60" : "bg-cyan-500/30 group-hover:bg-cyan-500/50"}`}
               />
+
+              <button
+                onClick={onMicrophoneClick}
+                className={`relative w-24 h-24 rounded-full border-2 flex items-center justify-center transition-all duration-300 backdrop-blur-md z-10 ${
+                  isListening
+                    ? "border-red-500 bg-red-900/30 text-red-500 shadow-[0_0_50px_rgba(239,68,68,0.6)] animate-pulse"
+                    : "border-cyan-500/50 bg-black/60 text-cyan-400 hover:border-cyan-400 hover:text-cyan-200 hover:shadow-[0_0_30px_rgba(0,229,255,0.5)]"
+                }`}
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-10 w-10"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={1.5}
+                    d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
+                  />
+                </svg>
+              </button>
+
+              <div className="absolute -bottom-10 left-1/2 transform -translate-x-1/2 text-xs tracking-[0.3em] font-bold opacity-80 whitespace-nowrap text-cyan-300">
+                {isListening ? "LISTENING MODE" : "VOICE CONTROL"}
+              </div>
             </div>
-          )}
-
-          {/* Bouton Micro */}
-          <button
-            onClick={onMicrophoneClick}
-            className={`relative z-10 w-28 h-28 flex items-center justify-center rounded-full border bg-black/40 hover:bg-cyan-500/10 transition-all duration-300 backdrop-blur-sm ${
-              isListening
-                ? "border-yellow-500/60 shadow-[0_0_15px_rgba(150,000,215,0.3)] jarvis-pulse-subtle"
-                : "border-cyan-500/30 hover:border-cyan-400/60 hover:shadow-[0_0_10px_rgba(0,229,255,0.2)]"
-            }`}
-          >
-            {isListening ? (
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-12 w-12 text-red-400 animate-pulse"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
-                />
-              </svg>
-            ) : (
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-12 w-12 text-cyan-400 group-hover:text-cyan-300 transition-colors"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
-                />
-              </svg>
-            )}
-          </button>
-
-          {/* Label STATUS */}
-          <div
-            className="absolute -bottom-5 text-[9px] font-bold tracking-widest opacity-70 whitespace-nowrap"
-            style={{ color: isListening ? "#00e5ff" : "#00e5ff" }}
-          >
-            {isListening ? "ON AIR" : "MIC"}
-          </div>
+          </motion.div>
         </div>
 
-        {/* --- ÉLÉMENT 2 : EMPREINTE DIGITALE --- */}
-        <div className="flex flex-col items-center gap-2">
-          <FingerprintScanner size={90} isActive={true} />
-          {/* Optimisation : Retrait de ml-16 pour centrer le texte proprement sous l'empreinte */}
-          <div className="jarvis-data text-[10px] tracking-[0.3em] text-cyan-400 font-bold opacity-80 mt-2 text-center">
-            BIOMETRIC SCAN
-          </div>
+        {/* === RIGHT COLUMN === */}
+        <div className="flex flex-col gap-6 pointer-events-auto h-[90vh] self-center z-20">
+          {/* DATE & TIME PANEL */}
+          <motion.div
+            initial={{ x: 100, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            transition={{ duration: 0.8 }}
+            className="jarvis-panel-glass p-6 rounded-2xl border border-cyan-500/20 bg-black/40 backdrop-blur-xl group hover:border-cyan-500/40"
+          >
+            <div className="text-4xl font-light text-white mb-1 tracking-wider overflow-hidden">
+              {currentTime}
+            </div>
+            <div className="text-sm text-cyan-400 tracking-widest uppercase opacity-80">
+              {currentDate}
+            </div>
+          </motion.div>
+
+          {/* NEURAL FEED (Chat) */}
+          <motion.div
+            initial={{ x: 100, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            transition={{ delay: 0.2, duration: 0.8 }}
+            className="flex-1 jarvis-panel-glass rounded-2xl border border-cyan-500/20 bg-black/40 backdrop-blur-xl overflow-hidden relative flex flex-col min-h-[400px]"
+          >
+            <div className="p-4 border-b border-cyan-500/20 bg-cyan-900/10 flex justify-between items-center">
+              <h3 className="text-sm font-bold tracking-widest text-cyan-300">
+                NEURAL FEED
+              </h3>
+              <div className="flex gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-cyan-500 animate-pulse" />
+                <span className="w-1.5 h-1.5 rounded-full bg-cyan-500/50" />
+                <span className="w-1.5 h-1.5 rounded-full bg-cyan-500/20" />
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-hidden p-2">
+              <NeuralFeed messages={mockMessages as any} />
+            </div>
+
+            {/* Input Area Placeholder (Visual only) */}
+            <div className="p-3 border-t border-cyan-500/20 bg-black/20">
+              <div className="h-8 rounded border border-cyan-500/20 flex items-center px-3 text-xs text-cyan-500/50 italic tracking-wider">
+                Waiting for input...
+              </div>
+            </div>
+          </motion.div>
+
+          {/* BIOMETRIC & CONFIG - RESIZED & REPOSITIONED */}
+          <motion.div
+            initial={{ x: 100, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            transition={{ delay: 0.4, duration: 0.8 }}
+            className="flex flex-col gap-4 mt-auto"
+          >
+            {/* FINGERPRINT LARGE */}
+            <div className="flex flex-col items-center justify-center p-6 rounded-2xl border border-cyan-500/20 bg-black/40 backdrop-blur-xl group hover:border-cyan-500/40 transition-all">
+              <FingerprintScanner size={120} isActive={true} />
+              <div className="text-xs tracking-[0.3em] text-cyan-400 mt-4 opacity-80">
+                BIOMETRIC SCAN
+              </div>
+              <div className="text-[10px] tracking-widest text-green-400 mt-1">
+                ACCESS GRANTED
+              </div>
+            </div>
+
+            <button
+              onClick={() => setIsAppPathsOpen(true)}
+              className="w-full py-3 border border-cyan-500/30 rounded text-sm tracking-widest hover:bg-cyan-500/10 transition-colors bg-black/40 backdrop-blur-sm"
+            >
+              CONFIG APPS
+            </button>
+          </motion.div>
         </div>
       </div>
 
-      {/* Gestionnaire Chemins Applications */}
+      {/* OVERLAYS */}
       <AppPathsManager
         isOpen={isAppPathsOpen}
         onClose={() => setIsAppPathsOpen(false)}
       />
-
-      {/* Overlays */}
       <LoadingOverlay isVisible={isProcessing} message={processingMessage} />
-
       <SuccessRipple trigger={successTrigger} />
     </div>
   );

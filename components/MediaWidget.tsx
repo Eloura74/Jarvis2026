@@ -1,0 +1,57 @@
+// fichier pour les widgets
+import React from "react";
+import { Play, SkipForward, SkipBack, Disc } from "lucide-react";
+
+export const MediaWidget: React.FC = () => {
+  return (
+    <div className="w-full relative overflow-hidden rounded-xl border border-cyan-500/20 bg-black/40 backdrop-blur-xl p-4 group hover:border-cyan-500/40 transition-colors">
+      <div className="flex items-center gap-4">
+        {/* Album Art / Disc Animation */}
+        <div className="relative w-12 h-12 flex-shrink-0">
+          <div className="absolute inset-0 rounded-full border border-cyan-500/30 animate-[spin_4s_linear_infinite]" />
+          <div className="absolute inset-1 rounded-full border border-cyan-500/50 animate-[spin_3s_linear_infinite_reverse]" />
+          <div className="absolute inset-0 flex items-center justify-center text-cyan-400">
+            <Disc size={24} className="animate-pulse" />
+          </div>
+        </div>
+
+        {/* Info */}
+        <div className="flex-1 min-w-0">
+          <div className="text-cyan-300 text-xs font-bold tracking-widest truncate">
+            NEURAL SYMPHONY
+          </div>
+          <div className="text-cyan-500/70 text-[10px] truncate">
+            SYSTEM AUDIO
+          </div>
+        </div>
+
+        {/* Controls */}
+        <div className="flex items-center gap-2 text-cyan-400">
+          <button className="p-1 hover:text-cyan-200 transition-colors">
+            <SkipBack size={14} />
+          </button>
+          <button className="p-1.5 rounded-full border border-cyan-500/40 hover:bg-cyan-500/10 transition-colors">
+            <Play size={14} fill="currentColor" />
+          </button>
+          <button className="p-1 hover:text-cyan-200 transition-colors">
+            <SkipForward size={14} />
+          </button>
+        </div>
+      </div>
+
+      {/* Spectrum Visualizer (Fake) */}
+      <div className="flex items-end justify-center gap-[2px] h-3 mt-3 opacity-50">
+        {[...Array(20)].map((_, i) => (
+          <div
+            key={i}
+            className="w-1 bg-cyan-500 rounded-t-sm"
+            style={{
+              height: `${Math.random() * 100}%`,
+              animation: `pulse 0.${5 + (i % 5)}s infinite alternate`,
+            }}
+          />
+        ))}
+      </div>
+    </div>
+  );
+};

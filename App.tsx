@@ -108,7 +108,6 @@ const JarvisShell: React.FC = () => {
                 : "speaking"
         }
         // Données Cerveau (Commande & Historique)
-        commandCount={brain.commandHistory.length}
         successTrigger={brain.successTrigger}
         onCommand={brain.processCommand}
         // Données Interaction (Micro)
