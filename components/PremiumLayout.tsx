@@ -16,6 +16,7 @@ import { NeuralFeed } from "./NeuralFeed";
 import { MediaWidget } from "./MediaWidget";
 import { WeatherWidget } from "./WeatherWidget";
 import { NetworkWidget } from "./NetworkWidget";
+import { CameraWidget } from "./CameraWidget";
 
 interface PremiumLayoutProps {
   status: "idle" | "listening" | "processing" | "speaking";
@@ -96,18 +97,18 @@ export const PremiumLayout: React.FC<PremiumLayoutProps> = ({
             initial={{ x: -100, opacity: 0 }}
             animate={{ x: 0, opacity: 1 }}
             transition={{ duration: 0.8, ease: "easeOut" }}
-            className="jarvis-panel-glass p-6 rounded-2xl border border-cyan-400/30 bg-black/20 backdrop-blur-xl relative overflow-hidden group hover:border-cyan-400/50 transition-all duration-500 shadow-[0_0_20px_rgba(0,229,255,0.1)]"
+            className="jarvis-panel-glass p-4 rounded-2xl border border-cyan-400/30 bg-black/20 backdrop-blur-xl relative overflow-hidden group hover:border-cyan-400/50 transition-all duration-500 shadow-[0_0_20px_rgba(0,229,255,0.1)]"
           >
             <div className="absolute inset-0 bg-gradient-to-br from-cyan-400/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
 
-            <div className="flex justify-between items-center mb-6">
+            <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-bold tracking-widest text-cyan-300 drop-shadow-[0_0_5px_rgba(0,229,255,0.8)]">
                 SYS.STATUS
               </h2>
               <div className="w-2 h-2 bg-cyan-400 rounded-full animate-pulse shadow-[0_0_10px_#00e5ff]" />
             </div>
 
-            <div className="space-y-6">
+            <div className="space-y-4">
               {/* CPU */}
               <div>
                 <div className="flex justify-between text-xs mb-1 opacity-90 tracking-wider text-cyan-200">
@@ -180,6 +181,15 @@ export const PremiumLayout: React.FC<PremiumLayoutProps> = ({
             <MediaWidget />
           </motion.div>
 
+          {/* CAMERA WIDGET (NEW) */}
+          <motion.div
+            initial={{ x: -100, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            transition={{ delay: 0.5, duration: 0.8 }}
+          >
+            <CameraWidget />
+          </motion.div>
+
           {/* NETWORK WIDGET (NEW) */}
           <motion.div
             initial={{ x: -100, opacity: 0 }}
@@ -199,7 +209,7 @@ export const PremiumLayout: React.FC<PremiumLayoutProps> = ({
           </div>
 
           {/* PARTICLE SPHERE OVERLAY - INCREASED VISIBILITY & Z-INDEX */}
-          <div className="absolute inset-0 flex items-center justify-center z-10 mix-blend-screen pointer-events-none filter brightness-125 contrast-125">
+          <div className="absolute inset-0 flex items-center justify-center z-10 mix-blend-screen pointer-events-none filter brightness-125 contrast-125 -translate-y-16">
             <ParticleSphere
               isActive={status === "speaking"}
               isListening={isListening || status === "listening"}
@@ -227,7 +237,7 @@ export const PremiumLayout: React.FC<PremiumLayoutProps> = ({
 
           {/* MICROPHONE BUTTON (Floating at bottom center) - ENHANCED */}
           <motion.div
-            className="absolute bottom-10 left-1/2 transform -translate-x-1/2 pointer-events-auto z-50 py-10"
+            className="absolute bottom-32  pointer-events-auto z-50 py-10"
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.95 }}
           >
@@ -272,7 +282,7 @@ export const PremiumLayout: React.FC<PremiumLayoutProps> = ({
         </div>
 
         {/* === RIGHT COLUMN === */}
-        <div className="flex flex-col gap-6 pointer-events-auto h-[90vh] self-center z-20">
+        <div className="flex flex-col gap-4 pointer-events-auto h-[90vh] mt-8 z-20">
           {/* DATE & TIME PANEL */}
           <motion.div
             initial={{ x: 100, opacity: 0 }}
@@ -318,31 +328,31 @@ export const PremiumLayout: React.FC<PremiumLayoutProps> = ({
             </div>
           </motion.div>
 
-          {/* BIOMETRIC & CONFIG - RESIZED & REPOSITIONED */}
+          {/* FINGERPRINT LARGE */}
           <motion.div
             initial={{ x: 100, opacity: 0 }}
             animate={{ x: 0, opacity: 1 }}
             transition={{ delay: 0.4, duration: 0.8 }}
-            className="flex flex-col gap-4 mt-auto"
+            className="flex flex-col items-center justify-center p-6 rounded-2xl border border-cyan-400/30 bg-black/20 backdrop-blur-xl group hover:border-cyan-400/50 transition-all shadow-[0_0_20px_rgba(0,229,255,0.1)]"
           >
-            {/* FINGERPRINT LARGE */}
-            <div className="flex flex-col items-center justify-center p-6 rounded-2xl border border-cyan-400/30 bg-black/20 backdrop-blur-xl group hover:border-cyan-400/50 transition-all shadow-[0_0_20px_rgba(0,229,255,0.1)]">
-              <FingerprintScanner size={120} isActive={true} />
-              <div className="text-xs tracking-[0.3em] text-cyan-300 mt-4 opacity-90 drop-shadow-[0_0_5px_rgba(0,229,255,0.5)]">
-                BIOMETRIC SCAN
-              </div>
-              <div className="text-[10px] tracking-widest text-green-400 mt-1 drop-shadow-[0_0_5px_rgba(74,222,128,0.5)]">
-                ACCESS GRANTED
-              </div>
+            <FingerprintScanner size={120} isActive={true} />
+            <div className="text-xs tracking-[0.3em] text-cyan-300 mt-4 opacity-90 drop-shadow-[0_0_5px_rgba(0,229,255,0.5)]">
+              BIOMETRIC SCAN
             </div>
-
-            <button
-              onClick={() => setIsAppPathsOpen(true)}
-              className="w-full py-3 border border-cyan-400/30 rounded text-sm tracking-widest hover:bg-cyan-500/20 transition-all bg-black/30 backdrop-blur-sm text-cyan-300 hover:text-cyan-100 shadow-[0_0_10px_rgba(0,229,255,0.1)]"
-            >
-              CONFIG APPS
-            </button>
+            <div className="text-[10px] tracking-widest text-green-400 mt-1 drop-shadow-[0_0_5px_rgba(74,222,128,0.5)]">
+              ACCESS GRANTED
+            </div>
           </motion.div>
+
+          <motion.button
+            initial={{ x: 100, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            transition={{ delay: 0.5, duration: 0.8 }}
+            onClick={() => setIsAppPathsOpen(true)}
+            className="w-full py-3 border border-cyan-400/30 rounded text-sm tracking-widest hover:bg-cyan-500/20 transition-all bg-black/30 backdrop-blur-sm text-cyan-300 hover:text-cyan-100 shadow-[0_0_10px_rgba(0,229,255,0.1)]"
+          >
+            CONFIG APPS
+          </motion.button>
         </div>
       </div>
 
