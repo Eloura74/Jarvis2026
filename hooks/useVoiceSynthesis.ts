@@ -107,10 +107,13 @@ export function useVoiceSynthesis({
         );
       }
 
-      // Configuration des paramètres vocaux (style FÉMININ, FLUIDE, NATUREL)
-      utterance.pitch = 0.9; // Légèrement plus aigu pour voix féminine naturelle
-      utterance.rate = 0.9; // Cadence plus lente = plus fluide et compréhensible
+      // Configuration des paramètres vocaux (style JARVIS - Posé, Sensuel, Professionnel)
+      utterance.pitch = 0.85; // Plus grave et sensuel
+      utterance.rate = 0.85; // Très posé et calme (comme JARVIS parlant à Tony)
       utterance.volume = volume; // Volume depuis settings
+      
+      // Log pour debug
+      console.log(`🎙️ Voix configurée : Pitch ${utterance.pitch} | Rate ${utterance.rate}`);
 
       // Synchronisation avec l'état du système
       utterance.onstart = () => {

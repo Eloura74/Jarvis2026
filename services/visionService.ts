@@ -1,11 +1,11 @@
 /**
  * Service Gemini Vision - Analyse d'images et screenshots
  * 
- * Utilise Gemini 2.0 Flash (GRATUIT) avec support Vision
+ * Utilise Gemini 2.5 Flash avec support Vision
  * pour analyser le contenu de l'écran.
  * 
  * Fonctionnalités :
- * - Screenshot automatique
+ * - Screenshot automatique (html2canvas)
  * - Analyse du contenu visuel
  * - OCR (extraction de texte)
  * - Détection d'erreurs dans le code
@@ -15,6 +15,7 @@
  */
 
 import { GoogleGenAI } from "@google/genai";
+import html2canvas from "html2canvas";
 
 // ============================================================================
 // CONFIGURATION
@@ -54,62 +55,47 @@ export interface VisionAnalysisResult {
 // ============================================================================
 
 /**
- * Capture un screenshot de l'écran actuel
+ * Capture un screenshot de l'interface J.A.R.V.I.S. actuelle
  * 
- * Utilise l'API getDisplayMedia du navigateur pour capturer l'écran complet.
- * L'utilisateur devra autoriser le partage d'écran.
+ * Utilise html2canvas pour capturer l'onglet automatiquement
+ * SANS popup ni permission requise.
+ * 
+ * Note : Capture SEULEMENT l'onglet J.A.R.V.I.S., pas les autres écrans.
  * 
  * @returns Promise avec l'image en base64
  */
 export const captureScreen = async (): Promise<string> => {
-  return new Promise(async (resolve, reject) => {
-    try {
-      // Demander la permission de capturer l'écran
-      const stream = await navigator.mediaDevices.getDisplayMedia({
-        video: {
-          mediaSource: "screen" as any,
-        } as any,
-      });
+  try {
+    console.log("📸 Capture automatique de l'interface J.A.R.V.I.S...");
 
-      // Créer un élément video pour capturer le stream
-      const video = document.createElement("video");
-      video.srcObject = stream;
-      video.autoplay = true;
+    // Capturer l'interface avec html2canvas (SANS popup)
+    const canvas = await html2canvas(document.body, {
+      backgroundColor: "#000000", // Fond noir J.A.R.V.I.S.
+      scale: 1, // Qualité normale (performance optimale)
+      logging: false, // Pas de logs debug
+      useCORS: true, // Images cross-origin
+      allowTaint: true,
+      windowWidth: window.innerWidth,
+      windowHeight: window.innerHeight,
+      // Ignorer certains éléments pour de meilleures performances
+      ignoreElements: (element) => {
+        // Ignorer les vidéos et iframes pour éviter les problèmes
+        return element.tagName === "VIDEO" || element.tagName === "IFRAME";
+      },
+    });
 
-      // Attendre que la vidéo soit prête
-      await new Promise<void>((resolveVideo) => {
-        video.onloadedmetadata = () => {
-          video.play();
-          resolveVideo();
-        };
-      });
+    // Convertir en base64
+    const dataUrl = canvas.toDataURL("image/png", 0.9);
 
-      // Attendre un frame pour être sûr que la vidéo est affichée
-      await new Promise((r) => setTimeout(r, 100));
+    console.log("✅ Capture réussie !");
+    console.log(`📊 Résolution : ${canvas.width}x${canvas.height}px`);
+    console.log(`📦 Taille : ${Math.round(dataUrl.length / 1024)}KB`);
 
-      // Capturer le frame dans un canvas
-      const canvas = document.createElement("canvas");
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-
-      const context = canvas.getContext("2d");
-      if (!context) {
-        throw new Error("Impossible de créer le contexte canvas");
-      }
-
-      context.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-      // Arrêter le stream
-      stream.getTracks().forEach((track) => track.stop());
-
-      // Convertir en base64
-      const dataUrl = canvas.toDataURL("image/png");
-      resolve(dataUrl);
-    } catch (error) {
-      console.error("Erreur capture écran:", error);
-      reject(error);
-    }
-  });
+    return dataUrl;
+  } catch (error) {
+    console.error("❌ Erreur capture automatique:", error);
+    throw new Error("Échec de la capture automatique de l'interface");
+  }
 };
 
 /**
