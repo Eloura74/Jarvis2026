@@ -10,16 +10,16 @@
 :root {
   /* Couleur unique : cyan */
   --jarvis-cyan: #00e5ff;
-  --jarvis-cyan-dim: rgba(0, 229, 255, 0.3);
-  --jarvis-cyan-subtle: rgba(0, 229, 255, 0.85);
+  --jarvis-cyan-dim: rgba(0, 229, 255, 0.6);
+  --jarvis-cyan-subtle: rgba(0, 229, 255, 0.95);
 
   /* Ligne ultra-fine */
   --line-thin: 0.5px;
   --line-normal: 1px;
 
-  /* Glow subtil */
-  --glow-small: 0 0 8px rgba(0, 229, 255, 0.6);
-  --glow-medium: 0 0 12px rgba(0, 229, 255, 0.4);
+  /* Glow subtil - Réduit pour plus de netteté */
+  --glow-small: 0 0 4px rgba(0, 229, 255, 0.6);
+  --glow-medium: 0 0 8px rgba(0, 229, 255, 0.4);
 }
 
 /* ==================== RESET & BASE ==================== */
@@ -154,23 +154,24 @@ body {
 /* ==================== TEXTE TECHNIQUE ==================== */
 
 /* Texte ultra-fin */
+/* Texte ultra-fin */
 .jarvis-text {
   font-family: "Rajdhani", "JetBrains Mono", monospace;
-  font-weight: 300;
+  font-weight: 500;
   font-size: 15px;
   letter-spacing: 2px;
   text-transform: uppercase;
   color: var(--jarvis-cyan);
-  text-shadow: var(--glow-small);
+  text-shadow: none;
   padding-bottom: 20px;
 }
 
 /* Texte de données (petits chiffres) */
 .jarvis-data {
   font-family: "JetBrains Mono", monospace;
-  font-size: 9px;
-  font-weight: 400;
-  color: var(--jarvis-cyan-dim);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--jarvis-cyan-subtle);
   letter-spacing: 1px;
 }
 
@@ -407,8 +408,8 @@ body {
     0deg,
     transparent,
     transparent 2px,
-    rgba(0, 229, 255, 0.02) 2px,
-    rgba(0, 229, 255, 0.02) 4px
+    rgba(0, 229, 255, 0.005) 2px,
+    rgba(0, 229, 255, 0.005) 4px
   );
   pointer-events: none;
   z-index: 1000;

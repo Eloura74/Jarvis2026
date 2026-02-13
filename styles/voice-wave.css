@@ -1,0 +1,50 @@
+/*
+ * --- CSS VOICE WAVE ---
+ * Style pour l'animation d'onde vocale
+ */
+:root {
+  --wave-color: #00f3ff;
+  --wave-speed: 1s;
+}
+
+.voice-wave {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  height: 60px;
+}
+
+.voice-bar {
+  /* Dimensions de base */
+  width: 6px;
+  height: 10px;
+  border-radius: 4px;
+
+  /* Style néon */
+  background: var(--wave-color);
+  box-shadow: 0 0 10px var(--wave-color);
+
+  /* L'animation utilise des variables CSS définies par le parent ou JS */
+  /* --duration est injecté par JS pour l'aléatoire */
+  animation: equalizer var(--duration, 1s) ease-in-out infinite alternate;
+
+  /* --delay est injecté par JS pour désynchroniser */
+  animation-delay: var(--delay, 0s);
+
+  /* Optimisation performance */
+  will-change: height;
+  transition: height 0.1s ease;
+}
+
+@keyframes equalizer {
+  0% {
+    height: 10px;
+    opacity: 0.3;
+  }
+  100% {
+    /* --max-h est injecté par JS pour varier les hauteurs */
+    height: var(--max-h, 45px);
+    opacity: 1;
+  }
+}

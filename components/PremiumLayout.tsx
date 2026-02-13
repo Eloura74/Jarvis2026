@@ -12,6 +12,7 @@ import { LoadingOverlay } from "./LoadingOverlay";
 import { SuccessRipple } from "./SuccessRipple";
 import { AppPathsManager } from "./AppPathsManager";
 import { ParticleSphere } from "./ParticleSphere";
+import { VoiceWave } from "./VoiceWave";
 
 interface PremiumLayoutProps {
   // HUD status
@@ -217,6 +218,17 @@ export const PremiumLayout: React.FC<PremiumLayoutProps> = ({
                 24
               </span>
             </div>
+
+            {/* Animation Voice Wave - Styles néon cyan */}
+            <div className="jarvis-line-h" />
+            <div className="flex justify-center pt-2">
+              <VoiceWave
+                barCount={9}
+                color="#00f3ff"
+                maxHeight={35}
+                isActive={true}
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -407,10 +419,10 @@ export const PremiumLayout: React.FC<PremiumLayoutProps> = ({
                 fontFamily: "Rajdhani, sans-serif",
                 color: "#f0f0f0", // Gris blanc
                 textShadow: `
-                0 0 20px rgba(255, 255, 255, 0.8),
-                0 0 40px rgba(200, 200, 255, 0.5),
-                0 0 70px rgba(0, 229, 255, 0.4),
-                2px 2px 6px rgba(0, 0, 0, 0.9)
+                0 0 10px rgba(255, 255, 255, 0.8),
+                0 0 20px rgba(200, 200, 255, 0.5),
+                0 0 40px rgba(0, 229, 255, 0.4),
+                2px 2px 4px rgba(0, 0, 0, 0.9)
               `,
                 letterSpacing: "0.3em",
                 filter: "brightness(1.1)",
