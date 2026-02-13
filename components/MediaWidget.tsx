@@ -1,4 +1,4 @@
-// fichier pour les widgets
+// fichier pour les widgets de l'interface
 import React from "react";
 import { Play, SkipForward, SkipBack, Disc } from "lucide-react";
 
