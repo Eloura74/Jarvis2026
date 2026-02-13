@@ -9,7 +9,6 @@ interface ParticleSphereProps {
   activeColor?: string;
 }
 
-// Classe pour les points de la grille (Latitude/Longitude)
 class GridPoint {
   x: number;
   y: number;
@@ -19,24 +18,30 @@ class GridPoint {
   baseZ: number;
   lat: number;
   lon: number;
+  isLand: boolean;
 
   constructor(radius: number, lat: number, lon: number) {
     this.lat = lat;
     this.lon = lon;
 
     // Conversion Sphérique -> Cartésien
-    // phi (lat) de -PI/2 à PI/2
-    // theta (lon) de 0 à 2PI
-    const phi = (lat * Math.PI) / 180;
-    const theta = (lon * Math.PI) / 180;
+    const phi = (90 - lat) * (Math.PI / 180);
+    const theta = (lon + 180) * (Math.PI / 180);
 
-    this.x = radius * Math.cos(phi) * Math.cos(theta);
-    this.y = radius * Math.sin(phi); // Y est l'axe vertical ici pour simplifier la rotation
-    this.z = radius * Math.cos(phi) * Math.sin(theta);
+    //
+    this.x = -(radius * Math.sin(phi) * Math.cos(theta));
+    this.z = radius * Math.sin(phi) * Math.sin(theta);
+    this.y = radius * Math.cos(phi);
 
     this.baseX = this.x;
     this.baseY = this.y;
     this.baseZ = this.z;
+
+    // Simulation simpliste de "continents" via bruit
+    const noise =
+      Math.sin(lat * 0.1) * Math.cos(lon * 0.1) +
+      Math.sin(lat * 0.3 + lon * 0.2) * 0.5;
+    this.isLand = noise > 0.2;
   }
 
   update(radiusFactor: number, rotationY: number, rotationX: number) {
@@ -48,12 +53,12 @@ class GridPoint {
     let x1 = currentX * Math.cos(rotationY) - currentZ * Math.sin(rotationY);
     let z1 = currentZ * Math.cos(rotationY) + currentX * Math.sin(rotationY);
 
-    // Rotation X (Légère inclinaison -23.5deg pour effet Terre)
-    const tilt = (23.5 * Math.PI) / 180;
+    // Rotation X (Tilt fixe ~23deg)
+    const tilt = (23 * Math.PI) / 180;
     let y2 = currentY * Math.cos(tilt) - z1 * Math.sin(tilt);
     let z2 = z1 * Math.cos(tilt) + currentY * Math.sin(tilt);
 
-    // Ajout rotation animée sur X si besoin (rotationX)
+    // Oscillation additionnelle X
     let y3 = y2 * Math.cos(rotationX) - z2 * Math.sin(rotationX);
     let z3 = z2 * Math.cos(rotationX) + y2 * Math.sin(rotationX);
 
@@ -67,9 +72,9 @@ export const ParticleSphere: React.FC<ParticleSphereProps> = ({
   isActive,
   isListening,
   audioLevel = 0,
-  size = 300,
+  size = 600,
   baseColor = "#00e5ff",
-  activeColor = "#ff0033",
+  activeColor = "#00e5ff",
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -81,141 +86,110 @@ export const ParticleSphere: React.FC<ParticleSphereProps> = ({
     if (!ctx) return;
 
     const dpr = window.devicePixelRatio || 1;
-    const rect = canvas.getBoundingClientRect();
-    canvas.width = rect.width * dpr;
-    canvas.height = rect.height * dpr;
+    canvas.width = size * dpr;
+    canvas.height = size * dpr;
     ctx.scale(dpr, dpr);
 
     // --- CONFIGURATION DU GLOBE ---
-    const radius = size * 0.35;
+    // Rayon AUGMENTÉ pour effet MAXIMAL (était 0.36 -> 0.42)
+    const radius = size * 0.42;
     const points: GridPoint[] = [];
 
-    // Création des Latitudes (Parallèles)
-    for (let lat = -80; lat <= 80; lat += 10) {
-      // Plus on est proche des pôles, moins on a de points pour maintenir la densité visuelle constante
-      const circumference = Math.cos((lat * Math.PI) / 180);
-      const step = 15 / Math.max(0.1, circumference); // Espacement longitudinal
+    for (let lat = -90; lat <= 90; lat += 3) {
+      const r_lat = Math.cos((lat * Math.PI) / 180) * radius;
+      const circumference = 2 * Math.PI * r_lat;
+      const pointsOnLat = Math.floor(circumference / 4);
 
-      for (let lon = 0; lon < 360; lon += step) {
-        points.push(new GridPoint(radius, lat, lon));
+      if (pointsOnLat > 0) {
+        const step = 360 / pointsOnLat;
+        for (let lon = -180; lon < 180; lon += step) {
+          points.push(new GridPoint(radius, lat, lon));
+        }
       }
     }
 
-    // Ajout de particules aléatoires "Data" internes
-    const dataPoints: GridPoint[] = [];
-    for (let i = 0; i < 150; i++) {
-      const lat = (Math.random() - 0.5) * 160;
-      const lon = Math.random() * 360;
-      // Rayon légèrement variable pour effet de volume
-      const rVar = radius * (0.5 + Math.random() * 0.4);
-      dataPoints.push(new GridPoint(rVar, lat, lon));
-    }
-
     let rotationY = 0;
-    let rotationX = 0; // Légère oscillation
+    let rotationX = 0;
     let time = 0;
     let animationId: number;
 
     const render = () => {
-      ctx.clearRect(0, 0, rect.width, rect.height);
-      const centerX = rect.width / 2;
-      const centerY = rect.height / 2;
+      ctx.clearRect(0, 0, size, size);
+      const centerX = size / 2;
+      const centerY = size / 2;
 
       // --- LOGIQUE D'ANIMATION ---
       let targetRadius = 1;
-      let rotSpeed = 0.002;
-
-      const audioFactor = Math.min(1, Math.max(0, audioLevel / 100));
+      let rotSpeed = 0.003;
 
       if (isActive) {
-        // SPEAKING (Assistant)
-        targetRadius = 1.05 + audioFactor * 0.2;
-        rotSpeed = 0.02; // Rotation rapide quand parle
+        // Speaking: LOCK SIZE (Animation vitesse seulement)
+        targetRadius = 1;
+        rotSpeed = 0.03;
       } else if (isListening) {
-        // LISTENING (User) - LE MICRO EST ACTIVÉ
-        // L'utilisateur veut que ça "s'anime légèrement plus" et "grossisse un peu"
-        targetRadius = 1.15 + audioFactor * 0.15; // + ~15% en base + reaction audio
-        rotSpeed = 0.01; // Rotation plus rapide que l'idle (0.002)
-        // Ajout d'une oscillation plus marquée sur X pour l'effet " vivant "
-        rotationX = Math.sin(time * 0.02) * 0.1;
+        // Listening: LOCK SIZE (Animation vitesse + oscillation seulement)
+        targetRadius = 1;
+        rotSpeed = 0.02;
+        rotationX = Math.sin(time * 0.05) * 0.1;
       } else {
-        // IDLE
-        targetRadius = 1 + Math.sin(time * 0.01) * 0.01;
+        // Idle
+        targetRadius = 1 + Math.sin(time * 0.01) * 0.005;
+        rotationX = Math.sin(time * 0.01) * 0.02;
       }
 
       rotationY += rotSpeed;
-      if (!isActive) rotationX = Math.sin(time * 0.005) * 0.005; // Oscillation légère en idle
       time += 1;
 
-      // Couleur active
-      const color = isActive ? activeColor : baseColor;
-
-      // Perspective pour le centre (pour les anneaux globaux)
-      const fov = 300;
-      const centerScale = fov / (fov + 400);
-
-      // --- DESSIN GRILLE ---
+      // --- 1. GLOBE (POINTS) ---
       points.forEach((p) => {
         p.update(targetRadius, rotationY, rotationX);
 
-        // Perspective
-        const scale = fov / (fov + p.z + 400); // +400 pour reculer la caméra
-        const px = centerX + p.x * scale;
-        const py = centerY + p.y * scale;
-
-        // On ne dessine que ce qui est "devant" ou légèrement derrière pour transparence
-        // Z range approx -radius à +radius
-        // Opacité basée sur Z (Depth Cueing)
-        const alpha = Math.max(0.1, (p.z + radius) / (2 * radius)); // 0 à 1 approx
-
-        if (alpha > 0.1) {
-          ctx.fillStyle = color;
-          ctx.globalAlpha = alpha * 0.6;
-          ctx.beginPath();
-          ctx.arc(px, py, 1.5 * scale, 0, Math.PI * 2);
-          ctx.fill();
-        }
-      });
-
-      // --- DESSIN DATA POINTS (Interne) ---
-      dataPoints.forEach((p) => {
-        p.update(targetRadius, -rotationY * 1.5, time * 0.005); // Tourne en sens inverse
-
+        const fov = 400;
         const scale = fov / (fov + p.z + 400);
         const px = centerX + p.x * scale;
         const py = centerY + p.y * scale;
 
-        const alpha = Math.max(0, (p.z + radius) / (2 * radius));
+        if (p.z > -radius * 1.5) {
+          let baseAlpha = (p.z + radius) / (2 * radius);
 
-        if (alpha > 0.05) {
-          ctx.fillStyle = isActive ? "#ffffff" : color; // Data blanc si actif
-          ctx.globalAlpha = alpha * 0.8;
-          ctx.beginPath();
-          ctx.arc(px, py, 2 * scale, 0, Math.PI * 2);
-          ctx.fill();
+          if (p.isLand) {
+            ctx.fillStyle = isListening || isActive ? "#ffffff" : baseColor;
+            ctx.globalAlpha = Math.max(0.1, baseAlpha);
+            ctx.beginPath();
+            ctx.arc(px, py, 1.2 * scale, 0, Math.PI * 2);
+            ctx.fill();
+          } else {
+            ctx.fillStyle = baseColor;
+            ctx.globalAlpha = Math.max(0, baseAlpha * 0.3);
+            ctx.beginPath();
+            ctx.arc(px, py, 0.8 * scale, 0, Math.PI * 2);
+            ctx.fill();
+          }
         }
       });
 
-      // --- EFFET SCAN VERTICAL / ANNEAU ---
-      // const scanY = centerY + Math.sin(time * 0.05) * radius * centerScale;
+      // --- 2. ANNEAUX (RINGS) - SUPPRIMÉS ---
+      // L'utilisateur veut uniquement la sphère, sans traits autour.
 
-      /* Anneau équatorial brillant */
-      ctx.beginPath();
-      ctx.strokeStyle = color;
-      ctx.lineWidth = 1;
-      ctx.globalAlpha = 0.3;
-      // Utilisation de centerScale défini plus haut
-      ctx.ellipse(
-        centerX,
-        centerY,
-        radius * 1.2 * centerScale,
-        radius * 0.4 * centerScale,
-        0,
-        0,
-        Math.PI * 2,
-      );
-      ctx.stroke();
-      ctx.globalAlpha = 1;
+      // --- 3. DÉCORS & TEXTE ---
+      let statusText = "STANDBY";
+      let statusColor = baseColor;
+
+      if (isListening) {
+        statusText = "LISTENING";
+        statusColor = "#ef4444";
+      } else if (isActive) {
+        statusText = "ACTIVE";
+        statusColor = "#00e5ff";
+      }
+
+      ctx.font = "bold 14px Rajdhani, monospace";
+      ctx.fillStyle = statusColor;
+      ctx.textAlign = "center";
+      ctx.letterSpacing = "2px";
+      // Positionné juste sous la sphère
+      ctx.fillText(statusText, centerX, centerY + radius * 1.2);
+
       animationId = requestAnimationFrame(render);
     };
 
@@ -229,12 +203,13 @@ export const ParticleSphere: React.FC<ParticleSphereProps> = ({
         ref={canvasRef}
         style={{ width: size, height: size, zIndex: 10 }}
       />
-      {/* Bloom Central */}
+      {/* Glow Central Diffus */}
       <div
         className="absolute inset-0 rounded-full pointer-events-none"
         style={{
-          background: `radial-gradient(circle, ${isActive ? activeColor : baseColor}33 0%, transparent 60%)`,
-          filter: "blur(30px)",
+          background: `radial-gradient(circle, ${isListening ? "#ef4444" : baseColor}22 0%, transparent 60%)`,
+          filter: "blur(40px)",
+          transition: "background 0.3s ease",
         }}
       />
     </div>
