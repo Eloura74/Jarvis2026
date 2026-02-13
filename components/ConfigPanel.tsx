@@ -1,15 +1,16 @@
 /**
  * ConfigPanel - Panneau de configuration unifié pour J.A.R.V.I.S.
- * 
+ *
  * Onglets :
- * - Applications (chemins personnalisés)
+ * - Applications (chemins personnalisés avec CRUD complet)
  * - Raccourcis (clavier globaux)
  * - Commandes (macros personnalisées)
  */
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Folder, Keyboard, Zap, Plus, Trash2, Save } from "lucide-react";
+import { X, Folder, Keyboard, Zap, Plus, Trash2, Save, Edit, Play, Check } from "lucide-react";
+import { APPS_DATABASE, AppEntry } from "../appsDatabase";
 
 interface ConfigPanelProps {
   isOpen: boolean;

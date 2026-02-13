@@ -23,6 +23,7 @@ import * as windowManager from "./windowManager.js";
 import * as automation from "./automation.js";
 import { getSystemStats, getLightStats } from "./systemStats.js";
 import * as fileSystem from "./fileSystem.js";
+import appsRoutes from "./routes/apps.js";
 
 const app = express();
 const PORT = 3001;
@@ -30,6 +31,9 @@ const PORT = 3001;
 // Middleware
 app.use(cors()); // Permettre les requêtes depuis le frontend (localhost:5003)
 app.use(express.json());
+
+// Routes API - Gestion des applications (CRUD)
+app.use("/api/apps", appsRoutes);
 
 // Index des applications (chargé en mémoire)
 let appsIndex = [];

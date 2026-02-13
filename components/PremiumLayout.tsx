@@ -9,7 +9,7 @@ import { JarvisHUDAuthentic } from "./JarvisHUDAuthentic";
 import { JarvisCinematicBackground } from "./JarvisCinematicBackground";
 import { LoadingOverlay } from "./LoadingOverlay";
 import { SuccessRipple } from "./SuccessRipple";
-import { ConfigPanel } from "./ConfigPanel";
+import { ConfigPanelCRUD } from "./ConfigPanelCRUD";
 import { ParticleSphere } from "./ParticleSphere";
 import { FingerprintScanner } from "./FingerprintScanner";
 import { NeuralFeed } from "./NeuralFeed";
@@ -391,7 +391,7 @@ export const PremiumLayout: React.FC<PremiumLayoutProps> = ({
       </div>
 
       {/* OVERLAYS */}
-      <ConfigPanel
+      <ConfigPanelCRUD
         isOpen={isAppPathsOpen}
         onClose={() => setIsAppPathsOpen(false)}
       />

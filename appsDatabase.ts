@@ -211,6 +211,51 @@ export const APPS_DATABASE: Record<string, AppEntry> = {
     keywords: ["games", "gaming", "game launcher", "steam", "valve"],
     description: "Steam - game platform",
   },
+
+  // ============================================================================
+  // APPLICATIONS SYSTÈME WINDOWS
+  // ============================================================================
+  calculette: {
+    path: "calc",
+    category: "system",
+    keywords: ["calcul", "math", "calculator", "calculatrice", "addition"],
+    description: "Calculatrice Windows",
+    aliases: ["calc", "calculator", "calculatrice"],
+  },
+  notepad: {
+    path: "notepad",
+    category: "system",
+    keywords: ["texte", "text", "editor", "éditeur", "note"],
+    description: "Bloc-notes Windows",
+    aliases: ["bloc-notes", "note", "notes"],
+  },
+  explorer: {
+    path: "explorer",
+    category: "system",
+    keywords: ["files", "fichiers", "explorateur", "folder", "dossier"],
+    description: "Explorateur de fichiers Windows",
+    aliases: ["explorateur", "fichiers", "files"],
+  },
+  paint: {
+    path: "mspaint",
+    category: "system",
+    keywords: ["dessin", "draw", "image", "paint", "painting"],
+    description: "Paint Windows",
+  },
+  "task manager": {
+    path: "taskmgr",
+    category: "system",
+    keywords: ["tasks", "processes", "system", "performance", "gestionnaire"],
+    description: "Gestionnaire des tâches Windows",
+    aliases: ["taskmgr", "gestionnaire", "gestionnaire de tâches"],
+  },
+  settings: {
+    path: "ms-settings:",
+    category: "system",
+    keywords: ["settings", "paramètres", "configuration", "system"],
+    description: "Paramètres Windows",
+    aliases: ["paramètres", "config", "configuration"],
+  },
 };
 
 /**
