@@ -14,9 +14,9 @@ import { KernelProvider, useKernel } from "./contexts/KernelContext";
 
 // Composants UI
 import { PremiumLayout } from "./components/PremiumLayout";
+import { ImageOverlay } from "./components/ImageOverlay";
 import { toasterConfig } from "./utils/toasterConfig";
 import { SystemStatus } from "./types";
-import { CommandInfo } from "./types/app.types";
 
 // Hooks Spécialisés
 import { useJarvisInteraction } from "./hooks/useJarvisInteraction";
@@ -29,8 +29,19 @@ import { useAutonomy } from "./hooks/useAutonomy";
 
 const JarvisShell: React.FC = () => {
   // Accès au "Noyau" via Context
-  const { status, setStatus, logs, addLog, appMemory, updateMemory, findApp } =
-    useKernel();
+  const {
+    status,
+    setStatus,
+    logs,
+    addLog,
+    appMemory,
+    updateMemory,
+    findApp,
+    visualMode, // NOUVEAU
+    setVisualMode, // NOUVEAU
+    addConversationMessage, // NOUVEAU
+    getConversationContext, // NOUVEAU
+  } = useKernel();
 
   // État local UI (non-partagé)
   const [activeOverlay, setActiveOverlay] = useState<string | null>(null);
@@ -60,6 +71,9 @@ const JarvisShell: React.FC = () => {
     setStatus,
     speak: interaction.speak,
     setActiveOverlay,
+    setVisualMode, // NOUVEAU
+    addConversationMessage, // NOUVEAU
+    getConversationContext, // NOUVEAU
   });
 
   brainRef.current = brain;
@@ -107,6 +121,14 @@ const JarvisShell: React.FC = () => {
         isProcessing={status === SystemStatus.PROCESSING}
         processingMessage={activeOverlay || "🤖 JARVIS analyse..."}
       />
+
+      {/* Overlay Visuel (Images) */}
+      <ImageOverlay
+        query={visualMode.query}
+        isVisible={visualMode.isVisible}
+        onClose={() => setVisualMode(null, false)}
+      />
+
       <Toaster {...toasterConfig} />
     </>
   );

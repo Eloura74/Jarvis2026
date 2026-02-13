@@ -222,7 +222,7 @@ export const PremiumLayout: React.FC<PremiumLayoutProps> = ({
       </div>
 
       {/* Coin supérieur droit - Commandes - ENRICHI */}
-      <div className="fixed top-8 right-8 w-72 z-30">
+      <div className="fixed top-36 right-8 w-72 z-30">
         <div
           className="jarvis-panel-corners p-5"
           style={{
@@ -561,11 +561,11 @@ export const PremiumLayout: React.FC<PremiumLayoutProps> = ({
             }`}
             style={{
               padding: "18px 36px",
-              borderColor: isListening ? "#ffd700" : "#00e5ff",
+              borderColor: isListening ? "#ff0000" : "#00e5ff",
               boxShadow: isListening
-                ? "0 0 30px rgba(255, 215, 0, 0.6), inset 0 0 20px rgba(255, 215, 0, 0.1)"
+                ? "0 0 30px rgba(255, 0, 0, 0.6), inset 0 0 20px rgba(255, 0, 0, 0.1)"
                 : "0 0 15px rgba(0, 229, 255, 0.4)",
-              color: isListening ? "#ffd700" : "#00e5ff",
+              color: isListening ? "#ff0000" : "#00e5ff",
             }}
           >
             {/* Indicateur statut */}
@@ -574,9 +574,9 @@ export const PremiumLayout: React.FC<PremiumLayoutProps> = ({
                 isListening ? "jarvis-dot-pulse" : "jarvis-dot"
               }`}
               style={{
-                background: isListening ? "#ffd700" : "#00e5ff",
+                background: isListening ? "#ff0000" : "#00e5ff",
                 boxShadow: isListening
-                  ? "0 0 10px rgba(255, 215, 0, 0.8)"
+                  ? "0 0 10px rgba(255, 0, 0, 0.8)"
                   : "0 0 8px rgba(0, 229, 255, 0.6)",
               }}
             />
@@ -594,9 +594,9 @@ export const PremiumLayout: React.FC<PremiumLayoutProps> = ({
                   className="jarvis-text"
                   style={{
                     fontSize: "13px",
-                    color: isListening ? "#ffd700" : "#00e5ff",
+                    color: isListening ? "#ff0000" : "#00e5ff",
                     textShadow: isListening
-                      ? "0 0 10px rgba(255, 215, 0, 0.8)"
+                      ? "0 0 10px rgba(255, 0, 0, 0.8)"
                       : "0 0 8px rgba(0, 229, 255, 0.6)",
                   }}
                 >
@@ -623,9 +623,9 @@ export const PremiumLayout: React.FC<PremiumLayoutProps> = ({
               <div
                 className="jarvis-status-indicator"
                 style={{
-                  background: isListening ? "#ffd700" : "#00e5ff",
+                  background: isListening ? "#ff0000" : "#00e5ff",
                   boxShadow: isListening
-                    ? "0 0 10px rgba(255, 215, 0, 0.8)"
+                    ? "0 0 10px rgba(255, 0, 0, 0.8)"
                     : "0 0 8px rgba(0, 229, 255, 0.6)",
                 }}
               />

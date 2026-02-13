@@ -1,9 +1,4 @@
-import {
-  GoogleGenAI,
-  FunctionDeclaration,
-  SchemaType,
-  Type,
-} from "@google/genai";
+import { GoogleGenAI, FunctionDeclaration, Type } from "@google/genai";
 import { AppMemory } from "../types";
 import { OmniDecision } from "../types/app.types";
 
@@ -64,23 +59,24 @@ ${memorySummary}
 4. **Hardware/IoT**: 'manage_hardware'.
 5. **Media**: 'control_media'.
 6. **Web**: 'perform_web_search'.
-7. **System**: 'organize_files', 'system_optimization'.
+7. **Visuals**: 'show_images' - Illustrate conversation with images (e.g., "Show me a T-Rex").
+8. **System**: 'organize_files', 'system_optimization'.
 
 **CRITICAL RULES FOR TOOL USAGE:**
 - **DISTINGUISH CONVERSATION VS ACTION**:
-  - If the user asks for an **OPINION**, **EXPLANATION**, or **GENERAL KNOWLEDGE** (e.g., "What do you think of...", "Tell me about...", "How works..."), **DO NOT USE TOOLS**. Answer textually with your internal knowledge.
-  - ONLY use 'perform_web_search' if the user **EXPLICITLY** asks to "search", "find online", "look up", or if the information is likely to be very recent/real-time (news, weather).
-  
-- **PRONOUN RESOLUTION**:
-  - Use CONVERSATIONAL CONTEXT to resolve "it", "that", "him", "her".
-  - Example: "Call her" (Context: talking about Marie) → Call Marie.
+  - If the user asks for an **OPINION** or **GENERAL KNOWLEDGE**, Answer textually.
+  - **SYSTEMATIC VISUALS**: Whenever you describe something physical, a place, a person, or a concept that can be visualized (like "Mairie de Fos", "Iron Man", "Python code"), **YOU MUST USE** 'show_images("precise query")' to illustrate your response.
+  - **QUERY CLEANING**: For 'show_images', parameter 'query' MUST be:
+     1. **CORRECTED** (Fix typos: "therie" -> "théorie").
+     2. **CONCISE** (Keywords only: "Théorie des cordes", not "what is string theory").
+     3. **SPECIFIC** (e.g. "Iron Man Mark 85" instead of "Iron Man").
+  - **Search Rule**: ONLY use 'perform_web_search' if the user **EXPLICITLY** asks to "search links" or "find online references". For visual context, prefer 'show_images'.
 
-- **COMPLEX REQUESTS**:
-  - You can execute MULTIPLE tools in one response (Workflow).
-  - Example: "Work Mode" → Launch VSCode, Launch Spotify.
-
-- **AMBIGUITY**:
-  - If unsure between Tool or Text, prefer Text and ask for clarification.
+**EXAMPLES OF INTENT:**
+- User: "Montre-moi Mars" -> Tool: show_images("Planète Mars")
+- User: "A quoi ressemble Iron Man ?" -> Tool: show_images("Iron Man Marvel")
+- User: "Cherche des infos sur Mars" -> Tool: perform_web_search("Mars planet info")
+- User: "Que penses-tu de..." -> Tool: show_images("...") + Text Opinion.
 `;
 
 // ============================================================================
@@ -245,6 +241,21 @@ const toolDeclarations: FunctionDeclaration[] = [
       required: ["url"],
     },
   },
+  // OUTIL 13 : Affichage d'images (NOUVEAU)
+  // Permet à Gemini d'illustrer ses propos avec des images du web
+  // Exemple : "Montre-moi des chats" → query: "chats"
+  {
+    name: "show_images",
+    description:
+      "MUST USE this tool to display images whenever the user asks to 'see', 'show', or asks for a visual description. Argument 'query' is the search term.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        query: { type: Type.STRING },
+      },
+      required: ["query"],
+    },
+  },
 ];
 
 // ============================================================================
@@ -278,7 +289,7 @@ export const parseCommand = async (
         : "No prior usage.";
 
     const response = await ai.models.generateContent({
-      model: "gemini-2.0-flash", // Utilisation de la version 2.0 Flash plus stable
+      model: "gemini-2.0-flash",
       contents: input,
       config: {
         systemInstruction: generateSystemInstruction(
@@ -286,43 +297,65 @@ export const parseCommand = async (
           conversationContext,
         ),
         tools: [{ functionDeclarations: toolDeclarations }],
-        temperature: 0.1,
+        temperature: 0.3, // Augmenté légèrement pour plus de créativité conversationnelle
       },
     });
 
     const candidate = response.candidates?.[0];
     if (!candidate) throw new Error("No response from Neural Core.");
 
+    // 1. Extraction des outils
     const functionCalls = candidate.content?.parts
       ?.filter((p) => p.functionCall)
       .map((p) => p.functionCall);
 
-    if (functionCalls && functionCalls.length > 0) {
-      const validCalls = functionCalls.filter(
-        (fc): fc is { name: string; args: Record<string, unknown> } =>
-          fc?.name !== undefined && fc?.args !== undefined,
-      );
-
-      const decision: OmniDecision = {
-        type: "TOOL_CALL",
-        toolCalls: validCalls.map((fc) => ({
+    const validCalls =
+      functionCalls
+        ?.filter(
+          (fc): fc is { name: string; args: Record<string, unknown> } =>
+            fc?.name !== undefined && fc?.args !== undefined,
+        )
+        .map((fc) => ({
           name: fc.name,
           args: fc.args,
-        })),
+        })) || [];
+
+    // 2. Extraction du texte
+    const textResponse = candidate.content?.parts
+      ?.filter((p) => p.text)
+      .map((p) => p.text)
+      .join("");
+
+    let decision: OmniDecision;
+
+    // CAS 1 : MIXTE (Texte + Outils)
+    if (validCalls.length > 0 && textResponse) {
+      decision = {
+        type: "MIXED_RESPONSE",
+        toolCalls: validCalls,
+        text: textResponse,
         confidence: 0.99,
       };
-
-      if (shouldUseCache) setCachedDecision(input, decision);
-
-      return decision;
+    }
+    // CAS 2 : OUTILS SEULEMENT
+    else if (validCalls.length > 0) {
+      decision = {
+        type: "TOOL_CALL",
+        toolCalls: validCalls,
+        confidence: 0.99,
+      };
+    }
+    // CAS 3 : TEXTE SEULEMENT
+    else {
+      decision = {
+        type: "TEXT_RESPONSE",
+        text: textResponse || "Standing by.",
+        confidence: 0.8,
+      };
     }
 
-    const decision: OmniDecision = {
-      type: "TEXT_RESPONSE",
-      text:
-        candidate.content?.parts?.map((p) => p.text).join("") || "Standing by.",
-      confidence: 0.8,
-    };
+    // Mise en cache seulement si pas de contexte complexe
+    if (shouldUseCache) setCachedDecision(input, decision);
 
     return decision;
   } catch (error) {

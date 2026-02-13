@@ -8,7 +8,11 @@ import React, {
 import { LogEntry, SystemStatus, AppMemory } from "../types";
 import { useSystemStatus } from "../hooks/useSystemStatus";
 import { useAppMemory } from "../hooks/useAppMemory";
-import { useAppPaths } from "../hooks/useAppPaths";
+import { useAppPaths, AppPath } from "../hooks/useAppPaths";
+import {
+  useConversationMemory,
+  ChatMessage,
+} from "../hooks/useConversationMemory";
 import { INITIAL_LOGS } from "../constants";
 
 // ========================================
@@ -32,7 +36,17 @@ interface KernelContextType {
   // Mémoire Applicative
   appMemory: AppMemory[];
   updateMemory: (appName: string, path: string) => void;
-  findApp: (appName: string) => AppMemory | undefined;
+  findApp: (appName: string) => AppPath | null;
+
+  // Mémoire Conversationnelle
+  conversationHistory: ChatMessage[];
+  addConversationMessage: (role: "user" | "model", text: string) => void;
+  clearConversationHistory: () => void;
+  getConversationContext: () => string;
+
+  // Mode Visuel (Images)
+  visualMode: { query: string | null; isVisible: boolean };
+  setVisualMode: (query: string | null, isVisible: boolean) => void;
 }
 
 // ========================================
@@ -80,6 +94,30 @@ export const KernelProvider: React.FC<KernelProviderProps> = ({ children }) => {
   const { memory: appMemory, updateMemory } = useAppMemory();
   const { findApp } = useAppPaths();
 
+  // 4. Gestion de la Mémoire Conversationnelle (Corrigé)
+  const {
+    history: conversationHistory,
+    addMessage: addConversationMessage,
+    clearHistory: clearConversationHistory,
+    getContext: getConversationContext,
+  } = useConversationMemory();
+
+  // 5. Mode Visuel
+  const [visualMode, setVisualModeState] = useState<{
+    query: string | null;
+    isVisible: boolean;
+  }>({
+    query: null,
+    isVisible: false,
+  });
+
+  const setVisualMode = useCallback(
+    (query: string | null, isVisible: boolean) => {
+      setVisualModeState({ query, isVisible });
+    },
+    [],
+  );
+
   // Valeur exposée
   const value: KernelContextType = {
     status,
@@ -90,6 +128,12 @@ export const KernelProvider: React.FC<KernelProviderProps> = ({ children }) => {
     appMemory,
     updateMemory,
     findApp,
+    conversationHistory,
+    addConversationMessage,
+    clearConversationHistory,
+    getConversationContext,
+    visualMode,
+    setVisualMode,
   };
 
   return (

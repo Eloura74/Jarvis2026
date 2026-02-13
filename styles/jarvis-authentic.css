@@ -11,12 +11,12 @@
   /* Couleur unique : cyan */
   --jarvis-cyan: #00e5ff;
   --jarvis-cyan-dim: rgba(0, 229, 255, 0.3);
-  --jarvis-cyan-subtle: rgba(0, 229, 255, 0.15);
-  
+  --jarvis-cyan-subtle: rgba(0, 229, 255, 0.85);
+
   /* Ligne ultra-fine */
   --line-thin: 0.5px;
   --line-normal: 1px;
-  
+
   /* Glow subtil */
   --glow-small: 0 0 8px rgba(0, 229, 255, 0.6);
   --glow-medium: 0 0 12px rgba(0, 229, 255, 0.4);
@@ -108,9 +108,16 @@ body {
   position: absolute;
   width: 100%;
   height: 100%;
-  background-image: 
-    linear-gradient(var(--jarvis-cyan-subtle) var(--line-thin), transparent var(--line-thin)),
-    linear-gradient(90deg, var(--jarvis-cyan-subtle) var(--line-thin), transparent var(--line-thin));
+  background-image:
+    linear-gradient(
+      var(--jarvis-cyan-subtle) var(--line-thin),
+      transparent var(--line-thin)
+    ),
+    linear-gradient(
+      90deg,
+      var(--jarvis-cyan-subtle) var(--line-thin),
+      transparent var(--line-thin)
+    );
   background-size: 40px 40px;
   opacity: 0.2;
   pointer-events: none;
@@ -133,7 +140,8 @@ body {
 }
 
 @keyframes jarvisDotPulse {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 1;
     transform: scale(1);
   }
@@ -147,18 +155,19 @@ body {
 
 /* Texte ultra-fin */
 .jarvis-text {
-  font-family: 'Rajdhani', 'JetBrains Mono', monospace;
+  font-family: "Rajdhani", "JetBrains Mono", monospace;
   font-weight: 300;
-  font-size: 11px;
+  font-size: 15px;
   letter-spacing: 2px;
   text-transform: uppercase;
   color: var(--jarvis-cyan);
   text-shadow: var(--glow-small);
+  padding-bottom: 20px;
 }
 
 /* Texte de données (petits chiffres) */
 .jarvis-data {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: "JetBrains Mono", monospace;
   font-size: 9px;
   font-weight: 400;
   color: var(--jarvis-cyan-dim);
@@ -167,12 +176,13 @@ body {
 
 /* Label technique */
 .jarvis-label {
-  font-family: 'Rajdhani', sans-serif;
-  font-size: 10px;
+  font-family: "Rajdhani", sans-serif;
+  font-size: 15px;
   font-weight: 500;
   letter-spacing: 3px;
   text-transform: uppercase;
   color: var(--jarvis-cyan-subtle);
+  padding-bottom: 20px;
 }
 
 /* ==================== PANELS FLOTTANTS ==================== */
@@ -207,7 +217,7 @@ body {
 
 .jarvis-panel-corners::before,
 .jarvis-panel-corners::after {
-  content: '';
+  content: "";
   position: absolute;
   width: 15px;
   height: 15px;
@@ -252,7 +262,7 @@ body {
 
 .jarvis-crosshair::before,
 .jarvis-crosshair::after {
-  content: '';
+  content: "";
   position: absolute;
   background: var(--jarvis-cyan);
   box-shadow: var(--glow-small);
@@ -304,7 +314,8 @@ body {
 
 /* Pulse subtil */
 @keyframes jarvisPulseSubtle {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 0.5;
   }
   50% {
@@ -352,7 +363,7 @@ body {
 }
 
 .jarvis-data-segment::before {
-  content: '';
+  content: "";
   width: 20px;
   height: var(--line-thin);
   background: var(--jarvis-cyan-dim);
@@ -427,7 +438,7 @@ body {
   background: transparent;
   border: var(--line-thin) solid var(--jarvis-cyan-dim);
   color: var(--jarvis-cyan);
-  font-family: 'Rajdhani', sans-serif;
+  font-family: "Rajdhani", sans-serif;
   font-size: 11px;
   font-weight: 500;
   letter-spacing: 2px;
@@ -457,9 +468,15 @@ body {
 /* ==================== UTILITAIRES ==================== */
 
 /* Espacement standard JARVIS */
-.jarvis-spacing-sm { margin: 8px; }
-.jarvis-spacing-md { margin: 16px; }
-.jarvis-spacing-lg { margin: 32px; }
+.jarvis-spacing-sm {
+  margin: 8px;
+}
+.jarvis-spacing-md {
+  margin: 16px;
+}
+.jarvis-spacing-lg {
+  margin: 32px;
+}
 
 /* Transparence totale */
 .jarvis-transparent {
@@ -480,11 +497,11 @@ body {
     --line-thin: 0.75px;
     --line-normal: 1.5px;
   }
-  
+
   .jarvis-text {
     font-size: 10px;
   }
-  
+
   .jarvis-data {
     font-size: 8px;
   }

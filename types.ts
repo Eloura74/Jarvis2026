@@ -105,15 +105,25 @@ export interface TimeSeriesData {
  * };
  * ```
  */
+/**
+ * Format de réponse structurée de Gemini AI
+ *
+ * Ce type représente la décision prise par Gemini suite à une commande :
+ * - TOOL_CALL : Exécution d'outils pure (ex: "Lance Chrome")
+ * - TEXT_RESPONSE : Réponse conversationnelle pure (ex: "Bonjour")
+ * - MIXED_RESPONSE : Réponse conversationnelle + Actions (ex: "Voici des images de chats" + Action ShowImages)
+ * - ERROR : Une erreur s'est produite
+ */
 export interface OmniDecision {
-  type: "TOOL_CALL" | "TEXT_RESPONSE" | "ERROR"; // Type de décision
+  type: "TOOL_CALL" | "TEXT_RESPONSE" | "MIXED_RESPONSE" | "ERROR";
 
-  // Support des workflows Multi-Tool : Gemini peut appeler plusieurs outils en une seule réponse
-  // Exemple : "Mode Travail" → Lance VSCode + Spotify + Ajuste Volume
-  toolCalls?: { name: string; args: any }[]; // Liste des outils à exécuter (optionnel)
+  // Support des workflows Multi-Tool
+  toolCalls?: { name: string; args: any }[];
 
-  text?: string; // Réponse textuelle (optionnel, pour TEXT_RESPONSE ou ERROR)
-  confidence: number; // Niveau de confiance de l'IA (0-1)
+  // Réponse textuelle (disponible aussi en MIXED_RESPONSE)
+  text?: string;
+
+  confidence: number;
 }
 
 // ============================================================================

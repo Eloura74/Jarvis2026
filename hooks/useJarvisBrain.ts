@@ -30,6 +30,8 @@ interface UseJarvisBrainProps {
   // NOUVEAU : Props pour la mémoire conversationnelle
   addConversationMessage?: (role: "user" | "model", text: string) => void;
   getConversationContext?: () => string;
+  // NOUVEAU : Mode Visuel
+  setVisualMode?: (query: string | null, isVisible: boolean) => void;
 }
 
 export function useJarvisBrain({
@@ -42,6 +44,7 @@ export function useJarvisBrain({
   setActiveOverlay,
   addConversationMessage,
   getConversationContext,
+  setVisualMode,
 }: UseJarvisBrainProps) {
   const [commandHistory, setCommandHistory] = useState<CommandInfo[]>([]);
   const [successTrigger, setSuccessTrigger] = useState(0);
@@ -51,7 +54,7 @@ export function useJarvisBrain({
   // ========================================
   const executeTool = async (toolName: string, toolArgs: any) => {
     // Contexte commun
-    const ctx: HandlerContext = { addLog, setStatus };
+    const ctx: HandlerContext = { addLog, setStatus, setVisualMode };
 
     // Dépendances additionnelles
     // NOTE: on passe findApp tel quel, les handlers devront gérer AppPath | null
@@ -120,6 +123,8 @@ export function useJarvisBrain({
           return await handlers.handleOpenUrl(toolArgs, ctx);
         case "manage_bookmarks":
           return await handlers.handleManageBookmarks(toolArgs, ctx);
+        case "show_images": // NOUVEAU
+          return await handlers.handleShowImages(toolArgs, ctx);
 
         // === PRODUCTIVITY ===
         case "set_timer":
@@ -180,20 +185,20 @@ export function useJarvisBrain({
         // 3. Envoyer à Gemini
         const result = await parseCommand(text, appMemory, conversationContext);
 
+        // CAS 1 : APPEL D'OUTIL (Outil seul)
         if (
           result.type === "TOOL_CALL" &&
           result.toolCalls &&
           result.toolCalls.length > 0
         ) {
           const toolCall = result.toolCalls[0];
-          addLog(`Intent detected: Run Tool ${toolCall.name}`, "OMNI", "info");
+          addLog(`Intent: Tool ${toolCall.name}`, "OMNI", "info");
           trackCommand(text);
           addLog(
             `Executing: ${toolCall.name} (${JSON.stringify(toolCall.args)})`,
             "KERNEL",
             "warning",
           );
-
           await executeTool(toolCall.name, toolCall.args);
 
           setSuccessTrigger(Date.now());
@@ -204,12 +209,41 @@ export function useJarvisBrain({
                 : c,
             ),
           );
-
           const successMsg = "Commande exécutée avec succès.";
           speak(successMsg);
           if (addConversationMessage)
             addConversationMessage("model", successMsg);
-        } else if (result.type === "TEXT_RESPONSE" && result.text) {
+        }
+        // CAS 2 : RÉPONSE MIXTE (Texte + Outils) - NOUVEAU
+        else if (
+          result.type === "MIXED_RESPONSE" &&
+          result.text &&
+          result.toolCalls
+        ) {
+          addLog(`Intent: Mixed (Talk + Action)`, "OMNI", "info");
+
+          // 1. Parler
+          speak(result.text);
+          if (addConversationMessage)
+            addConversationMessage("model", result.text);
+
+          // 2. Exécuter les outils (ex: show_images)
+          for (const toolCall of result.toolCalls) {
+            addLog(`Exec: ${toolCall.name}`, "KERNEL", "warning");
+            await executeTool(toolCall.name, toolCall.args);
+          }
+
+          setCommandHistory((prev) =>
+            prev.map((c) =>
+              c.timestamp === newCommand.timestamp
+                ? { ...c, status: "success", result: result.text }
+                : c,
+            ),
+          );
+          setStatus(SystemStatus.IDLE);
+        }
+        // CAS 3 : CONVERSATION (Texte seul)
+        else if (result.type === "TEXT_RESPONSE" && result.text) {
           addLog(`Intent: Conversation`, "OMNI", "info");
           speak(result.text);
           addLog(result.text, "OMNI", "success");

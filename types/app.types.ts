@@ -38,4 +38,5 @@ export interface HandlerContext {
     type?: "info" | "success" | "error" | "warning",
   ) => void;
   setStatus: (status: SystemStatus) => void;
+  setVisualMode?: (query: string | null, isVisible: boolean) => void; // Optionnel pour compatibilité
 }

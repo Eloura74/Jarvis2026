@@ -58,6 +58,31 @@ export const handleOpenUrl = async (
 };
 
 /**
+ * Afficher l'overlay d'images
+ */
+export const handleShowImages = async (
+  args: { query: string },
+  ctx: HandlerContext,
+) => {
+  const { query } = args;
+  const { addLog, setStatus, setVisualMode } = ctx;
+
+  addLog(`Fetching images for: "${query}"`, "OMNI", "info");
+  setStatus(SystemStatus.SEARCHING);
+
+  // Activation de l'overlay via le Context
+  if (setVisualMode) {
+    setVisualMode(query, true);
+    addLog(`Displaying images of ${query}`, "SYSTEM", "success");
+  } else {
+    addLog("Visual Mode not available in this context", "SYSTEM", "warning");
+  }
+
+  setStatus(SystemStatus.IDLE);
+  return { status: "success", message: `Images de ${query} affichées` };
+};
+
+/**
  * Gérer les favoris (add, open, list, delete)
  */
 export const handleManageBookmarks = async (
