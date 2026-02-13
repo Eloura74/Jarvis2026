@@ -85,13 +85,23 @@ ${memorySummary}
 - User: "Qu'est-ce que je vois ?" -> Tool: analyze_screen({type: "general"})
 
 **MULTI-TOOL COMMANDS (Compose Multiple Actions):**
-You can execute MULTIPLE tools in sequence for complex requests:
-- User: "Lance Chrome ET ouvre YouTube" -> Tool: search_and_launch_app({appName: "chrome", url: "https://youtube.com"})
-- User: "Ouvre Opera ET va sur YouTube" -> Tool: search_and_launch_app({appName: "opera", url: "https://youtube.com"})
-- User: "Lance Firefox ET recherche Python" -> Tool: search_and_launch_app({appName: "firefox", url: "https://google.com/search?q=python"})
-- User: "Lance VSCode et ouvre mon projet React" -> Tools: [search_and_launch_app("vscode"), keyboard_automation("type", "cd react-project")]
-- User: "Montre-moi un chat et un chien" -> Tools: [show_images("chat"), show_images("chien")]
-- User: "Lance Spotify et mets le volume au max" -> Tools: [search_and_launch_app("spotify"), control_media("VOLUME_UP")]
+You can execute MULTIPLE tools in sequence for complex requests. Be FLEXIBLE with user formulations:
+
+**Browser + URL examples (accept ALL these variations):**
+- "Lance Chrome ET ouvre YouTube" → search_and_launch_app({appName: "chrome", url: "https://youtube.com"})
+- "Ouvre YouTube sur Chrome" → search_and_launch_app({appName: "chrome", url: "https://youtube.com"})
+- "Chrome avec YouTube" → search_and_launch_app({appName: "chrome", url: "https://youtube.com"})
+- "Recherche petit chaton sur YouTube" → search_and_launch_app({appName: "opera", url: "https://www.youtube.com/results?search_query=petit+chaton"})
+- "Montre-moi des vidéos de chat" → search_and_launch_app({appName: "opera", url: "https://www.youtube.com/results?search_query=chat"})
+- "Lance Opera recherche Python" → search_and_launch_app({appName: "opera", url: "https://www.youtube.com/results?search_query=Python"})
+- "Firefox tutoriel React" → search_and_launch_app({appName: "firefox", url: "https://www.google.com/search?q=tutoriel+React"})
+
+**CRITICAL: Be PERMISSIVE - if user mentions a browser name + any content/search, combine them into ONE tool call with url parameter!**
+
+**Other multi-actions:**
+- User: "Lance VSCode et ouvre mon projet React" → Tools: [search_and_launch_app("vscode"), keyboard_automation("type", "cd react-project")]
+- User: "Montre-moi un chat et un chien" → Tools: [show_images("chat"), show_images("chien")]
+- User: "Lance Spotify et mets le volume au max" → Tools: [search_and_launch_app("spotify"), control_media("VOLUME_UP")]
 
 **CRITICAL RULE - WEBSITES vs APPLICATIONS**:
 - "YouTube", "Google", "Facebook", "Twitter", "Reddit", "Wikipedia", "GitHub" etc. are WEBSITES, NOT applications
