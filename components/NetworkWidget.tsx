@@ -78,7 +78,7 @@ export const NetworkWidget: React.FC = () => {
   }, []);
 
   return (
-    <div className="w-full h-40 relative rounded-xl border border-cyan-500/20 bg-black/40 backdrop-blur-xl overflow-hidden group hover:border-cyan-500/40 transition-all duration-500">
+    <div className="w-full h-40 relative rounded-xl border border-cyan-400/30 bg-black/20 backdrop-blur-xl overflow-hidden group hover:border-cyan-400/50 transition-all duration-500 shadow-[0_0_15px_rgba(0,229,255,0.1)]">
       <canvas ref={canvasRef} className="w-full h-full" />
       <div className="absolute inset-0 bg-gradient-to-t from-cyan-900/10 to-transparent pointer-events-none" />
     </div>

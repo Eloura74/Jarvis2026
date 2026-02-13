@@ -96,12 +96,12 @@ export const PremiumLayout: React.FC<PremiumLayoutProps> = ({
             initial={{ x: -100, opacity: 0 }}
             animate={{ x: 0, opacity: 1 }}
             transition={{ duration: 0.8, ease: "easeOut" }}
-            className="jarvis-panel-glass p-6 rounded-2xl border border-cyan-500/20 bg-black/40 backdrop-blur-xl relative overflow-hidden group hover:border-cyan-500/40 transition-all duration-500"
+            className="jarvis-panel-glass p-6 rounded-2xl border border-cyan-400/30 bg-black/20 backdrop-blur-xl relative overflow-hidden group hover:border-cyan-400/50 transition-all duration-500 shadow-[0_0_20px_rgba(0,229,255,0.1)]"
           >
-            <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+            <div className="absolute inset-0 bg-gradient-to-br from-cyan-400/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
 
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-bold tracking-widest text-cyan-400">
+              <h2 className="text-xl font-bold tracking-widest text-cyan-300 drop-shadow-[0_0_5px_rgba(0,229,255,0.8)]">
                 SYS.STATUS
               </h2>
               <div className="w-2 h-2 bg-cyan-400 rounded-full animate-pulse shadow-[0_0_10px_#00e5ff]" />
@@ -110,11 +110,11 @@ export const PremiumLayout: React.FC<PremiumLayoutProps> = ({
             <div className="space-y-6">
               {/* CPU */}
               <div>
-                <div className="flex justify-between text-xs mb-1 opacity-70 tracking-wider">
+                <div className="flex justify-between text-xs mb-1 opacity-90 tracking-wider text-cyan-200">
                   <span>CPU LOAD</span>
-                  <span>{cpuUsage}%</span>
+                  <span className="text-cyan-300 font-bold">{cpuUsage}%</span>
                 </div>
-                <div className="h-1 bg-cyan-900/50 rounded-full overflow-hidden">
+                <div className="h-1 bg-cyan-900/30 rounded-full overflow-hidden">
                   <motion.div
                     initial={{ width: 0 }}
                     animate={{ width: `${cpuUsage}%` }}
@@ -125,11 +125,11 @@ export const PremiumLayout: React.FC<PremiumLayoutProps> = ({
 
               {/* MEMORY */}
               <div>
-                <div className="flex justify-between text-xs mb-1 opacity-70 tracking-wider">
+                <div className="flex justify-between text-xs mb-1 opacity-90 tracking-wider text-cyan-200">
                   <span>RAM USAGE</span>
-                  <span>{memoryUsage}</span>
+                  <span className="text-cyan-300 font-bold">{memoryUsage}</span>
                 </div>
-                <div className="h-1 bg-cyan-900/50 rounded-full overflow-hidden">
+                <div className="h-1 bg-cyan-900/30 rounded-full overflow-hidden">
                   <motion.div
                     initial={{ width: 0 }}
                     animate={{ width: `${parseFloat(memoryUsage)}%` }} // Adjust max as needed
@@ -139,16 +139,18 @@ export const PremiumLayout: React.FC<PremiumLayoutProps> = ({
               </div>
 
               {/* PROCESSES */}
-              <div className="flex justify-between items-center border-t border-cyan-500/20 pt-4">
-                <span className="text-xs opacity-70 tracking-wider">
+              <div className="flex justify-between items-center border-t border-cyan-400/30 pt-4">
+                <span className="text-xs opacity-90 tracking-wider text-cyan-200">
                   ACTIVE PROCESSES
                 </span>
-                <span className="text-xl font-bold">{processes}</span>
+                <span className="text-xl font-bold text-cyan-300 drop-shadow-[0_0_5px_rgba(0,229,255,0.5)]">
+                  {processes}
+                </span>
               </div>
             </div>
 
             {/* DECORATIVE CORNER */}
-            <div className="absolute top-0 right-0 p-2 opacity-50">
+            <div className="absolute top-0 right-0 p-2 opacity-80">
               <svg width="20" height="20" viewBox="0 0 20 20">
                 <path
                   d="M0 0 L20 0 L20 20"
@@ -213,10 +215,10 @@ export const PremiumLayout: React.FC<PremiumLayoutProps> = ({
             initial={{ y: -50, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ duration: 1, delay: 0.5 }}
-            className="absolute top-24 text-center z-0"
+            className="absolute top-12 text-center z-0"
           >
             <h1 className="text-6xl font-bold tracking-[0.5em] text-white/90 drop-shadow-[0_0_15px_rgba(0,229,255,0.5)]">
-              J.A.R.V.I.S.
+              J.A.R.V.I.S
             </h1>
             <div className="text-[10px] tracking-[1em] opacity-60 text-cyan-200 mt-2">
               JUST A RATHER VERY INTELLIGENT SYSTEM
@@ -262,7 +264,7 @@ export const PremiumLayout: React.FC<PremiumLayoutProps> = ({
                 </svg>
               </button>
 
-              <div className="absolute -bottom-10 left-1/2 transform -translate-x-1/2 text-xs tracking-[0.3em] font-bold opacity-80 whitespace-nowrap text-cyan-300">
+              <div className="absolute -bottom-10 text-xs tracking-[0.3em] font-bold opacity-80 whitespace-nowrap text-cyan-300">
                 {isListening ? "LISTENING MODE" : "VOICE CONTROL"}
               </div>
             </div>
@@ -276,12 +278,12 @@ export const PremiumLayout: React.FC<PremiumLayoutProps> = ({
             initial={{ x: 100, opacity: 0 }}
             animate={{ x: 0, opacity: 1 }}
             transition={{ duration: 0.8 }}
-            className="jarvis-panel-glass p-6 rounded-2xl border border-cyan-500/20 bg-black/40 backdrop-blur-xl group hover:border-cyan-500/40"
+            className="jarvis-panel-glass p-6 rounded-2xl border border-cyan-400/30 bg-black/20 backdrop-blur-xl group hover:border-cyan-400/50 shadow-[0_0_20px_rgba(0,229,255,0.1)]"
           >
-            <div className="text-4xl font-light text-white mb-1 tracking-wider overflow-hidden">
+            <div className="text-4xl font-light text-white mb-1 tracking-wider overflow-hidden drop-shadow-[0_0_8px_rgba(255,255,255,0.5)]">
               {currentTime}
             </div>
-            <div className="text-sm text-cyan-400 tracking-widest uppercase opacity-80">
+            <div className="text-sm text-cyan-300 tracking-widest uppercase opacity-90 drop-shadow-[0_0_5px_rgba(0,229,255,0.5)]">
               {currentDate}
             </div>
           </motion.div>
@@ -291,14 +293,14 @@ export const PremiumLayout: React.FC<PremiumLayoutProps> = ({
             initial={{ x: 100, opacity: 0 }}
             animate={{ x: 0, opacity: 1 }}
             transition={{ delay: 0.2, duration: 0.8 }}
-            className="flex-1 jarvis-panel-glass rounded-2xl border border-cyan-500/20 bg-black/40 backdrop-blur-xl overflow-hidden relative flex flex-col min-h-[400px]"
+            className="flex-1 jarvis-panel-glass rounded-2xl border border-cyan-400/30 bg-black/20 backdrop-blur-xl overflow-hidden relative flex flex-col min-h-[400px] shadow-[0_0_20px_rgba(0,229,255,0.1)]"
           >
-            <div className="p-4 border-b border-cyan-500/20 bg-cyan-900/10 flex justify-between items-center">
-              <h3 className="text-sm font-bold tracking-widest text-cyan-300">
+            <div className="p-4 border-b border-cyan-400/30 bg-cyan-900/20 flex justify-between items-center">
+              <h3 className="text-sm font-bold tracking-widest text-cyan-300 drop-shadow-[0_0_5px_rgba(0,229,255,0.5)]">
                 NEURAL FEED
               </h3>
               <div className="flex gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-cyan-500 animate-pulse" />
+                <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse shadow-[0_0_5px_#00e5ff]" />
                 <span className="w-1.5 h-1.5 rounded-full bg-cyan-500/50" />
                 <span className="w-1.5 h-1.5 rounded-full bg-cyan-500/20" />
               </div>
@@ -309,8 +311,8 @@ export const PremiumLayout: React.FC<PremiumLayoutProps> = ({
             </div>
 
             {/* Input Area Placeholder (Visual only) */}
-            <div className="p-3 border-t border-cyan-500/20 bg-black/20">
-              <div className="h-8 rounded border border-cyan-500/20 flex items-center px-3 text-xs text-cyan-500/50 italic tracking-wider">
+            <div className="p-3 border-t border-cyan-400/30 bg-black/20">
+              <div className="h-8 rounded border border-cyan-500/30 flex items-center px-3 text-xs text-cyan-400/70 italic tracking-wider">
                 Waiting for input...
               </div>
             </div>
@@ -324,19 +326,19 @@ export const PremiumLayout: React.FC<PremiumLayoutProps> = ({
             className="flex flex-col gap-4 mt-auto"
           >
             {/* FINGERPRINT LARGE */}
-            <div className="flex flex-col items-center justify-center p-6 rounded-2xl border border-cyan-500/20 bg-black/40 backdrop-blur-xl group hover:border-cyan-500/40 transition-all">
+            <div className="flex flex-col items-center justify-center p-6 rounded-2xl border border-cyan-400/30 bg-black/20 backdrop-blur-xl group hover:border-cyan-400/50 transition-all shadow-[0_0_20px_rgba(0,229,255,0.1)]">
               <FingerprintScanner size={120} isActive={true} />
-              <div className="text-xs tracking-[0.3em] text-cyan-400 mt-4 opacity-80">
+              <div className="text-xs tracking-[0.3em] text-cyan-300 mt-4 opacity-90 drop-shadow-[0_0_5px_rgba(0,229,255,0.5)]">
                 BIOMETRIC SCAN
               </div>
-              <div className="text-[10px] tracking-widest text-green-400 mt-1">
+              <div className="text-[10px] tracking-widest text-green-400 mt-1 drop-shadow-[0_0_5px_rgba(74,222,128,0.5)]">
                 ACCESS GRANTED
               </div>
             </div>
 
             <button
               onClick={() => setIsAppPathsOpen(true)}
-              className="w-full py-3 border border-cyan-500/30 rounded text-sm tracking-widest hover:bg-cyan-500/10 transition-colors bg-black/40 backdrop-blur-sm"
+              className="w-full py-3 border border-cyan-400/30 rounded text-sm tracking-widest hover:bg-cyan-500/20 transition-all bg-black/30 backdrop-blur-sm text-cyan-300 hover:text-cyan-100 shadow-[0_0_10px_rgba(0,229,255,0.1)]"
             >
               CONFIG APPS
             </button>

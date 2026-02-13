@@ -51,14 +51,14 @@ export const NeuralFeed: React.FC<NeuralFeedProps> = ({ messages }) => {
               <div
                 className={`max-w-[80%] p-3 rounded-lg backdrop-blur-md border ${
                   msg.sender === "user"
-                    ? "bg-cyan-900/20 border-cyan-500/30 text-cyan-100"
-                    : "bg-blue-900/20 border-blue-500/30 text-blue-100"
+                    ? "bg-cyan-900/10 border-cyan-400/40 text-cyan-50 shadow-[0_0_10px_rgba(0,229,255,0.2)]"
+                    : "bg-blue-900/10 border-blue-400/40 text-blue-50 shadow-[0_0_10px_rgba(60,130,246,0.2)]"
                 }`}
                 style={{
                   boxShadow:
                     msg.sender === "user"
-                      ? "0 0 10px rgba(0, 229, 255, 0.1)"
-                      : "0 0 10px rgba(60, 130, 246, 0.1)",
+                      ? "0 0 15px rgba(0, 229, 255, 0.15)"
+                      : "0 0 15px rgba(60, 130, 246, 0.15)",
                 }}
               >
                 <div className="flex justify-between items-center mb-1 text-[10px] opacity-70 tracking-wider">

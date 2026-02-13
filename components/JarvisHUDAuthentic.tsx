@@ -237,7 +237,7 @@ export const JarvisHUDAuthentic: React.FC<JarvisHUDAuthenticProps> = ({
       // ctx.restore(); // Restore context state to remove translation/rotation for next frame
 
       // Incrément rotation (très lent et fluide)
-      rotationRef.current += 0.003; // Rotation très lente
+      rotationRef.current += 0.513; // Rotation très lente
 
       animationId = requestAnimationFrame(draw);
     };

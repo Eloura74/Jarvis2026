@@ -4,7 +4,7 @@ import { CloudRain, Sun, Wind } from "lucide-react";
 
 export const WeatherWidget: React.FC = () => {
   return (
-    <div className="w-full relative overflow-hidden rounded-xl border border-cyan-500/20 bg-black/40 backdrop-blur-xl p-4 flex items-center justify-between group hover:border-cyan-500/40 transition-colors">
+    <div className="w-full relative overflow-hidden rounded-xl border border-cyan-400/30 bg-black/20 backdrop-blur-xl p-4 flex items-center justify-between group hover:border-cyan-400/50 transition-colors shadow-[0_0_15px_rgba(0,229,255,0.1)]">
       <div className="flex items-center gap-4">
         {/* Icon */}
         <div className="text-cyan-400 filter drop-shadow-[0_0_8px_rgba(0,229,255,0.4)]">

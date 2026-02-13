@@ -4,7 +4,7 @@ import { Play, SkipForward, SkipBack, Disc } from "lucide-react";
 
 export const MediaWidget: React.FC = () => {
   return (
-    <div className="w-full relative overflow-hidden rounded-xl border border-cyan-500/20 bg-black/40 backdrop-blur-xl p-4 group hover:border-cyan-500/40 transition-colors">
+    <div className="w-full relative overflow-hidden rounded-xl border border-cyan-400/30 bg-black/20 backdrop-blur-xl p-4 group hover:border-cyan-400/50 transition-colors shadow-[0_0_15px_rgba(0,229,255,0.1)]">
       <div className="flex items-center gap-4">
         {/* Album Art / Disc Animation */}
         <div className="relative w-12 h-12 flex-shrink-0">
