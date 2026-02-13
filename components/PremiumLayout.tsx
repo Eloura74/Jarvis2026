@@ -244,7 +244,7 @@ export const PremiumLayout: React.FC<PremiumLayoutProps> = ({
 
           {/* MICROPHONE BUTTON (Floating at bottom center) - ENHANCED */}
           <motion.div
-            className="absolute bottom-32  pointer-events-auto z-50 py-10"
+            className="absolute bottom-16  pointer-events-auto z-50 py-10"
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.95 }}
           >

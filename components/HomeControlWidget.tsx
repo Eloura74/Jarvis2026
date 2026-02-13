@@ -107,15 +107,12 @@ export const HomeControlWidget: React.FC = () => {
 
     const fetchStates = async () => {
       try {
-        // On récupère tout d'un coup pour faire simple, ou on pourrait optimiser
-        // Pour l'instant, on fait un call global /api/states pour tout avoir
         const res = await fetch("/api/states", {
           headers: { Authorization: `Bearer ${HA_TOKEN}` },
         });
         if (!res.ok) throw new Error("Fetch fail");
         const data = await res.json();
 
-        // Indexer par entity_id
         const newState: Record<string, any> = {};
         data.forEach((ent: any) => {
           newState[ent.entity_id] = ent;
@@ -126,12 +123,11 @@ export const HomeControlWidget: React.FC = () => {
       }
     };
 
-    fetchStates(); // Initial
-    const interval = setInterval(fetchStates, 5000); // Poll every 5s
+    fetchStates();
+    const interval = setInterval(fetchStates, 5000);
     return () => clearInterval(interval);
-  }, [isOpen]); // Only poll if component mounted (isOpen check could be used to slow down polling if closed)
+  }, [isOpen]);
 
-  // Toggle Light Function
   const toggleLight = async (entityId: string) => {
     const entity = states[entityId];
     const isOn = entity?.state === "on";
@@ -146,7 +142,6 @@ export const HomeControlWidget: React.FC = () => {
         },
         body: JSON.stringify({ entity_id: entityId }),
       });
-      // Optimistic update
       setStates((prev) => ({
         ...prev,
         [entityId]: { ...prev[entityId], state: isOn ? "off" : "on" },
@@ -159,14 +154,14 @@ export const HomeControlWidget: React.FC = () => {
   return (
     <motion.div
       initial={false}
-      animate={{ width: isOpen ? 300 : 60 }}
-      className="relative h-full jarvis-panel-glass bg-black/40 border border-cyan-400/30 overflow-hidden flex flex-row rounded-xl transition-all duration-500 shadow-[0_0_15px_rgba(0,229,255,0.1)]"
+      animate={{ width: isOpen ? 340 : 60 }}
+      className="relative h-full jarvis-panel-glass bg-black/60 border border-cyan-400/30 overflow-hidden flex flex-row rounded-xl transition-all duration-500 shadow-[0_0_20px_rgba(0,229,255,0.15)] backdrop-blur-md"
     >
       {/* SIDEBAR TABS */}
-      <div className="w-[60px] flex flex-col items-center py-4 gap-4 bg-cyan-950/20 border-r border-cyan-400/20 z-10">
+      <div className="w-[60px] flex flex-col items-center py-4 gap-6 bg-cyan-950/40 border-r border-cyan-400/20 z-10 shrink-0">
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className="p-2 rounded-full hover:bg-cyan-500/20 text-cyan-300 transition-all mb-4"
+          className="p-2 rounded-full hover:bg-cyan-500/20 text-cyan-300 transition-all mb-2 hover:shadow-[0_0_10px_#00e5ff]"
         >
           {isOpen ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
         </button>
@@ -210,7 +205,9 @@ export const HomeControlWidget: React.FC = () => {
       </div>
 
       {/* CONTENT AREA */}
-      <div className="flex-1 p-4 min-w-[240px] overflow-y-auto custom-scrollbar">
+      <div className="flex-1 p-5 min-w-[280px] overflow-y-auto custom-scrollbar relative">
+        <div className="absolute inset-0 bg-gradient-to-br from-cyan-900/10 to-transparent pointer-events-none" />
+
         <AnimatePresence mode="wait">
           {/* === LIGHTS === */}
           {activeTab === "LIGHTS" && (
@@ -219,31 +216,33 @@ export const HomeControlWidget: React.FC = () => {
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
-              className="space-y-3"
+              className="space-y-4"
             >
-              <h3 className="text-cyan-300 font-bold tracking-widest text-sm mb-4 border-b border-cyan-500/30 pb-2">
-                LIGHTS CONTROL
-              </h3>
-              {ENTITIES.LIGHTS.map((light) => {
-                const state = states[light.id]?.state;
-                const isOn = state === "on";
-                return (
-                  <div
-                    key={light.id}
-                    className="flex items-center justify-between p-2 rounded bg-black/40 border border-cyan-500/10"
-                  >
-                    <span className="text-[10px] text-cyan-100/80 font-mono tracking-wider">
-                      {light.label}
-                    </span>
-                    <button
-                      onClick={() => toggleLight(light.id)}
-                      className={`p-2 rounded-full transition-all duration-300 shadow-[0_0_10px_rgba(0,229,255,0.2)] ${isOn ? "bg-cyan-500 text-black shadow-[0_0_15px_#00e5ff]" : "bg-gray-800 text-gray-500"}`}
+              <Header title="LIGHTS CONTROL" />
+              <div className="space-y-3">
+                {ENTITIES.LIGHTS.map((light) => {
+                  const state = states[light.id]?.state;
+                  const isOn = state === "on";
+                  return (
+                    <div
+                      key={light.id}
+                      className={`flex items-center justify-between p-3 rounded-lg border transition-all duration-300 group ${isOn ? "bg-cyan-900/20 border-cyan-400/50 shadow-[0_0_10px_rgba(0,229,255,0.2)]" : "bg-black/40 border-gray-800 hover:border-cyan-500/30"}`}
                     >
-                      <Power size={14} />
-                    </button>
-                  </div>
-                );
-              })}
+                      <span
+                        className={`text-xs font-bold tracking-wider ${isOn ? "text-cyan-100" : "text-gray-400 group-hover:text-cyan-200"}`}
+                      >
+                        {light.label}
+                      </span>
+                      <button
+                        onClick={() => toggleLight(light.id)}
+                        className={`p-2 rounded-full transition-all duration-300 ${isOn ? "bg-cyan-400 text-black shadow-[0_0_15px_#00e5ff] scale-110" : "bg-gray-800 text-gray-500 hover:text-cyan-400 hover:bg-gray-700"}`}
+                      >
+                        <Power size={16} />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
             </motion.div>
           )}
 
@@ -254,31 +253,35 @@ export const HomeControlWidget: React.FC = () => {
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
-              className="space-y-3"
+              className="space-y-4"
             >
-              <h3 className="text-cyan-300 font-bold tracking-widest text-sm mb-4 border-b border-cyan-500/30 pb-2">
-                ENV. SENSORS
-              </h3>
-              <div className="grid grid-cols-2 gap-2">
+              <Header title="ENV. SENSORS" />
+              <div className="grid grid-cols-2 gap-3">
                 {ENTITIES.SENSORS.map((sensor) => {
-                  const val = states[sensor.id]?.state ?? "--";
+                  const rawVal = states[sensor.id]?.state;
+                  const isAvailable =
+                    rawVal && rawVal !== "unavailable" && rawVal !== "unknown";
+                  const val = isAvailable ? rawVal : "N/A";
+
                   return (
                     <div
                       key={sensor.id}
-                      className="p-2 rounded bg-black/40 border border-cyan-500/10 flex flex-col items-center"
+                      className="p-3 rounded-lg bg-black/40 border border-cyan-500/10 flex flex-col items-center justify-center hover:border-cyan-500/30 transition-colors cursor-default"
                     >
-                      <div className="flex items-center gap-1 text-[9px] text-cyan-400/70 mb-1">
+                      <div className="flex items-center gap-1.5 text-[10px] text-cyan-400/70 mb-1 uppercase tracking-wider">
                         {sensor.type === "temp" ? (
-                          <Thermometer size={10} />
+                          <Thermometer size={12} />
                         ) : (
-                          <Droplets size={10} />
+                          <Droplets size={12} />
                         )}
                         <span>{sensor.label}</span>
                       </div>
-                      <span className="text-lg font-bold text-white">
+                      <span
+                        className={`text-xl font-bold ${isAvailable ? "text-white drop-shadow-[0_0_5px_rgba(255,255,255,0.3)]" : "text-gray-600 text-sm"}`}
+                      >
                         {val}
-                        <span className="text-xs text-cyan-500 ml-0.5">
-                          {sensor.unit}
+                        <span className="text-xs text-cyan-500/80 ml-0.5">
+                          {isAvailable ? sensor.unit : ""}
                         </span>
                       </span>
                     </div>
@@ -297,44 +300,44 @@ export const HomeControlWidget: React.FC = () => {
               exit={{ opacity: 0, x: -20 }}
               className="space-y-4"
             >
-              <h3 className="text-cyan-300 font-bold tracking-widest text-sm mb-4 border-b border-cyan-500/30 pb-2">
-                3D PRINTERS
-              </h3>
+              <Header title="3D PRINTERS" />
               {ENTITIES.PRINTERS.map((printer) => {
                 const bed = states[printer.bed]?.state ?? 0;
                 const ext = states[printer.ext]?.state ?? 0;
-                const progress = Math.round(
-                  Number(states[printer.progress]?.state ?? 0),
-                );
+                const progressState = states[printer.progress]?.state;
+                const progress =
+                  progressState && progressState !== "unavailable"
+                    ? Math.round(Number(progressState))
+                    : 0;
 
                 return (
                   <div
                     key={printer.name}
-                    className="p-3 rounded-lg bg-black/40 border border-purple-500/20"
+                    className="p-3 rounded-lg bg-black/40 border border-purple-500/20 group hover:border-purple-500/40 transition-all"
                   >
                     <div className="flex justify-between items-center mb-2">
-                      <span className="text-xs font-bold text-purple-300">
+                      <span className="text-xs font-bold text-purple-300 tracking-wider group-hover:text-purple-200 transition-colors">
                         {printer.name}
                       </span>
-                      <span className="text-[10px] text-purple-400">
+                      <span className="text-[10px] text-purple-400 font-mono">
                         {progress}%
                       </span>
                     </div>
                     {/* Progress Bar */}
-                    <div className="w-full h-1.5 bg-gray-800 rounded-full overflow-hidden mb-3">
+                    <div className="w-full h-1.5 bg-gray-900 rounded-full overflow-hidden mb-3 border border-purple-500/10">
                       <div
-                        className="h-full bg-purple-500 transition-all duration-500"
+                        className="h-full bg-gradient-to-r from-purple-600 to-pink-500 shadow-[0_0_10px_#d946ef] transition-all duration-700 ease-out"
                         style={{ width: `${progress}%` }}
                       />
                     </div>
-                    <div className="flex justify-between text-[10px] text-gray-400">
+                    <div className="flex justify-between text-[10px] text-gray-400 font-mono">
                       <div className="flex items-center gap-1">
-                        <Activity size={10} className="text-red-400" /> NZL:{" "}
-                        {ext}°C
+                        <Activity size={10} className="text-pink-400" /> NZ:{" "}
+                        <span className="text-gray-300">{ext}°C</span>
                       </div>
                       <div className="flex items-center gap-1">
-                        <Activity size={10} className="text-blue-400" /> BED:{" "}
-                        {bed}°C
+                        <Activity size={10} className="text-blue-400" /> BD:{" "}
+                        <span className="text-gray-300">{bed}°C</span>
                       </div>
                     </div>
                   </div>
@@ -350,23 +353,21 @@ export const HomeControlWidget: React.FC = () => {
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
-              className="space-y-2"
+              className="space-y-3"
             >
-              <h3 className="text-cyan-300 font-bold tracking-widest text-sm mb-4 border-b border-cyan-500/30 pb-2">
-                SECURITY STATUS
-              </h3>
+              <Header title="SECURITY STATUS" />
               {ENTITIES.DOORS.map((door) => {
-                const isOpen = states[door.id]?.state === "on"; // binary_sensor: on = open
+                const isOpen = states[door.id]?.state === "on";
                 return (
                   <div
                     key={door.id}
-                    className={`flex items-center justify-between p-2 rounded border transition-all ${isOpen ? "bg-red-900/20 border-red-500/50" : "bg-green-900/10 border-green-500/30"}`}
+                    className={`flex items-center justify-between p-3 rounded-lg border transition-all duration-500 ${isOpen ? "bg-red-950/30 border-red-500/50 shadow-[0_0_15px_rgba(239,68,68,0.2)]" : "bg-green-950/10 border-green-500/20"}`}
                   >
-                    <span className="text-[10px] text-cyan-100 font-mono">
+                    <span className="text-[10px] text-cyan-100 font-mono tracking-wider">
                       {door.label}
                     </span>
                     <div
-                      className={`flex items-center gap-2 px-2 py-0.5 rounded text-[10px] font-bold ${isOpen ? "bg-red-500 text-black" : "bg-green-500/20 text-green-400"}`}
+                      className={`flex items-center gap-2 px-2.5 py-1 rounded text-[10px] font-bold tracking-widest ${isOpen ? "bg-red-600 text-white shadow-[0_0_10px_#ef4444]" : "bg-green-500/10 text-green-500/80"}`}
                     >
                       <DoorOpen size={12} />
                       <span>{isOpen ? "OPEN" : "CLOSED"}</span>
@@ -382,6 +383,12 @@ export const HomeControlWidget: React.FC = () => {
   );
 };
 
+const Header = ({ title }: { title: string }) => (
+  <h3 className="text-cyan-300 font-bold tracking-[0.2em] text-xs mb-5 flex items-center gap-2 after:content-[''] after:h-[1px] after:bg-gradient-to-r after:from-cyan-500/50 after:to-transparent after:flex-1 drop-shadow-[0_0_5px_rgba(0,229,255,0.5)]">
+    {title}
+  </h3>
+);
+
 const TabButton = ({
   active,
   onClick,
@@ -395,16 +402,16 @@ const TabButton = ({
 }) => (
   <button
     onClick={onClick}
-    className={`relative group w-10 h-10 flex items-center justify-center rounded-xl transition-all duration-300 ${
+    className={`relative group w-12 h-12 flex items-center justify-center rounded-xl transition-all duration-300 ${
       active
-        ? "bg-cyan-500/20 text-cyan-300 shadow-[0_0_10px_rgba(0,229,255,0.3)]"
-        : "text-cyan-500/40 hover:text-cyan-300 hover:bg-white/5"
+        ? "bg-cyan-500/20 text-cyan-300 shadow-[0_0_15px_rgba(0,229,255,0.3)] border border-cyan-400/30"
+        : "text-cyan-500/40 hover:text-cyan-300 hover:bg-white/5 border border-transparent"
     }`}
     title={label}
   >
     {icon}
     {active && (
-      <div className="absolute left-0 w-0.5 h-6 bg-cyan-400 rounded-r-full" />
+      <div className="absolute -left-[1px] top-1/2 -translate-y-1/2 w-0.5 h-6 bg-cyan-400 rounded-r-full shadow-[0_0_5px_#00e5ff]" />
     )}
   </button>
 );

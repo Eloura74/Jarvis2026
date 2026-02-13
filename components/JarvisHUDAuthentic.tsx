@@ -267,7 +267,7 @@ export const JarvisHUDAuthentic: React.FC<JarvisHUDAuthenticProps> = ({
 
       {/* Texte de statut (en dessous) */}
       {showDetails && (
-        <div className="absolute bottom-0 w-full flex justify-center pb-8 pointer-events-none">
+        <div className="absolute bottom-14 w-full flex justify-center pb-8 pointer-events-none">
           <div
             className="jarvis-text text-center tracking-[0.2em] font-bold"
             style={{ textShadow: `0 0 10px ${color}` }}
