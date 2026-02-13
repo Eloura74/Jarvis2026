@@ -9,9 +9,25 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 
 export const CameraWidget: React.FC = () => {
-  const [activeCamera, setActiveCamera] = useState<
-    "FRONT" | "LIVING" | "GARDEN"
-  >("FRONT");
+  // CONFIGURATION HOME ASSISTANT
+  // Les valeurs sont maintenant chargées depuis .env.local
+  // NOTE: Via le proxy Vite car CORS bloque souvent les requêtes directes
+  const HA_BASE_URL = ""; // On utilise le proxy local défini dans vite.config.ts
+  const HA_TOKEN = import.meta.env.VITE_HA_TOKEN || "";
+
+  const cameras = [
+    { id: "camera.camera_ext_1", label: "EXTERIEUR", icon: "create" },
+    { id: "camera.camera_salon", label: "SALON", icon: "sofa" },
+    {
+      id: "camera.a1mini_0309da452500192_camera",
+      label: "A1 MINI",
+      icon: "box",
+    },
+    { id: "camera.mainsail_picam", label: "MAINSAIL", icon: "server" },
+    { id: "camera.vz330_plateau", label: "VZ330", icon: "printer" },
+  ] as const;
+
+  const [activeCameraId, setActiveCameraId] = useState<string>(cameras[0].id);
   const [isRecording] = useState(true);
 
   // Simulation d'un effet de glitch aléatoire pour le "réalisme"
@@ -27,11 +43,11 @@ export const CameraWidget: React.FC = () => {
     return () => clearInterval(interval);
   }, []);
 
-  const cameras = [
-    { id: "FRONT", label: "FRONT DOOR" },
-    { id: "LIVING", label: "LIVING ROOM" },
-    { id: "GARDEN", label: "BACKYARD" },
-  ] as const;
+  const currentCam = cameras.find((c) => c.id === activeCameraId);
+
+  // Construction de l'URL du flux MJPEG (Token injecté par le proxy Vite)
+  // Utilisation de /api/camera_proxy_stream/{entity_id}
+  const streamUrl = `/api/camera_proxy_stream/${activeCameraId}`;
 
   return (
     <div className="w-full relative overflow-hidden rounded-xl border border-cyan-400/30 bg-black/20 backdrop-blur-xl group hover:border-cyan-400/50 transition-all duration-500 shadow-[0_0_15px_rgba(0,229,255,0.1)] flex flex-col">
@@ -59,16 +75,26 @@ export const CameraWidget: React.FC = () => {
 
       {/* VIDEO PREVIEW AREA */}
       <div className="relative aspect-video bg-black/50 overflow-hidden group-hover:brightness-110 transition-all">
-        {/* Placeholder Image Logic (Gradient for now) */}
-        <div
-          className={`absolute inset-0 bg-gradient-to-br transition-opacity duration-500 ${
-            activeCamera === "FRONT"
-              ? "from-slate-800 to-slate-900"
-              : activeCamera === "LIVING"
-                ? "from-stone-800 to-stone-900"
-                : "from-green-900/20 to-slate-900"
-          }`}
-        />
+        {HA_TOKEN ? (
+          <img
+            src={streamUrl}
+            alt={currentCam?.label}
+            className="absolute inset-0 w-full h-full object-cover"
+          />
+        ) : (
+          <>
+            {/* Fallback Placeholder Logic */}
+            <div className="absolute inset-0 bg-gradient-to-br from-slate-800 to-slate-900 transition-opacity duration-500" />
+            <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-4">
+              <span className="text-cyan-500/50 text-[10px] tracking-widest uppercase mb-2">
+                AUTH REQUIRED
+              </span>
+              <span className="text-cyan-400 text-xs">
+                Veuillez configurer HA_TOKEN dans le code
+              </span>
+            </div>
+          </>
+        )}
 
         {/* Grid Overlay */}
         <div
@@ -97,7 +123,7 @@ export const CameraWidget: React.FC = () => {
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-cyan-500/5 to-transparent h-full w-full animate-[scan_4s_linear_infinite] pointer-events-none" />
 
         {/* Status Overlays */}
-        <div className="absolute top-2 left-2 flex items-center gap-2">
+        {/* <div className="absolute top-2 left-2 flex items-center gap-2">
           <div
             className={`flex items-center gap-1 px-1.5 py-0.5 rounded bg-black/60 border ${isRecording ? "border-red-500/50 text-red-500" : "border-gray-500 text-gray-400"}`}
           >
@@ -109,38 +135,28 @@ export const CameraWidget: React.FC = () => {
           <div className="px-1.5 py-0.5 rounded bg-black/60 border border-cyan-500/30 text-cyan-300 text-[9px] font-mono">
             {new Date().toLocaleTimeString([], { hour12: false })}
           </div>
-        </div>
+        </div> */}
 
         <div className="absolute bottom-2 left-2">
           <div className="text-xs font-bold text-cyan-100 tracking-wider flex items-center gap-2 drop-shadow-md">
             <Activity size={12} className="text-cyan-400" />
-            CAM_0
-            {activeCamera === "FRONT"
-              ? "1"
-              : activeCamera === "LIVING"
-                ? "2"
-                : "3"}{" "}
-            :{" "}
-            {activeCamera === "FRONT"
-              ? "FRONT_DOOR"
-              : activeCamera === "LIVING"
-                ? "LIVING_ROOM"
-                : "BACKYARD"}
+            CAM_0{cameras.indexOf(currentCam!) + 1} : {currentCam?.label}
           </div>
         </div>
       </div>
 
       {/* CONTROLS */}
-      <div className="p-2 flex gap-1 bg-black/30">
+      <div className="p-2 grid grid-cols-3 gap-1 bg-black/30">
         {cameras.map((cam) => (
           <button
             key={cam.id}
-            onClick={() => setActiveCamera(cam.id)}
-            className={`flex-1 py-1.5 text-[9px] font-bold tracking-wider rounded border transition-all ${
-              activeCamera === cam.id
+            onClick={() => setActiveCameraId(cam.id)}
+            className={`flex-1 py-1.5 text-[8px] sm:text-[9px] font-bold tracking-wider rounded border transition-all truncate px-1 ${
+              activeCameraId === cam.id
                 ? "bg-cyan-500/20 border-cyan-500/50 text-cyan-300 shadow-[0_0_10px_rgba(0,229,255,0.2)]"
                 : "bg-transparent border-transparent text-cyan-500/50 hover:bg-cyan-500/10 hover:text-cyan-400"
             }`}
+            title={cam.label}
           >
             {cam.label}
           </button>
