@@ -60,11 +60,13 @@ ${memorySummary}
 5. **Media**: 'control_media'.
 6. **Web**: 'perform_web_search'.
 7. **Visuals**: 'show_images' - Illustrate conversation with images (e.g., "Show me a T-Rex").
-8. **System**: 'organize_files', 'system_optimization'.
+8. **Vision/Screen Analysis**: 'analyze_screen' - Capture and analyze screen content (OCR, error detection, UI analysis).
+9. **System**: 'organize_files', 'system_optimization'.
 
 **CRITICAL RULES FOR TOOL USAGE:**
 - **DISTINGUISH CONVERSATION VS ACTION**:
   - If the user asks for an **OPINION** or **GENERAL KNOWLEDGE**, Answer textually.
+  - **SCREEN ANALYSIS**: If user mentions "écran", "screen", "analyse", "lis", "read", "vois", "see", "erreur à l'écran", YOU MUST USE 'analyze_screen' tool.
   - **SYSTEMATIC VISUALS**: Whenever you describe something physical, a place, a person, or a concept that can be visualized (like "Mairie de Fos", "Iron Man", "Python code"), **YOU MUST USE** 'show_images("precise query")' to illustrate your response.
   - **QUERY CLEANING**: For 'show_images', parameter 'query' MUST be:
      1. **CORRECTED** (Fix typos: "therie" -> "théorie").
@@ -77,6 +79,10 @@ ${memorySummary}
 - User: "A quoi ressemble Iron Man ?" -> Tool: show_images("Iron Man Marvel")
 - User: "Cherche des infos sur Mars" -> Tool: perform_web_search("Mars planet info")
 - User: "Que penses-tu de..." -> Tool: show_images("...") + Text Opinion.
+- User: "Analyse l'écran" -> Tool: analyze_screen({type: "general"})
+- User: "Lis le texte" -> Tool: analyze_screen({type: "ocr"})
+- User: "Trouve les erreurs" -> Tool: analyze_screen({type: "error"})
+- User: "Qu'est-ce que je vois ?" -> Tool: analyze_screen({type: "general"})
 
 **MULTI-TOOL COMMANDS (Compose Multiple Actions):**
 You can execute MULTIPLE tools in sequence for complex requests:
@@ -306,7 +312,7 @@ const toolDeclarations: FunctionDeclaration[] = [
   {
     name: "analyze_screen",
     description:
-      "Capture and analyze the current screen using Gemini Vision (FREE). Use when user asks to 'analyze screen', 'read screen', 'find errors', 'what's on my screen', etc.",
+      "CRITICAL: MUST USE when user mentions 'écran', 'screen', 'analyse', 'lis', 'read', 'vois', 'see', 'what do I see', 'qu'est-ce que je vois', 'trouve les erreurs', 'find errors', 'read this', 'lis ça'. Captures and analyzes screen content using Gemini Vision AI. FREE to use.",
     parameters: {
       type: Type.OBJECT,
       properties: {
@@ -314,11 +320,11 @@ const toolDeclarations: FunctionDeclaration[] = [
           type: Type.STRING,
           enum: ["general", "ocr", "code", "ui", "error"],
           description:
-            "Type of analysis: general (default), ocr (read text), code (analyze code), ui (analyze interface), error (find errors)",
+            "Type of analysis: general (describe what's visible), ocr (extract text), code (analyze code), ui (analyze interface design), error (find errors/bugs)",
         },
         prompt: {
           type: Type.STRING,
-          description: "Custom prompt for the analysis (optional)",
+          description: "Optional custom instruction for the analysis",
         },
       },
     },

@@ -53,8 +53,13 @@ export function useJarvisBrain({
   // EXÉCUTION DES OUTILS
   // ========================================
   const executeTool = async (toolName: string, toolArgs: any) => {
-    // Contexte commun
-    const ctx: HandlerContext = { addLog, setStatus, setVisualMode };
+    // Contexte commun (avec speak pour Vision)
+    const ctx: HandlerContext & { speak?: (text: string) => void } = { 
+      addLog, 
+      setStatus, 
+      setVisualMode,
+      speak,
+    };
 
     // Dépendances additionnelles
     // NOTE: on passe findApp tel quel, les handlers devront gérer AppPath | null

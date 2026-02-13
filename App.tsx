@@ -22,7 +22,8 @@ import { SystemStatus } from "./types";
 import { useJarvisInteraction } from "./hooks/useJarvisInteraction";
 import { useJarvisBrain } from "./hooks/useJarvisBrain";
 import { useAutonomy } from "./hooks/useAutonomy";
-import { useSystemStats } from "./hooks/useSystemStats"; // NOUVEAU
+import { useSystemStats } from "./hooks/useSystemStats";
+import { useGlobalShortcuts, createListenShortcut } from "./hooks/useGlobalShortcuts";
 
 // ============================================================================
 // SHELL (Composant Interne avec accès au Kernel)
@@ -89,6 +90,22 @@ const JarvisShell: React.FC = () => {
   useAutonomy({
     enabled: status === SystemStatus.IDLE,
     onAction: (msg) => addLog(msg, "OMNI", "info"),
+  });
+
+  // ========================================
+  // RACCOURCIS CLAVIER GLOBAUX
+  // ========================================
+
+  useGlobalShortcuts({
+    shortcuts: [
+      createListenShortcut(() => {
+        // Activer l'écoute vocale avec Ctrl+Space
+        if (status === SystemStatus.IDLE) {
+          interaction.handleMicrophoneClick();
+        }
+      }),
+    ],
+    enabled: true,
   });
 
   // ========================================

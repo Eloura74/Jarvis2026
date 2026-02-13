@@ -36,9 +36,9 @@ import { HandlerContext } from "../types/app.types";
  */
 export const handleAnalyzeScreen = async (
   args: { type?: AnalysisType; prompt?: string },
-  ctx: HandlerContext
+  ctx: HandlerContext & { speak?: (text: string) => void }
 ) => {
-  const { addLog } = ctx;
+  const { addLog, speak } = ctx;
 
   try {
     const analysisType = args.type || "general";
@@ -52,11 +52,25 @@ export const handleAnalyzeScreen = async (
     // Analyse de l'écran avec Gemini Vision (GRATUIT)
     const result = await analyzeCurrentScreen(analysisType, args.prompt);
 
+    // Afficher le résultat complet dans les logs
     addLog(
-      `✅ Analyse terminée : ${result.text.substring(0, 100)}...`,
-      "SYSTEM",
+      `🔍 ANALYSE VISUELLE`,
+      "OMNI",
       "success"
     );
+    
+    addLog(
+      result.text,
+      "OMNI",
+      "info"
+    );
+
+    // Synthèse vocale du résultat
+    if (speak) {
+      // Résumé court pour la voix (premiers 150 caractères)
+      const summary = result.text.substring(0, 150) + (result.text.length > 150 ? "..." : "");
+      speak(summary);
+    }
 
     return {
       status: "success",
@@ -64,12 +78,27 @@ export const handleAnalyzeScreen = async (
       data: result,
     };
   } catch (error) {
+    let errorMessage = "Erreur inconnue";
+    
+    if (error instanceof Error) {
+      errorMessage = error.message;
+    } else if (error && typeof error === "object" && "name" in error) {
+      // Erreur DOMException (permission refusée)
+      errorMessage = (error as any).name === "NotAllowedError" 
+        ? "Permission de partage d'écran refusée"
+        : "Erreur de capture d'écran";
+    }
+    
     addLog(
-      `❌ Erreur analyse écran : ${error instanceof Error ? error.message : "Erreur inconnue"}`,
+      `❌ Erreur analyse écran : ${errorMessage}`,
       "SYSTEM",
       "error"
     );
-    throw error;
+    
+    return {
+      status: "error",
+      message: errorMessage,
+    };
   }
 };
 

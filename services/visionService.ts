@@ -56,53 +56,58 @@ export interface VisionAnalysisResult {
 /**
  * Capture un screenshot de l'écran actuel
  * 
- * Utilise l'API Canvas pour capturer la fenêtre.
- * Sur Electron, utiliserait desktopCapturer pour le vrai screenshot.
+ * Utilise l'API getDisplayMedia du navigateur pour capturer l'écran complet.
+ * L'utilisateur devra autoriser le partage d'écran.
  * 
  * @returns Promise avec l'image en base64
  */
 export const captureScreen = async (): Promise<string> => {
-  return new Promise((resolve, reject) => {
-    // Vérifier si on est dans Electron (desktop)
-    if (typeof window !== "undefined" && (window as any).electronAPI) {
-      // Utiliser l'API Electron pour screenshot desktop
-      (window as any).electronAPI
-        .captureScreen()
-        .then((dataUrl: string) => resolve(dataUrl))
-        .catch(reject);
-    } else {
-      // Fallback : Capture de la fenêtre du navigateur via canvas
-      // Note : Ceci capture seulement la page web, pas le desktop complet
-      try {
-        const canvas = document.createElement("canvas");
-        const context = canvas.getContext("2d");
+  return new Promise(async (resolve, reject) => {
+    try {
+      // Demander la permission de capturer l'écran
+      const stream = await navigator.mediaDevices.getDisplayMedia({
+        video: {
+          mediaSource: "screen" as any,
+        } as any,
+      });
 
-        if (!context) {
-          throw new Error("Impossible de créer le contexte canvas");
-        }
+      // Créer un élément video pour capturer le stream
+      const video = document.createElement("video");
+      video.srcObject = stream;
+      video.autoplay = true;
 
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-
-        // Dessiner la page actuelle
-        const blob = new Blob(
-          [document.documentElement.outerHTML],
-          { type: "text/html" }
-        );
-        const url = URL.createObjectURL(blob);
-
-        const img = new Image();
-        img.onload = () => {
-          context.drawImage(img, 0, 0, canvas.width, canvas.height);
-          const dataUrl = canvas.toDataURL("image/png");
-          URL.revokeObjectURL(url);
-          resolve(dataUrl);
+      // Attendre que la vidéo soit prête
+      await new Promise<void>((resolveVideo) => {
+        video.onloadedmetadata = () => {
+          video.play();
+          resolveVideo();
         };
-        img.onerror = reject;
-        img.src = url;
-      } catch (error) {
-        reject(error);
+      });
+
+      // Attendre un frame pour être sûr que la vidéo est affichée
+      await new Promise((r) => setTimeout(r, 100));
+
+      // Capturer le frame dans un canvas
+      const canvas = document.createElement("canvas");
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+
+      const context = canvas.getContext("2d");
+      if (!context) {
+        throw new Error("Impossible de créer le contexte canvas");
       }
+
+      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      // Arrêter le stream
+      stream.getTracks().forEach((track) => track.stop());
+
+      // Convertir en base64
+      const dataUrl = canvas.toDataURL("image/png");
+      resolve(dataUrl);
+    } catch (error) {
+      console.error("Erreur capture écran:", error);
+      reject(error);
     }
   });
 };
@@ -180,9 +185,9 @@ export const analyzeImage = async (
     // Sélectionner le prompt
     const prompt = customPrompt || ANALYSIS_PROMPTS[type];
 
-    // Appel API Gemini Vision (GRATUIT avec Flash)
+    // Appel API Gemini Vision avec 2.5 Flash
     const response = await ai.models.generateContent({
-      model: "gemini-2.0-flash-exp", // Version Flash = GRATUIT avec Vision
+      model: "gemini-2.5-flash-preview-09-2025", // Gemini 2.5 Flash supporte Vision (images + vidéos)
       contents: [
         {
           role: "user",

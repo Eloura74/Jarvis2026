@@ -9,7 +9,7 @@ import { JarvisHUDAuthentic } from "./JarvisHUDAuthentic";
 import { JarvisCinematicBackground } from "./JarvisCinematicBackground";
 import { LoadingOverlay } from "./LoadingOverlay";
 import { SuccessRipple } from "./SuccessRipple";
-import { AppPathsManager } from "./AppPathsManager";
+import { ConfigPanel } from "./ConfigPanel";
 import { ParticleSphere } from "./ParticleSphere";
 import { FingerprintScanner } from "./FingerprintScanner";
 import { NeuralFeed } from "./NeuralFeed";
@@ -352,15 +352,15 @@ export const PremiumLayout: React.FC<PremiumLayoutProps> = ({
             </div>
           </motion.div>
 
-          {/* FINGERPRINT LARGE */}
+          {/* FINGERPRINT COMPACT */}
           <motion.div
             initial={{ x: 100, opacity: 0 }}
             animate={{ x: 0, opacity: 1 }}
             transition={{ delay: 0.4, duration: 0.8 }}
-            className="flex flex-col items-center justify-center p-6 rounded-2xl border border-cyan-400/30 bg-black/20 backdrop-blur-xl group hover:border-cyan-400/50 transition-all shadow-[0_0_20px_rgba(0,229,255,0.1)]"
+            className="flex flex-col items-center justify-center p-4 rounded-2xl border border-cyan-400/30 bg-black/20 backdrop-blur-xl group hover:border-cyan-400/50 transition-all shadow-[0_0_20px_rgba(0,229,255,0.1)]"
           >
-            <FingerprintScanner size={120} isActive={true} />
-            <div className="text-xs tracking-[0.3em] text-cyan-300 mt-4 opacity-90 drop-shadow-[0_0_5px_rgba(0,229,255,0.5)]">
+            <FingerprintScanner size={80} isActive={true} />
+            <div className="text-xs tracking-[0.3em] text-cyan-300 mt-2 opacity-90 drop-shadow-[0_0_5px_rgba(0,229,255,0.5)]">
               BIOMETRIC SCAN
             </div>
             <div className="text-[10px] tracking-widest text-green-400 mt-1 drop-shadow-[0_0_5px_rgba(74,222,128,0.5)]">
@@ -391,7 +391,7 @@ export const PremiumLayout: React.FC<PremiumLayoutProps> = ({
       </div>
 
       {/* OVERLAYS */}
-      <AppPathsManager
+      <ConfigPanel
         isOpen={isAppPathsOpen}
         onClose={() => setIsAppPathsOpen(false)}
       />

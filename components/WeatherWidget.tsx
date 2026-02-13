@@ -38,19 +38,16 @@ export const WeatherWidget: React.FC = () => {
         const data = await getCurrentWeather();
         setWeather(data);
       } catch (err) {
-        console.error("Erreur météo géolocalisation :", err);
-        
-        // Fallback : utiliser ville par défaut
+        // Géolocalisation refusée ou indisponible - utiliser ville par défaut (pas d'erreur à logger)
         const defaultCity = import.meta.env.VITE_DEFAULT_WEATHER_CITY || "Paris";
         
         try {
-          console.log(`Utilisation ville par défaut : ${defaultCity}`);
           const data = await getWeatherByCity(defaultCity);
           setWeather(data);
           setError(null); // Pas d'erreur si fallback réussi
         } catch (fallbackErr) {
-          console.error("Erreur météo fallback :", fallbackErr);
-          setError(fallbackErr instanceof Error ? fallbackErr.message : "Erreur inconnue");
+          // Erreur API uniquement (clé invalide ou ville introuvable)
+          setError(fallbackErr instanceof Error ? fallbackErr.message : "Météo indisponible");
         } finally {
           setLoading(false);
         }
