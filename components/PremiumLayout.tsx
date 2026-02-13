@@ -157,19 +157,19 @@ export const PremiumLayout: React.FC<PremiumLayoutProps> = ({
       {/* Coin supérieur gauche - Système - ENRICHI */}
       <div className="fixed top-8 left-8 w-72 z-30">
         <div
-          className="jarvis-panel-corners p-5"
+          className="jarvis-panel-corners p-4"
           style={{
             boxShadow: "0 0 20px rgba(0, 229, 255, 0.3)",
           }}
         >
-          <div className="flex items-center gap-2 mb-4">
+          <div className="flex items-center gap-2 mb-2">
             <div className="jarvis-marker w-4" />
             <div className="jarvis-label">SYSTEM STATUS</div>
             <div className="flex-1" />
             <div className="jarvis-dot-pulse" />
           </div>
 
-          <div className="flex items-baseline gap-2 mb-3">
+          <div className="flex items-baseline gap-2 mb-2">
             <span
               className="jarvis-text"
               style={{
@@ -183,7 +183,7 @@ export const PremiumLayout: React.FC<PremiumLayoutProps> = ({
             <span className="jarvis-data">%</span>
           </div>
 
-          <div className="jarvis-progress mb-4" style={{ height: "6px" }}>
+          <div className="jarvis-progress mb-2" style={{ height: "6px" }}>
             <div
               className="jarvis-progress-bar"
               style={{
@@ -193,7 +193,7 @@ export const PremiumLayout: React.FC<PremiumLayoutProps> = ({
             />
           </div>
 
-          <div className="space-y-3">
+          <div className="space-y-2">
             <div className="flex justify-between items-center">
               <span className="jarvis-data">CPU LOAD</span>
               <span className="jarvis-text" style={{ fontSize: "12px" }}>
@@ -201,7 +201,7 @@ export const PremiumLayout: React.FC<PremiumLayoutProps> = ({
               </span>
             </div>
             {/* Mini-graphique CPU Animé */}
-            <div className="flex gap-1 h-10 items-end">
+            <div className="flex gap-1 h-8 items-end">
               {[...Array(12)].map((_, i) => {
                 // Simulation d'un historique basé sur le CPU actuel + bruit
                 const height = Math.min(
@@ -243,11 +243,11 @@ export const PremiumLayout: React.FC<PremiumLayoutProps> = ({
 
             {/* Animation Voice Wave - Styles néon cyan */}
             <div className="jarvis-line-h" />
-            <div className="flex justify-center pt-2">
+            <div className="flex justify-center pt-1">
               <VoiceWave
                 barCount={9}
                 color="#00f3ff"
-                maxHeight={35}
+                maxHeight={25}
                 isActive={true}
               />
             </div>
