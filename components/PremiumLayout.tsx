@@ -88,11 +88,17 @@ export const PremiumLayout: React.FC<PremiumLayoutProps> = ({
       </div>
 
       {/* ========================================
-          MAIN HUD LAYER (Interactive)
+          MAIN HUD LAYER (Interactive) - RESPONSIVE
           ======================================== */}
-      <div className="relative z-10 w-full h-screen grid grid-cols-[350px_1fr_350px] p-6 gap-6 pointer-events-none">
+      <div className="relative z-10 w-full min-h-screen grid 
+                      grid-cols-1 
+                      md:grid-cols-[300px_1fr] 
+                      xl:grid-cols-[350px_1fr_350px] 
+                      p-3 md:p-4 xl:p-6 
+                      gap-3 md:gap-4 xl:gap-6 
+                      pointer-events-none">
         {/* === LEFT COLUMN === */}
-        <div className="flex flex-col gap-6 pointer-events-auto z-20">
+        <div className="flex flex-col gap-3 md:gap-4 xl:gap-6 pointer-events-auto z-20">
           {/* SYSTEM STATUS PANEL */}
           <motion.div
             initial={{ x: -100, opacity: 0 }}
@@ -208,58 +214,64 @@ export const PremiumLayout: React.FC<PremiumLayoutProps> = ({
           </motion.div>
         </div>
 
-        {/* === CENTER COLUMN (HUD) === */}
-        <div className="relative flex items-center justify-center">
-          {/* CENTRAL HUD */}
+        {/* === CENTER COLUMN (HUD) - RESPONSIVE === */}
+        <div className="relative flex items-center justify-center 
+                        order-1 md:order-2
+                        min-h-[400px] md:min-h-[500px] xl:min-h-0">
+          {/* CENTRAL HUD - Taille adaptative */}
           <div className="absolute inset-0 flex items-center justify-center z-0">
-            <JarvisHUDAuthentic status={status} size={600} showDetails={true} />
+            <JarvisHUDAuthentic 
+              status={status} 
+              size={typeof window !== 'undefined' && window.innerWidth < 768 ? 300 : window.innerWidth < 1280 ? 400 : 600} 
+              showDetails={true} 
+            />
           </div>
 
-          {/* PARTICLE SPHERE OVERLAY - INCREASED VISIBILITY & Z-INDEX */}
-          <div className="absolute inset-0 flex items-center justify-center z-10 mix-blend-screen pointer-events-none filter brightness-125 contrast-125 -translate-y-16">
+          {/* PARTICLE SPHERE OVERLAY - Responsive */}
+          <div className="absolute inset-0 flex items-center justify-center z-10 mix-blend-screen pointer-events-none filter brightness-125 contrast-125 -translate-y-8 md:-translate-y-16">
             <ParticleSphere
               isActive={status === "speaking"}
               isListening={isListening || status === "listening"}
               audioLevel={status === "speaking" ? 80 : 0}
-              size={850}
+              size={typeof window !== 'undefined' && window.innerWidth < 768 ? 500 : window.innerWidth < 1280 ? 650 : 850}
               baseColor="#00e5ff"
               activeColor="#00e5ff"
             />
           </div>
 
-          {/* LOGO */}
+          {/* LOGO - Responsive */}
           <motion.div
             initial={{ y: -50, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ duration: 1, delay: 0.5 }}
-            className="absolute top-12 text-center z-0"
+            className="absolute top-4 md:top-8 xl:top-12 text-center z-0"
           >
-            <h1 className="text-6xl font-bold tracking-[0.5em] text-white/90 drop-shadow-[0_0_15px_rgba(0,229,255,0.5)]">
+            <h1 className="text-3xl md:text-5xl xl:text-6xl font-bold tracking-[0.3em] md:tracking-[0.5em] text-white/90 drop-shadow-[0_0_15px_rgba(0,229,255,0.5)]">
               J.A.R.V.I.S
             </h1>
-            <div className="text-[10px] tracking-[1em] opacity-60 text-cyan-200 mt-2">
+            <div className="text-[8px] md:text-[10px] tracking-[0.5em] md:tracking-[1em] opacity-60 text-cyan-200 mt-1 md:mt-2 hidden md:block">
               JUST A RATHER VERY INTELLIGENT SYSTEM
             </div>
           </motion.div>
 
-          {/* MICROPHONE BUTTON (Floating at bottom center) - ENHANCED */}
+          {/* MICROPHONE BUTTON - Responsive */}
           <motion.div
-            className="absolute bottom-16  pointer-events-auto z-50 py-10"
+            className="absolute bottom-8 md:bottom-16 pointer-events-auto z-50 py-4 md:py-10"
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.95 }}
           >
             <div className="relative group flex flex-col items-center justify-center">
-              {/* Outer Rotating Ring */}
-              <div className="absolute inset-0 rounded-full border border-cyan-500/30 w-32 h-32 -ml-[16px] -mt-[16px] animate-[spin_10s_linear_infinite]" />
-              <div className="absolute inset-0 rounded-full border border-cyan-500/20 w-40 h-40 -ml-[32px] -mt-[32px] animate-[spin_15s_linear_infinite_reverse]" />
+              {/* Outer Rotating Rings - Hidden on mobile */}
+              <div className="hidden md:block absolute inset-0 rounded-full border border-cyan-500/30 w-24 md:w-32 h-24 md:h-32 -ml-[12px] md:-ml-[16px] -mt-[12px] md:-mt-[16px] animate-[spin_10s_linear_infinite]" />
+              <div className="hidden md:block absolute inset-0 rounded-full border border-cyan-500/20 w-32 md:w-40 h-32 md:h-40 -ml-[24px] md:-ml-[32px] -mt-[24px] md:-mt-[32px] animate-[spin_15s_linear_infinite_reverse]" />
 
               <div
-                className={`absolute inset-0 rounded-full blur-2xl transition-all duration-300 w-24 h-24 ${isListening ? "bg-red-500/60" : "bg-cyan-500/30 group-hover:bg-cyan-500/50"}`}
+                className={`absolute inset-0 rounded-full blur-2xl transition-all duration-300 w-16 md:w-24 h-16 md:h-24 ${isListening ? "bg-red-500/60" : "bg-cyan-500/30 group-hover:bg-cyan-500/50"}`}
               />
 
               <button
                 onClick={onMicrophoneClick}
-                className={`relative w-24 h-24 rounded-full border-2 flex items-center justify-center transition-all duration-300 backdrop-blur-md z-10 ${
+                className={`relative w-16 md:w-24 h-16 md:h-24 rounded-full border-2 flex items-center justify-center transition-all duration-300 backdrop-blur-md z-10 ${
                   isListening
                     ? "border-red-500 bg-red-900/30 text-red-500 shadow-[0_0_50px_rgba(239,68,68,0.6)] animate-pulse"
                     : "border-cyan-500/50 bg-black/60 text-cyan-400 hover:border-cyan-400 hover:text-cyan-200 hover:shadow-[0_0_30px_rgba(0,229,255,0.5)]"
@@ -267,7 +279,7 @@ export const PremiumLayout: React.FC<PremiumLayoutProps> = ({
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
-                  className="h-10 w-10"
+                  className="h-8 md:h-10 w-8 md:w-10"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -281,15 +293,18 @@ export const PremiumLayout: React.FC<PremiumLayoutProps> = ({
                 </svg>
               </button>
 
-              <div className="absolute -bottom-10 text-xs tracking-[0.3em] font-bold opacity-80 whitespace-nowrap text-cyan-300">
-                {isListening ? "LISTENING MODE" : "VOICE CONTROL"}
+              <div className="absolute -bottom-8 md:-bottom-10 text-[10px] md:text-xs tracking-[0.2em] md:tracking-[0.3em] font-bold opacity-80 whitespace-nowrap text-cyan-300">
+                {isListening ? "LISTENING" : "VOICE"}
               </div>
             </div>
           </motion.div>
         </div>
 
-        {/* === RIGHT COLUMN === */}
-        <div className="flex flex-col gap-4 pointer-events-auto h-[90vh] mt-8 z-20">
+        {/* === RIGHT COLUMN - RESPONSIVE === */}
+        <div className="flex flex-col gap-3 md:gap-4 pointer-events-auto 
+                        md:h-[90vh] mt-0 md:mt-8 z-20 
+                        order-2 md:order-3
+                        xl:order-3">
           {/* DATE & TIME PANEL */}
           <motion.div
             initial={{ x: 100, opacity: 0 }}

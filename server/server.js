@@ -21,6 +21,7 @@ import {
 } from "./appIndexer.js";
 import * as windowManager from "./windowManager.js";
 import * as automation from "./automation.js";
+import { getSystemStats, getLightStats } from "./systemStats.js";
 
 const app = express();
 const PORT = 3001;
@@ -230,6 +231,52 @@ app.post("/api/reindex", async (req, res) => {
     success: true,
     message: "Reindexing started",
   });
+});
+
+// ============================================================================
+// ENDPOINTS STATS SYSTÈME
+// ============================================================================
+
+/**
+ * GET /api/system/stats
+ * Récupère les statistiques système complètes
+ * (CPU, RAM, Réseau, Processus, Température)
+ */
+app.get("/api/system/stats", async (req, res) => {
+  try {
+    const stats = await getSystemStats();
+    res.json({
+      success: true,
+      data: stats,
+    });
+  } catch (error) {
+    console.error(`❌ Failed to get system stats: ${error.message}`);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+});
+
+/**
+ * GET /api/system/stats/light
+ * Récupère uniquement les stats légères (CPU, RAM, Processus)
+ * Plus rapide, optimisé pour polling fréquent
+ */
+app.get("/api/system/stats/light", async (req, res) => {
+  try {
+    const stats = await getLightStats();
+    res.json({
+      success: true,
+      data: stats,
+    });
+  } catch (error) {
+    console.error(`❌ Failed to get light stats: ${error.message}`);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
 });
 
 // ============================================================================
