@@ -1,0 +1,109 @@
+/*
+ * --- CSS AUTONOME EMPREINTE HOLOGRAPHIQUE ---
+ * Facile à intégrer : structure HTML minimale requise
+ */
+
+/* Conteneur principal - s'adapte à son parent */
+.fingerprint-scanner {
+  display: flex;
+  position: relative;
+  width: 300px; /* Taille par défaut, écrasée par le style inline React */
+  height: 300px;
+  justify-content: center;
+  align-items: center;
+  background: transparent;
+  /* Suppression de la bordure carrée */
+  border: none;
+  /* Adaptation au conteneur circulaire parent */
+  border-radius: 50%;
+  overflow: hidden;
+}
+
+/* Suppression des coins technologiques externes */
+.fingerprint-scanner::before,
+.fingerprint-scanner::after {
+  display: none;
+}
+
+/* Boîte SVG interne */
+.fingerprint-svg-box {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  padding: 10px;
+  box-sizing: border-box;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Suppression des coins technologiques internes */
+.fingerprint-svg-box::before,
+.fingerprint-svg-box::after {
+  display: none;
+}
+
+/* L'empreinte SVG */
+.fingerprint-svg-box svg {
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(0px 0px 8px #07ffff);
+}
+
+.fingerprint-svg-box path {
+  stroke: #34d9fd;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  fill: none;
+  /* Animation de tracé */
+  stroke-dasharray: 100;
+  animation: draw-print 4s infinite linear;
+}
+
+/* Barre de scan */
+.fingerprint-scan-beam {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 0%; /* Animé vers 100% */
+  background: linear-gradient(
+    to bottom,
+    transparent 60%,
+    rgba(52, 217, 253, 0.4) 100%
+  );
+  border-bottom: 2px solid #34d9fd;
+  animation: scanning 3s ease-in-out infinite alternate;
+  pointer-events: none; /* Ne bloque pas le clic */
+  z-index: 10;
+}
+
+/* Animations */
+@keyframes draw-print {
+  0%,
+  100% {
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+  50% {
+    stroke-dashoffset: 50;
+    opacity: 0.5;
+  }
+}
+
+@keyframes scanning {
+  0% {
+    height: 0%;
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    height: 100%;
+    opacity: 0;
+  }
+}

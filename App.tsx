@@ -22,6 +22,7 @@ import { SystemStatus } from "./types";
 import { useJarvisInteraction } from "./hooks/useJarvisInteraction";
 import { useJarvisBrain } from "./hooks/useJarvisBrain";
 import { useAutonomy } from "./hooks/useAutonomy";
+import { useSystemStats } from "./hooks/useSystemStats"; // NOUVEAU
 
 // ============================================================================
 // SHELL (Composant Interne avec accès au Kernel)
@@ -45,6 +46,9 @@ const JarvisShell: React.FC = () => {
 
   // État local UI (non-partagé)
   const [activeOverlay, setActiveOverlay] = useState<string | null>(null);
+
+  // Système (Stats Dynamiques)
+  const systemStats = useSystemStats();
 
   // ========================================
   // CERVEAU & INTERACTION
@@ -111,8 +115,9 @@ const JarvisShell: React.FC = () => {
         isListening={interaction.isListening}
         onMicrophoneClick={interaction.handleMicrophoneClick}
         // Données Système (Via Context Kernel)
-        cpuUsage={Math.floor(20 + Math.random() * 15)}
-        memoryUsage="4.2 GB"
+        cpuUsage={systemStats.cpuUsage}
+        memoryUsage={`${systemStats.memoryUsage} GB`}
+        processes={systemStats.processes} // NOUVEAU
         logs={logs.map((log) => ({
           source: log.source,
           message: log.message,

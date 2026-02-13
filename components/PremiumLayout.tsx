@@ -13,6 +13,7 @@ import { SuccessRipple } from "./SuccessRipple";
 import { AppPathsManager } from "./AppPathsManager";
 import { ParticleSphere } from "./ParticleSphere";
 import { VoiceWave } from "./VoiceWave";
+import { FingerprintScanner } from "./FingerprintScanner";
 
 interface PremiumLayoutProps {
   // HUD status
@@ -22,6 +23,7 @@ interface PremiumLayoutProps {
   commandCount: number;
   cpuUsage?: number;
   memoryUsage?: string;
+  processes?: number; // NOUVEAU
 
   // Command
   onMicrophoneClick: () => void;
@@ -46,6 +48,7 @@ export const PremiumLayout: React.FC<PremiumLayoutProps> = ({
   commandCount,
   cpuUsage = 0,
   memoryUsage = "0 GB",
+  processes = 24, // Valeur par défaut
   onMicrophoneClick,
   isListening,
   logs,
@@ -189,19 +192,30 @@ export const PremiumLayout: React.FC<PremiumLayoutProps> = ({
                 {cpuUsage}%
               </span>
             </div>
-            {/* Mini-graphique CPU */}
-            <div className="flex gap-1 h-8">
-              {[...Array(12)].map((_, i) => (
-                <div
-                  key={i}
-                  className="flex-1 bg-cyan-500/20"
-                  style={{
-                    height: `${Math.random() * 100}%`,
-                    alignSelf: "flex-end",
-                    boxShadow: "0 0 5px rgba(0, 229, 255, 0.4)",
-                  }}
-                />
-              ))}
+            {/* Mini-graphique CPU Animé */}
+            <div className="flex gap-1 h-10 items-end">
+              {[...Array(12)].map((_, i) => {
+                // Simulation d'un historique basé sur le CPU actuel + bruit
+                const height = Math.min(
+                  100,
+                  Math.max(10, cpuUsage + (Math.random() - 0.5) * 40),
+                );
+                return (
+                  <div
+                    key={i}
+                    className="flex-1 bg-cyan-500/20 transition-all duration-300 ease-in-out"
+                    style={{
+                      height: `${height}%`,
+                      backgroundColor:
+                        i === 11
+                          ? "var(--jarvis-cyan)"
+                          : "rgba(0, 243, 255, 0.3)",
+                      boxShadow:
+                        i === 11 ? "0 0 10px var(--jarvis-cyan)" : "none",
+                    }}
+                  />
+                );
+              })}
             </div>
 
             <div className="jarvis-line-h" />
@@ -215,7 +229,7 @@ export const PremiumLayout: React.FC<PremiumLayoutProps> = ({
             <div className="flex justify-between items-center">
               <span className="jarvis-data">PROCESSES</span>
               <span className="jarvis-text" style={{ fontSize: "12px" }}>
-                24
+                {processes}
               </span>
             </div>
 
@@ -367,6 +381,10 @@ export const PremiumLayout: React.FC<PremiumLayoutProps> = ({
               </span>
             </div>
 
+            <div className="jarvis-line-h my-3" />
+
+            {/* Authentification Biométrique - Déplacé */}
+
             {/* Bouton Config Applications */}
             <div className="jarvis-line-h my-3" />
             <button
@@ -516,19 +534,23 @@ export const PremiumLayout: React.FC<PremiumLayoutProps> = ({
       {/* ========================================
           VISUALISEUR CIRCULAIRE (Droite milieu)
           ======================================== */}
-      <div className="fixed bottom-48 right-8 z-30">
-        <div className="relative w-32 h-32">
+      <div className="fixed bottom-40 right-24 z-30">
+        <div className="relative w-40 h-40 flex items-center justify-center">
           <CircularVisualizer
             isActive={isListening || status === "speaking"}
-            size={130}
+            size={160}
           />
+          {/* Empreinte au centre du cercle */}
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <FingerprintScanner size={100} isActive={true} />
+          </div>
         </div>
       </div>
 
       {/* ========================================
           CONTRÔLES MICRO (Bas droit) - Style Cinématique
           ======================================== */}
-      <div className="fixed bottom-8 right-8 z-30">
+      <div className="fixed bottom-6 right-24 z-30">
         <div className="relative">
           {/* Glow doré si actif */}
           {isListening && (

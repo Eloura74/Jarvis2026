@@ -8,18 +8,18 @@
 
 /* ==================== VARIABLES ==================== */
 :root {
-  /* Couleur unique : cyan */
-  --jarvis-cyan: #00e5ff;
-  --jarvis-cyan-dim: rgba(0, 229, 255, 0.6);
-  --jarvis-cyan-subtle: rgba(0, 229, 255, 0.95);
+  /* Couleur unique : cyan ultra-saturé */
+  --jarvis-cyan: #00f3ff;
+  --jarvis-cyan-dim: rgba(0, 243, 255, 0.8);
+  --jarvis-cyan-subtle: rgba(0, 243, 255, 1);
 
   /* Ligne ultra-fine */
   --line-thin: 0.5px;
   --line-normal: 1px;
 
-  /* Glow subtil - Réduit pour plus de netteté */
-  --glow-small: 0 0 4px rgba(0, 229, 255, 0.6);
-  --glow-medium: 0 0 8px rgba(0, 229, 255, 0.4);
+  /* Glow subtil - Renforcé mais net */
+  --glow-small: 0 0 5px rgba(0, 243, 255, 0.7);
+  --glow-medium: 0 0 10px rgba(0, 243, 255, 0.5);
 }
 
 /* ==================== RESET & BASE ==================== */

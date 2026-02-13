@@ -40,10 +40,11 @@ export const JarvisCinematicBackground: React.FC = () => {
         0,
         canvas.width / 2,
         canvas.height / 2,
-        canvas.width * 0.8,
+        canvas.width * 1.0,
       );
-      gradient.addColorStop(0, "#0a1628");
-      gradient.addColorStop(1, "#000000");
+      gradient.addColorStop(0, "#0f1c30"); // Bleu nuit profond
+      gradient.addColorStop(0.6, "#050a12"); // Transition sombre
+      gradient.addColorStop(1, "#000000"); // Noir pur
       ctx.fillStyle = gradient;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
