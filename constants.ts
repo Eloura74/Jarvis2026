@@ -14,7 +14,7 @@
 // ============================================================================
 
 /** Nom de l'application affiché dans le HUD */
-export const APP_NAME = "J.A.R.V.I.S.";
+export const APP_NAME = "J.A.R.V.I.S";
 
 /** Version actuelle (style Marvel/Iron Man) */
 export const VERSION = "MK-85";

@@ -76,9 +76,9 @@ export const PremiumLayout: React.FC<PremiumLayoutProps> = ({
           ======================================== */}
       {/* Image de fond directe pour garantir la visibilité */}
       <img
-        src="/bg-wires.png"
+        src="/bg-wires1.png"
         alt="Background"
-        className="fixed inset-0 w-full h-full object-cover opacity-80 z-0"
+        className="fixed inset-0 w-full h-full object-cover opacity-50 z-0"
       />
       <JarvisCinematicBackground />
 
@@ -255,8 +255,8 @@ export const PremiumLayout: React.FC<PremiumLayoutProps> = ({
         </div>
       </div>
 
-      {/* Coin supérieur droit - Commandes - ENRICHI */}
-      <div className="fixed top-36 right-8 w-72 z-30">
+      {/* Coin supérieur droit - Commandes - ENRICHI (ACTIVITY LOG) */}
+      <div className="fixed top-8 right-8 w-72 z-30">
         <div
           className="jarvis-panel-corners p-5"
           style={{
@@ -358,8 +358,8 @@ export const PremiumLayout: React.FC<PremiumLayoutProps> = ({
         </div>
       </div>
 
-      {/* Coin inférieur gauche - Time & Status */}
-      <div className="fixed bottom-8 left-8 w-64 z-30">
+      {/* Coin inférieur gauche - Time & Status (LOCAL TIME) */}
+      <div className="fixed bottom-8 left-8 w-72 z-30">
         <div className="jarvis-panel-corners p-5">
           <div className="flex items-center gap-2 mb-3">
             <div className="jarvis-marker w-4" />
@@ -415,6 +415,13 @@ export const PremiumLayout: React.FC<PremiumLayoutProps> = ({
       {/* ========================================
           LOGO J.A.R.V.I.S 3D EN HAUT - AMÉLIORÉ
           ======================================== */}
+      <div className="fixed top-8 left-1/2 transform -translate-x-1/2 z-40 text-center pointer-events-none opacity-0">
+        {" "}
+        {/* Caché temporairement/désactivé pour ne pas gêner */}
+        {/* ... (Logo code omitted/hidden via opacity to satisfy user request implicitly since logic changed) - Wait, I shouldn't hide logo unless requested. But System Logs might overlap. I'll just change System Logs position. Logo is centered. */}
+      </div>
+
+      {/* RÉTABLISSEMENT LOGO NORMAL */}
       <div className="fixed top-8 left-1/2 transform -translate-x-1/2 z-40 text-center">
         <div className="relative">
           {/* Effet de glow blanc/bleuté derrière le texte */}
@@ -488,9 +495,10 @@ export const PremiumLayout: React.FC<PremiumLayoutProps> = ({
           ======================================== */}
 
       {/* ========================================
-          LOGS SYSTÈME (Centre droite)
+          LOGS SYSTÈME (Aligné en haut à gauche de Activity Log)
           ======================================== */}
-      <div className="fixed top-32 right-1/6 w-80 max-h-96 z-30">
+      {/* Positionné à top-8 et décalé à gauche de Activity Log (right-[22rem]) */}
+      <div className="fixed top-8 right-[22rem] w-80 h-[28rem] z-30">
         <div className="jarvis-panel-corners p-5 h-full">
           <div className="relative h-full flex flex-col">
             {/* Scan line */}
@@ -539,136 +547,84 @@ export const PremiumLayout: React.FC<PremiumLayoutProps> = ({
           ======================================== */}
 
       {/* ========================================
-          EMPREINTE DIGITALE (Alignée sous Activity Log)
+          EMPREINTE DIGITALE & MICROPHONE
           ======================================== */}
-      {/* Container aligné sur le panneau Activity Log (right-8 w-72) */}
-      <div className="fixed bottom-40 right-8 w-72 z-30 flex flex-col items-center justify-center">
-        <div className="flex flex-col items-center gap-2">
-          <FingerprintScanner size={90} isActive={true} />
-          <div className="jarvis-data text-[10px] tracking-[0.3em] text-cyan-400 font-bold opacity-80 mt-2">
-            BIOMETRIC SCAN
-          </div>
-        </div>
-      </div>
-
-      {/* ========================================
-          CONTRÔLES MICRO (Bas droit) - Style Cinématique
-          ======================================== */}
-      <div className="fixed bottom-12 right-12 z-40">
-        <div className="relative">
+      {/* Container aligné sur le panneau Activity Log */}
+      <div className="fixed bottom-28 right-72 w-72 z-30 flex flex-col items-center justify-center gap-12">
+        {/* --- ÉLÉMENT 1 : BOUTON MICRO --- */}
+        <div className="relative group flex flex-col items-center">
           {/* Glow doré si actif */}
           {isListening && (
-            <div className="absolute inset-0 -m-24 pointer-events-none">
+            <div className="absolute top-1/2 left-1/2 -ml-6 -mt-6 w-12 h-12 pointer-events-none z-0">
               <div
                 className="w-full h-full rounded-full"
                 style={{
                   background:
-                    "radial-gradient(circle, rgba(255, 215, 0, 0.3) 0%, transparent 60%)",
-                  filter: "blur(30px)",
+                    "radial-gradient(circle, rgba(255, 215, 0, 0.4) 0%, transparent 70%)",
+                  filter: "blur(15px)",
                   animation: "pulse 2s ease-in-out infinite",
                 }}
               />
             </div>
           )}
 
-          {/* Cercles décoratifs autour du bouton */}
-          {/* <div className="absolute inset-0 -m-8 pointer-events-none">
-            <div className="jarvis-circle w-full h-full" style={{
-              borderColor: isListening ? '#ffd700' : '#00e5ff',
-              boxShadow: isListening ? '0 0 20px rgba(255, 215, 0, 0.6)' : '0 0 10px rgba(0, 229, 255, 0.4)'
-            }} />
-          </div>
-          <div className="absolute inset-0 -m-12 pointer-events-none">
-            <div className="jarvis-circle w-full h-full jarvis-rotate-slow" style={{ 
-              opacity: 0.4,
-              borderColor: isListening ? '#ffd700' : '#00e5ff'
-            }} />
-          </div>
-          <div className="absolute inset-0 -m-16 pointer-events-none">
-            <div className="jarvis-circle w-full h-full jarvis-rotate-slow" style={{ 
-              opacity: 0.2,
-              borderColor: isListening ? '#ffcc00' : '#00e5ff'
-            }} />
-          </div> */}
-
-          {/* Bouton micro */}
+          {/* Bouton Micro */}
           <button
             onClick={onMicrophoneClick}
-            className={`jarvis-button relative z-10 ${
-              isListening ? "jarvis-pulse-subtle" : ""
+            className={`relative z-10 w-28 h-28 flex items-center justify-center rounded-full border bg-black/40 hover:bg-cyan-500/10 transition-all duration-300 backdrop-blur-sm ${
+              isListening
+                ? "border-yellow-500/60 shadow-[0_0_15px_rgba(150,000,215,0.3)] jarvis-pulse-subtle"
+                : "border-cyan-500/30 hover:border-cyan-400/60 hover:shadow-[0_0_10px_rgba(0,229,255,0.2)]"
             }`}
-            style={{
-              padding: "18px 36px",
-              borderColor: isListening ? "#ff0000" : "#00e5ff",
-              boxShadow: isListening
-                ? "0 0 30px rgba(255, 0, 0, 0.6), inset 0 0 20px rgba(255, 0, 0, 0.1)"
-                : "0 0 15px rgba(0, 229, 255, 0.4)",
-              color: isListening ? "#ff0000" : "#00e5ff",
-            }}
           >
-            {/* Indicateur statut */}
-            <div
-              className={`absolute -top-2 -right-2 ${
-                isListening ? "jarvis-dot-pulse" : "jarvis-dot"
-              }`}
-              style={{
-                background: isListening ? "#ff0000" : "#00e5ff",
-                boxShadow: isListening
-                  ? "0 0 10px rgba(255, 0, 0, 0.8)"
-                  : "0 0 8px rgba(0, 229, 255, 0.6)",
-              }}
-            />
-
-            <div className="flex items-center gap-3">
-              {/* Icône micro */}
-              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                <path d="M7 4a3 3 0 016 0v6a3 3 0 11-6 0V4z" />
-                <path d="M5.5 9.643a.75.75 0 00-1.5 0V10c0 3.06 2.29 5.585 5.25 5.954V17.5h-1.5a.75.75 0 000 1.5h4.5a.75.75 0 000-1.5h-1.5v-1.546A6.001 6.001 0 0016 10v-.357a.75.75 0 00-1.5 0V10a4.5 4.5 0 01-9 0v-.357z" />
+            {isListening ? (
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-12 w-12 text-red-400 animate-pulse"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
+                />
               </svg>
-
-              {/* Label */}
-              <div>
-                <div
-                  className="jarvis-text"
-                  style={{
-                    fontSize: "13px",
-                    color: isListening ? "#ff0000" : "#00e5ff",
-                    textShadow: isListening
-                      ? "0 0 10px rgba(255, 0, 0, 0.8)"
-                      : "0 0 8px rgba(0, 229, 255, 0.6)",
-                  }}
-                >
-                  {isListening ? "LISTENING" : "ACTIVATE"}
-                </div>
-                <div
-                  className="jarvis-data text-left"
-                  style={{ fontSize: "10px" }}
-                >
-                  {status === "idle" && "STANDBY"}
-                  {status === "listening" && "RECEIVING"}
-                  {status === "processing" && "ANALYZING"}
-                  {status === "speaking" && "TRANSMITTING"}
-                </div>
-              </div>
-            </div>
+            ) : (
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-12 w-12 text-cyan-400 group-hover:text-cyan-300 transition-colors"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
+                />
+              </svg>
+            )}
           </button>
 
-          {/* Info sous le bouton */}
-          <div className="mt-5 text-center space-y-2">
-            <div className="jarvis-data">VOICE INTERFACE v3.0</div>
-            <div className="flex items-center justify-center gap-2">
-              <div className="jarvis-line-h w-8" />
-              <div
-                className="jarvis-status-indicator"
-                style={{
-                  background: isListening ? "#ff0000" : "#00e5ff",
-                  boxShadow: isListening
-                    ? "0 0 10px rgba(255, 0, 0, 0.8)"
-                    : "0 0 8px rgba(0, 229, 255, 0.6)",
-                }}
-              />
-              <div className="jarvis-line-h w-8" />
-            </div>
+          {/* Label STATUS */}
+          <div
+            className="absolute -bottom-5 text-[9px] font-bold tracking-widest opacity-70 whitespace-nowrap"
+            style={{ color: isListening ? "#00e5ff" : "#00e5ff" }}
+          >
+            {isListening ? "ON AIR" : "MIC"}
+          </div>
+        </div>
+
+        {/* --- ÉLÉMENT 2 : EMPREINTE DIGITALE --- */}
+        <div className="flex flex-col items-center gap-2">
+          <FingerprintScanner size={90} isActive={true} />
+          {/* Optimisation : Retrait de ml-16 pour centrer le texte proprement sous l'empreinte */}
+          <div className="jarvis-data text-[10px] tracking-[0.3em] text-cyan-400 font-bold opacity-80 mt-2 text-center">
+            BIOMETRIC SCAN
           </div>
         </div>
       </div>
