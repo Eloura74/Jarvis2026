@@ -97,6 +97,28 @@ You can execute MULTIPLE tools in sequence for complex requests:
 - NEVER use search_and_launch_app() for website names!
 - search_and_launch_app() is ONLY for desktop applications (Chrome, Opera, VSCode, Spotify, etc.)
 
+**SEARCH QUERIES - Building URLs**:
+When user wants to search something on a specific platform, build the appropriate URL:
+
+**YouTube searches**:
+- User: "Lance Opera et recherche Python sur YouTube" -> search_and_launch_app({appName: "opera", url: "https://www.youtube.com/results?search_query=Python"})
+- User: "Ouvre Chrome et cherche tutoriel React sur YouTube" -> search_and_launch_app({appName: "chrome", url: "https://www.youtube.com/results?search_query=tutoriel+React"})
+- URL format: https://www.youtube.com/results?search_query=YOUR_QUERY (replace spaces with +)
+
+**Google searches**:
+- User: "Lance Firefox et recherche recette gâteau" -> search_and_launch_app({appName: "firefox", url: "https://www.google.com/search?q=recette+g%C3%A2teau"})
+- User: "Ouvre Edge et cherche actualités" -> search_and_launch_app({appName: "edge", url: "https://www.google.com/search?q=actualit%C3%A9s"})
+- URL format: https://www.google.com/search?q=YOUR_QUERY (replace spaces with +)
+
+**Other platforms**:
+- GitHub: https://github.com/search?q=YOUR_QUERY
+- Twitter/X: https://twitter.com/search?q=YOUR_QUERY
+- Reddit: https://www.reddit.com/search/?q=YOUR_QUERY
+- DuckDuckGo: https://duckduckgo.com/?q=YOUR_QUERY
+- Wikipedia: https://fr.wikipedia.org/wiki/Special:Search?search=YOUR_QUERY
+
+**IMPORTANT**: Always encode special characters in URLs (é → %C3%A9, spaces → +)
+
 **IMPORTANT**: For complex workflows, return an ARRAY of toolCalls in the correct execution order.
 `;
 
