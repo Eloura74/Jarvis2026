@@ -32,7 +32,6 @@ export function useJarvisInteraction({
   onCommandReceived,
 }: UseJarvisInteractionProps) {
   const [conversationMode, setConversationMode] = useState(false);
-  const [currentSpeechText, setCurrentSpeechText] = useState<string>("");
 
   // Refs pour gestion asynchrone
   const lastMicActivationTime = useRef<number>(0);
@@ -70,7 +69,6 @@ export function useJarvisInteraction({
       // Redémarrage automatique si mode conversation
       setTimeout(() => {
         isSpeakingRef.current = false;
-        setCurrentSpeechText("");
 
         if (conversationModeRef.current) {
           console.log("🎤 Mode conversation : Réactivation micro");
@@ -84,7 +82,6 @@ export function useJarvisInteraction({
   // Synthèse vocale standard (Gemini TTS désactivé car instable)
   const speak = useCallback(
     (text: string) => {
-      setCurrentSpeechText(text);
       rawSpeak(text);
     },
     [rawSpeak],
@@ -93,71 +90,85 @@ export function useJarvisInteraction({
   // ========================================
   // RECONNAISSANCE VOCALE
   // ========================================
-  const {
-    isListening,
-    toggleListening,
-    startListening,
-    stopListening,
-    stopAndWait,
-  } = useVoiceRecognition(
-    (text) => {
-      // 1. Filtrer si Jarvis parle
-      if (isSpeakingRef.current || window.speechSynthesis.speaking) {
-        return;
-      }
+  const { isListening, toggleListening, startListening, stopAndWait } =
+    useVoiceRecognition(
+      (text) => {
+        // 1. Filtrer si Jarvis parle
+        if (isSpeakingRef.current || window.speechSynthesis.speaking) {
+          return;
+        }
 
-      // 2. Période de sécurité (Echo cancellation)
-      if (Date.now() - lastMicActivationTime.current < 1500) {
-        return;
-      }
+        // 2. Période de sécurité (Echo cancellation)
+        if (Date.now() - lastMicActivationTime.current < 1500) {
+          return;
+        }
 
-      // 3. Gestion des Mots de fin de conversation
-      const END_KEYWORDS = [
-        "au revoir",
-        "stop écoute",
-        "merci c'est tout",
-        "terminé",
-        "arrête",
-      ];
-      if (END_KEYWORDS.some((k) => text.toLowerCase().includes(k))) {
-        setConversationMode(false);
-        speak("À bientôt !");
-        addLog("👋 Mode conversation désactivé", "SYSTEM", "info");
-        return;
-      }
+        // 3. Gestion des Mots de fin de conversation
+        const END_KEYWORDS = [
+          "au revoir",
+          "stop écoute",
+          "merci c'est tout",
+          "terminé",
+          "arrête",
+        ];
+        if (END_KEYWORDS.some((k) => text.toLowerCase().includes(k))) {
+          setConversationMode(false);
+          speak("À bientôt !");
+          addLog("👋 Mode conversation désactivé", "SYSTEM", "info");
+          return;
+        }
 
-      // 4. Activation Auto du mode conversation
-      if (!conversationMode) {
-        setConversationMode(true);
-        addLog("🎤 Mode conversation activé", "SYSTEM", "info");
-      }
+        // 4. Activation Auto du mode conversation
+        if (!conversationMode) {
+          setConversationMode(true);
+          addLog("🎤 Mode conversation activé", "SYSTEM", "info");
+        }
 
-      // 5. Interruption de la parole de Jarvis (Barge-in)
-      if (window.speechSynthesis.speaking) {
-        stopSpeech();
-      }
+        // 5. Interruption de la parole de Jarvis (Barge-in)
+        if (window.speechSynthesis.speaking) {
+          stopSpeech();
+        }
 
-      // 6. Transmission de la commande
-      console.log(`✅ Commande validée : "${text}"`);
-      onCommandRef.current(text);
-    },
-    // onStatusChange
-    () => {},
-  );
+        // 6. Transmission de la commande
+        console.log(`✅ Commande validée : "${text}"`);
+        onCommandRef.current(text);
+      },
+      // onStatusChange
+      (listening) => {
+        if (listening) {
+          setStatus(SystemStatus.LISTENING);
+        } else {
+          // Ne repasser en IDLE que si on était en LISTENING
+          // (Pour ne pas écraser PROCESSING ou SPEAKING)
+          if (status === SystemStatus.LISTENING) {
+            setStatus(SystemStatus.IDLE);
+          }
+        }
+      },
+    );
 
   // ========================================
   // WAKE WORD
   // ========================================
-  useWakeWord(
+  const { enable: enableWakeWord, disable: disableWakeWord } = useWakeWord(
     useCallback(() => {
       if (status === SystemStatus.IDLE) {
-        // setStatus(SystemStatus.LISTENING); // Sera géré par le useEffect de isListening
         addLog("Wake word detected", "VOICE", "info");
         lastMicActivationTime.current = Date.now();
         startListening();
       }
     }, [status, addLog, startListening]),
   );
+
+  // Gestion intelligente du Wake Word
+  // Désactive le wake word quand on est déjà en train d'écouter ou que Jarvis parle
+  useEffect(() => {
+    if (!isListening && status === SystemStatus.IDLE) {
+      enableWakeWord();
+    } else {
+      disableWakeWord();
+    }
+  }, [status, isListening, enableWakeWord, disableWakeWord]);
 
   // ========================================
   // GESTION MANUELLE MICRO
