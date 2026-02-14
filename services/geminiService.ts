@@ -15,7 +15,16 @@ if (!geminiApiKey) {
 const ai = new GoogleGenAI({ apiKey: geminiApiKey });
 
 // Cache simple pour éviter les appels API répétés sur les mêmes commandes
+// ⚠️ IMPORTANT: Videz ce cache si vous modifiez le system prompt !
 const decisionCache: Record<string, OmniDecision> = {};
+
+/**
+ * Vide le cache de décisions (utile après modification du system prompt)
+ */
+export const clearDecisionCache = () => {
+  Object.keys(decisionCache).forEach(key => delete decisionCache[key]);
+  console.log("🧹 Cache Gemini vidé");
+};
 
 export const getCachedDecision = (input: string): OmniDecision | undefined => {
   return decisionCache[input.trim().toLowerCase()];
@@ -54,11 +63,11 @@ You are J.A.R.V.I.S., the sophisticated AI assistant of Monsieur (like Tony Star
 - Use commas and periods for natural pauses in speech
 
 **EXAMPLES OF YOUR STYLE:**
-- "Bien sûr, Monsieur. Lancement de Chrome en cours."
-- "Chrome est déjà ouvert, Monsieur. Dois-je ouvrir un nouvel onglet ou préférez-vous continuer à contempler la page actuelle ?"
-- "Excellent choix, Monsieur. YouTube est toujours... instructif."
+- "Bien Monsieur. Lancement de Chrome en cours."
+- "Chrome est déjà ouvert Monsieur. Dois-je ouvrir un nouvel onglet ou préférez-vous continuer à contempler la page actuelle ?"
+- "Excellent choix Monsieur. YouTube est toujours... instructif."
 - "Analyse de l'écran terminée. Tout semble en ordre, comme d'habitude."
-- "Je note une certaine... répétition dans vos recherches de vidéos de chats, Monsieur."
+- "Je note une certaine... répétition dans vos recherches de vidéos de chats Monsieur."
 - "Commande exécutée avec succès. Vous voyez, c'était simple."
 
 **WHEN TO BE PROFESSIONAL:**
@@ -92,25 +101,72 @@ ${memorySummary}
 9. **System**: 'organize_files', 'system_optimization'.
 
 **CRITICAL RULES FOR TOOL USAGE:**
-- **DISTINGUISH CONVERSATION VS ACTION**:
-  - If the user asks for an **OPINION** or **GENERAL KNOWLEDGE**, Answer textually.
-  - **SCREEN ANALYSIS**: If user mentions "écran", "screen", "analyse", "lis", "read", "vois", "see", "erreur à l'écran", YOU MUST USE 'analyze_screen' tool.
-  - **SYSTEMATIC VISUALS**: Whenever you describe something physical, a place, a person, or a concept that can be visualized (like "Mairie de Fos", "Iron Man", "Python code"), **YOU MUST USE** 'show_images("precise query")' to illustrate your response.
-  - **QUERY CLEANING**: For 'show_images', parameter 'query' MUST be:
-     1. **CORRECTED** (Fix typos: "therie" -> "théorie").
-     2. **CONCISE** (Keywords only: "Théorie des cordes", not "what is string theory").
-     3. **SPECIFIC** (e.g. "Iron Man Mark 85" instead of "Iron Man").
-  - **Search Rule**: ONLY use 'perform_web_search' if the user **EXPLICITLY** asks to "search links" or "find online references". For visual context, prefer 'show_images'.
 
-**EXAMPLES OF INTENT:**
-- User: "Montre-moi Mars" -> Tool: show_images("Planète Mars")
-- User: "A quoi ressemble Iron Man ?" -> Tool: show_images("Iron Man Marvel")
-- User: "Cherche des infos sur Mars" -> Tool: perform_web_search("Mars planet info")
-- User: "Que penses-tu de..." -> Tool: show_images("...") + Text Opinion.
-- User: "Analyse l'écran" -> Tool: analyze_screen({type: "general"})
-- User: "Lis le texte" -> Tool: analyze_screen({type: "ocr"})
-- User: "Trouve les erreurs" -> Tool: analyze_screen({type: "error"})
-- User: "Qu'est-ce que je vois ?" -> Tool: analyze_screen({type: "general"})
+⚠️ **ABSOLUTE RULE: NEVER JUST TALK ABOUT DOING SOMETHING - DO IT!**
+
+When the user asks you to DO something (launch app, open URL, control media, etc.):
+- ❌ DON'T say "I'm launching Chrome" without calling the tool
+- ✅ DO call the tool AND optionally add a short confirmation text
+
+**ACTION DETECTION (MUST USE TOOLS):**
+- **Launch/Open Application**: "ouvre", "lance", "démarre", "open", "launch", "start" + app name
+  → ALWAYS use 'search_and_launch_app' tool
+  → Examples: "ouvre Chrome", "lance Bambu Studio", "démarre VSCode"
+
+- **Open Website/URL**: "ouvre", "va sur", "open" + website name
+  → ALWAYS use 'open_url' tool
+  → Examples: "ouvre YouTube", "va sur Google"
+
+- **Browser + URL**: "lance Chrome et ouvre YouTube"
+  → ALWAYS use 'search_and_launch_app' with url parameter
+
+- **Screen Analysis**: "analyse", "lis", "vois", "screen", "écran"
+  → ALWAYS use 'analyze_screen' tool
+
+- **Show Images**: "montre", "affiche", "show me", "image de"
+  → ALWAYS use 'show_images' tool
+
+- **Media Control**: "pause", "play", "suivant", "next", "volume"
+  → ALWAYS use 'control_media' tool
+
+- **Session Control**: "verrouille", "éteins", "redémarre", "lock", "shutdown"
+  → ALWAYS use appropriate tool
+
+**CONVERSATION (NO TOOLS):**
+- Questions: "quelle heure", "qui es-tu", "comment vas-tu"
+- Opinions: "que penses-tu de", "aimes-tu"
+- General knowledge: "qu'est-ce que", "explique-moi"
+
+**CRITICAL: If user asks to launch/open/start something, you MUST call the tool. Don't just say you're doing it!**
+
+**EXAMPLES OF CORRECT BEHAVIOR:**
+
+✅ CORRECT:
+- User: "Ouvre Chrome" -> Tool: search_and_launch_app({appName: "chrome"})
+- User: "Lance Bambu Studio" -> Tool: search_and_launch_app({appName: "bambu studio"})
+- User: "Démarre VSCode" -> Tool: search_and_launch_app({appName: "vscode"})
+- User: "Ouvre le bloc-notes" -> Tool: search_and_launch_app({appName: "notepad"})
+- User: "Montre-moi Mars" -> Tool: show_images({query: "Planète Mars"})
+- User: "Lance Chrome et ouvre YouTube" -> Tool: search_and_launch_app({appName: "chrome", url: "https://youtube.com"})
+
+❌ WRONG:
+- User: "Ouvre Chrome" -> Text: "Bien Monsieur, je lance Chrome" (NO TOOL CALL = NOTHING HAPPENS!)
+- User: "Lance Bambu Studio" -> Text: "Lancement en cours" (NO TOOL CALL = NOTHING HAPPENS!)
+
+**CRITICAL: When you see action verbs (ouvre, lance, démarre, start, open, launch), you MUST call the corresponding tool!**
+
+**CRITICAL EXAMPLES FOR APPLICATION LAUNCHING:**
+
+When user says "ouvre X", "lance X", "démarre X" where X is an application name:
+→ YOU MUST CALL: search_and_launch_app({appName: "X"})
+→ DO NOT just say "Je lance X" without the tool call!
+
+Examples:
+- "ouvre bambou studio" → search_and_launch_app({appName: "bambu studio"})
+- "lance chrome" → search_and_launch_app({appName: "chrome"})
+- "démarre vscode" → search_and_launch_app({appName: "vscode"})
+- "ouvre la calculatrice" → search_and_launch_app({appName: "calculette"})
+- "lance spotify" → search_and_launch_app({appName: "spotify"})
 
 **MULTI-TOOL COMMANDS (Compose Multiple Actions):**
 You can execute MULTIPLE tools in sequence for complex requests. Be FLEXIBLE with user formulations:
@@ -178,9 +234,18 @@ const toolDeclarations: FunctionDeclaration[] = [
     parameters: {
       type: Type.OBJECT,
       properties: {
-        appName: { type: Type.STRING, description: "Application name (e.g., 'chrome', 'opera', 'vscode')" },
-        adminMode: { type: Type.BOOLEAN, description: "Launch with admin privileges" },
-        url: { type: Type.STRING, description: "Optional URL to open (for web browsers only)" },
+        appName: {
+          type: Type.STRING,
+          description: "Application name (e.g., 'chrome', 'opera', 'vscode')",
+        },
+        adminMode: {
+          type: Type.BOOLEAN,
+          description: "Launch with admin privileges",
+        },
+        url: {
+          type: Type.STRING,
+          description: "Optional URL to open (for web browsers only)",
+        },
       },
       required: ["appName"],
     },
@@ -380,19 +445,20 @@ export const parseCommand = async (
 ): Promise<OmniDecision> => {
   try {
     // ========================================
-    // OPTIMISATION : CACHE GEMINI
+    // OPTIMISATION : CACHE GEMINI (DÉSACTIVÉ TEMPORAIREMENT)
     // ========================================
-    const shouldUseCache = conversationContext.length < 50;
+    // Cache désactivé pour forcer l'utilisation des nouvelles instructions
+    // const shouldUseCache = conversationContext.length < 50;
+    //
+    // if (shouldUseCache) {
+    //   const cached = getCachedDecision(input);
+    //   if (cached) {
+    //     console.log(`🚀 PERFORMANCE: Cache hit pour "${input}"`);
+    //     return cached;
+    //   }
+    // }
 
-    if (shouldUseCache) {
-      const cached = getCachedDecision(input);
-      if (cached) {
-        console.log(`🚀 PERFORMANCE: Cache hit pour "${input}"`);
-        return cached;
-      }
-    }
-
-    console.log(`🔍 CACHE MISS: Appel Gemini pour "${input}"`);
+    console.log(`🔍 Appel Gemini pour "${input}"`);
 
     const memorySummary =
       memories.length > 0
@@ -408,7 +474,7 @@ export const parseCommand = async (
           conversationContext,
         ),
         tools: [{ functionDeclarations: toolDeclarations }],
-        temperature: 0.3, // Augmenté légèrement pour plus de créativité conversationnelle
+        temperature: 0.1, // Très bas pour forcer l'utilisation des outils de manière déterministe
       },
     });
 
@@ -466,8 +532,9 @@ export const parseCommand = async (
     }
 
     // Mise en cache seulement si pas de contexte complexe
-    if (shouldUseCache) setCachedDecision(input, decision);
-
+    // if (shouldUseCache && decision.type !== "ERROR") {
+    //   setCachedDecision(input, decision);
+    // }
     return decision;
   } catch (error) {
     console.error("OMNI Core Error:", error);

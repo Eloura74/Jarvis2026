@@ -41,18 +41,21 @@ export const APPS_DATABASE: Record<string, AppEntry> = {
     // - C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe (64-bit)
     // - C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe (32-bit)
     // - C:\\Users\\USERNAME\\AppData\\Local\\Google\\Chrome\\Application\\chrome.exe (installation utilisateur)
+    // ⚠️ IMPORTANT: Remplacez "faber" par VOTRE nom d'utilisateur Windows !
     path: "C:\\Users\\faber\\AppData\\Local\\Google\\Chrome\\Application\\chrome.exe",
     category: "browser",
     keywords: ["web", "internet", "navigation", "google", "browser"],
     description: "Google Chrome web browser",
   },
   opera: {
+    // ⚠️ IMPORTANT: Remplacez "faber" par VOTRE nom d'utilisateur Windows !
     path: "C:\\Users\\faber\\AppData\\Local\\Programs\\Opera\\opera.exe",
     category: "browser",
     keywords: ["web", "internet", "navigation", "browser"],
     description: "Opera web browser",
   },
   "opera gx": {
+    // ⚠️ IMPORTANT: Remplacez "faber" par VOTRE nom d'utilisateur Windows !
     path: "C:\\Users\\faber\\AppData\\Local\\Programs\\Opera GX\\launcher.exe",
     category: "browser",
     keywords: ["web", "internet", "navigation", "gaming", "browser"],
@@ -76,6 +79,7 @@ export const APPS_DATABASE: Record<string, AppEntry> = {
   // IDEs & DÉVELOPPEMENT
   // ============================================================================
   vscode: {
+    // ⚠️ IMPORTANT: Remplacez "faber" par VOTRE nom d'utilisateur Windows !
     path: "C:\\Users\\faber\\AppData\\Local\\Programs\\Microsoft VS Code\\Code.exe",
     category: "ide",
     keywords: [
@@ -91,7 +95,8 @@ export const APPS_DATABASE: Record<string, AppEntry> = {
     aliases: ["vs code", "visual studio code", "code"],
   },
   windsurf: {
-    path: "A:LogicielsWindsurfWindsurf.exe",
+    // ⚠️ Vérifiez ce chemin selon votre installation
+    path: "A:\\Logiciels\\Windsurf\\Windsurf.exe",
     category: "ide",
     keywords: [
       "code",
@@ -149,6 +154,7 @@ export const APPS_DATABASE: Record<string, AppEntry> = {
   // CRÉATION & 3D
   // ============================================================================
   bambu: {
+    // ⚠️ Vérifiez ce chemin selon votre installation
     path: "A:\\Logiciels\\Bambu Studio\\bambu-studio.exe",
     category: "3d-printing",
     keywords: ["3d", "printing", "printer", "slicer", "3d printing", "bambu"],

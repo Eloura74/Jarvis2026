@@ -1,0 +1,105 @@
+═══════════════════════════════════════════════════════════════════
+  🚀 J.A.R.V.I.S. - INSTRUCTIONS DE DÉMARRAGE
+═══════════════════════════════════════════════════════════════════
+
+⚠️  PROBLÈME ACTUEL : Le backend n'est pas démarré !
+
+Sans le backend, vos commandes vocales sont reconnues mais ne lancent
+AUCUNE application. C'est normal !
+
+═══════════════════════════════════════════════════════════════════
+  ✅ SOLUTION RAPIDE
+═══════════════════════════════════════════════════════════════════
+
+OPTION A - Script Automatique (LE PLUS SIMPLE)
+───────────────────────────────────────────────
+
+1. Double-cliquez sur : start-jarvis.bat
+
+   OU (PowerShell) :
+
+   Double-cliquez sur : start-jarvis.ps1
+
+2. Deux fenêtres vont s'ouvrir (NE LES FERMEZ PAS)
+   - Backend (port 3001)
+   - Frontend (port 5173)
+
+3. Ouvrez votre navigateur sur : http://localhost:5173
+
+4. C'est prêt ! Testez avec "Jarvis, ouvre le bloc-notes"
+
+
+OPTION B - Démarrage Manuel
+───────────────────────────────────────────────
+
+1. Ouvrez un PREMIER terminal :
+   cd server
+   node server.js
+
+   ⚠️  LAISSEZ CETTE FENÊTRE OUVERTE !
+
+2. Ouvrez un SECOND terminal :
+   npm run dev
+
+3. Ouvrez http://localhost:5173
+
+═══════════════════════════════════════════════════════════════════
+  🔧 CONFIGURATION IMPORTANTE
+═══════════════════════════════════════════════════════════════════
+
+📝 Fichier : appsDatabase.ts
+
+Vérifiez et MODIFIEZ les chemins selon VOTRE installation Windows :
+
+Exemple Chrome :
+  path: "C:\\Users\\VOTRE_NOM\\AppData\\Local\\Google\\Chrome\\..."
+           ^^^^^^^^^^^
+           Remplacez par VOTRE nom d'utilisateur !
+
+Pour trouver le bon chemin :
+1. Menu Démarrer → Chercher l'app
+2. Clic droit → Ouvrir l'emplacement du fichier
+3. Clic droit sur l'icône → Propriétés
+4. Copier le chemin complet
+
+═══════════════════════════════════════════════════════════════════
+  🧪 TEST DE FONCTIONNEMENT
+═══════════════════════════════════════════════════════════════════
+
+1. Vérifiez dans la console du navigateur (F12) :
+   ✅ "Backend connecté (port 3001)"
+   ✅ "Backend online - Ready to execute commands"
+
+2. Testez une commande simple :
+   - Cliquez sur le micro
+   - Dites : "Ouvre le bloc-notes"
+   - Le Bloc-notes Windows doit s'ouvrir !
+
+3. Si ça fonctionne, essayez :
+   - "Lance Chrome"
+   - "Ouvre la calculatrice"
+   - "Quelle heure est-il ?"
+
+═══════════════════════════════════════════════════════════════════
+  📚 DOCUMENTATION COMPLÈTE
+═══════════════════════════════════════════════════════════════════
+
+Lisez : DEMARRAGE-RAPIDE.md pour plus de détails
+
+═══════════════════════════════════════════════════════════════════
+  ❌ DÉPANNAGE
+═══════════════════════════════════════════════════════════════════
+
+Problème : "Cannot find module 'express'"
+Solution : cd server && npm install
+
+Problème : "Port 3001 already in use"
+Solution : Fermez l'autre instance ou changez le port
+
+Problème : "Application not found"
+Solution : Vérifiez le chemin dans appsDatabase.ts
+
+Problème : Les commandes sont reconnues mais rien ne se lance
+Solution : LE BACKEND N'EST PAS DÉMARRÉ ! Relisez cette page.
+
+═══════════════════════════════════════════════════════════════════

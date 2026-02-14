@@ -201,6 +201,10 @@ export function useJarvisBrain({
           result.toolCalls.length > 0
         ) {
           const toolCount = result.toolCalls.length;
+          console.log(
+            `🧠 [BRAIN] Intent: ${toolCount} tool${toolCount > 1 ? "s" : ""} to execute`,
+            result.toolCalls
+          );
           addLog(
             `Intent: ${toolCount} tool${toolCount > 1 ? "s" : ""} to execute`,
             "OMNI",
@@ -211,12 +215,33 @@ export function useJarvisBrain({
           // Exécution séquentielle de tous les outils
           for (let i = 0; i < result.toolCalls.length; i++) {
             const toolCall = result.toolCalls[i];
+            console.log(
+              `⚙️ [KERNEL] [${i + 1}/${toolCount}] Executing: ${toolCall.name}`,
+              toolCall.args
+            );
             addLog(
               `[${i + 1}/${toolCount}] Executing: ${toolCall.name}`,
               "KERNEL",
               "warning",
             );
-            await executeTool(toolCall.name, toolCall.args);
+            
+            try {
+              const toolResult = await executeTool(toolCall.name, toolCall.args);
+              console.log(
+                `✅ [KERNEL] Tool ${toolCall.name} completed:`,
+                toolResult
+              );
+            } catch (toolError) {
+              console.error(
+                `❌ [KERNEL] Tool ${toolCall.name} failed:`,
+                toolError
+              );
+              addLog(
+                `Tool ${toolCall.name} failed: ${toolError instanceof Error ? toolError.message : String(toolError)}`,
+                "KERNEL",
+                "error"
+              );
+            }
           }
 
           setSuccessTrigger(Date.now());
@@ -240,6 +265,10 @@ export function useJarvisBrain({
           result.text &&
           result.toolCalls
         ) {
+          console.log(
+            `💬 [BRAIN] Intent: Mixed (Talk + Action)`,
+            { text: result.text, tools: result.toolCalls }
+          );
           addLog(`Intent: Mixed (Talk + Action)`, "OMNI", "info");
 
           // 1. Parler
@@ -264,6 +293,7 @@ export function useJarvisBrain({
         }
         // CAS 3 : CONVERSATION (Texte seul)
         else if (result.type === "TEXT_RESPONSE" && result.text) {
+          console.log(`🗨️ [BRAIN] Intent: Conversation -`, result.text);
           addLog(`Intent: Conversation`, "OMNI", "info");
           speak(result.text);
           addLog(result.text, "OMNI", "success");
