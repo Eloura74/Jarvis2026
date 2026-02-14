@@ -22,7 +22,7 @@ const decisionCache: Record<string, OmniDecision> = {};
  * Vide le cache de décisions (utile après modification du system prompt)
  */
 export const clearDecisionCache = () => {
-  Object.keys(decisionCache).forEach(key => delete decisionCache[key]);
+  Object.keys(decisionCache).forEach((key) => delete decisionCache[key]);
   console.log("🧹 Cache Gemini vidé");
 };
 
@@ -489,11 +489,46 @@ const toolDeclarations: FunctionDeclaration[] = [
       },
     },
   },
+  // OUTIL 15 : Contrôle Domotique Home Assistant
+  {
+    name: "control_home_automation",
+    description:
+      "Control lights, switches, and other home devices via Home Assistant.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        target: {
+          type: Type.STRING,
+          description:
+            "Name of the device or room (e.g., 'salon', 'bureau', 'light.canape').",
+        },
+        action: {
+          type: Type.STRING,
+          enum: [
+            "turn_on",
+            "turn_off",
+            "toggle",
+            "set_color",
+            "set_brightness",
+          ],
+          description: "Action to perform.",
+        },
+        value: {
+          type: Type.STRING,
+          description:
+            "Optional value (e.g., 'red', 'blue', '50%', '255'). For colors, use English names.",
+        },
+      },
+      required: ["target", "action"],
+    },
+  },
 ];
 
 // ============================================================================
 // FONCTION PRINCIPALE : PARSING DES COMMANDES UTILISATEUR
 // ============================================================================
+
+import { getHAContext } from "./homeAssistantService";
 
 export const parseCommand = async (
   input: string,
@@ -501,19 +536,7 @@ export const parseCommand = async (
   conversationContext: string = "",
 ): Promise<OmniDecision> => {
   try {
-    // ========================================
-    // OPTIMISATION : CACHE GEMINI (DÉSACTIVÉ TEMPORAIREMENT)
-    // ========================================
-    // Cache désactivé pour forcer l'utilisation des nouvelles instructions
-    // const shouldUseCache = conversationContext.length < 50;
-    //
-    // if (shouldUseCache) {
-    //   const cached = getCachedDecision(input);
-    //   if (cached) {
-    //     console.log(`🚀 PERFORMANCE: Cache hit pour "${input}"`);
-    //     return cached;
-    //   }
-    // }
+    // ... (cache logic commented out) ...
 
     console.log(`🔍 Appel Gemini pour "${input}"`);
 
@@ -522,16 +545,18 @@ export const parseCommand = async (
         ? `Frequent Apps: ${memories.map((m) => `${m.appName} (${m.launchCount})`).join(", ")}`
         : "No prior usage.";
 
+    // Génération du contexte Home Assistant (DYNAMIQUE)
+    const haContext = await getHAContext();
+
     const response = await ai.models.generateContent({
       model: "gemini-2.0-flash",
       contents: input,
       config: {
-        systemInstruction: generateSystemInstruction(
-          memorySummary,
-          conversationContext,
-        ),
+        systemInstruction:
+          generateSystemInstruction(memorySummary, conversationContext) +
+          haContext, // INJECTION DU CONTEXTE HA
         tools: [{ functionDeclarations: toolDeclarations }],
-        temperature: 0.1, // Très bas pour forcer l'utilisation des outils de manière déterministe
+        temperature: 0.1,
       },
     });
 

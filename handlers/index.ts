@@ -21,4 +21,8 @@ export * from "./webHandlers";
 export * from "./productivityHandlers";
 
 // Vision (Gemini Vision - screen analysis)
+// Vision (Gemini Vision - screen analysis)
 export * from "./visionHandlers";
+
+// Home Assistant
+export * from "./haHandlers";

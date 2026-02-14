@@ -12,87 +12,11 @@ import {
   Activity,
 } from "lucide-react";
 
-// Configuration HA
-const HA_BASE_URL = "";
-const HA_TOKEN = import.meta.env.VITE_HA_TOKEN || "";
-
-// Liste des entités
-const ENTITIES = {
-  LIGHTS: [
-    { id: "light.canape", label: "CANAPE" },
-    { id: "light.cheminee", label: "CHEMINEE" },
-    { id: "light.led_switchwire", label: "SWITCHWIRE" },
-    {
-      id: "light.a1mini_0309da452500192_lumiere_de_la_chambre",
-      label: "A1 MINI LIGHT",
-    },
-  ],
-  SENSORS: [
-    {
-      id: "sensor.capteur_bureau_temperature",
-      label: "BUREAU",
-      unit: "°C",
-      type: "temp",
-    },
-    {
-      id: "sensor.capteur_bureau_humidite",
-      label: "BUREAU",
-      unit: "%",
-      type: "hum",
-    },
-    {
-      id: "sensor.capteur_etage_humidite",
-      label: "ETAGE",
-      unit: "%",
-      type: "hum",
-    },
-    {
-      id: "sensor.capteur_etage_temperature",
-      label: "ETAGE",
-      unit: "°C",
-      type: "temp",
-    },
-    {
-      id: "sensor.capteur_salon_humidite",
-      label: "SALON",
-      unit: "%",
-      type: "hum",
-    },
-    {
-      id: "sensor.capteur_salon_temperature",
-      label: "SALON",
-      unit: "°C",
-      type: "temp",
-    },
-  ],
-  PRINTERS: [
-    {
-      name: "VZ330",
-      bed: "sensor.vz330_bed_temperature",
-      ext: "sensor.vz330_extruder_temperature",
-      progress: "sensor.vz330_progress",
-    },
-    {
-      name: "MAINSAIL",
-      bed: "sensor.mainsail_bed_temperature",
-      ext: "sensor.mainsail_extruder_temperature",
-      progress: "sensor.mainsail_progress",
-    },
-    {
-      name: "A1 MINI",
-      bed: "sensor.a1mini_0309da452500192_temperature_du_lit",
-      ext: "sensor.a1mini_0309da452500192_temperature_de_la_buse",
-      progress: "sensor.a1mini_0309da452500192_progression_de_l_impression",
-    },
-  ],
-  DOORS: [
-    { id: "binary_sensor.bureau_prive_porte_porte", label: "BUREAU" },
-    { id: "binary_sensor.capteur_chambre_aaron_porte", label: "AARON" },
-    { id: "binary_sensor.capteur_garage_porte", label: "GARAGE" },
-    { id: "binary_sensor.portail_porte", label: "PORTAIL" },
-    { id: "binary_sensor.porte_chambre_parentale_porte", label: "PARENTS" },
-  ],
-};
+import {
+  HA_ENTITIES,
+  fetchHAStates,
+  toggleEntity,
+} from "../services/homeAssistantService";
 
 type Tab = "LIGHTS" | "SENSORS" | "PRINTERS" | "DOORS";
 
@@ -101,54 +25,29 @@ export const HomeControlWidget: React.FC = () => {
   const [activeTab, setActiveTab] = useState<Tab>("LIGHTS");
   const [states, setStates] = useState<Record<string, any>>({});
 
-  // Polling des états HA
+  // Polling des états HA via le Service Centralisé
   useEffect(() => {
-    if (!HA_TOKEN) return;
-
-    const fetchStates = async () => {
-      try {
-        const res = await fetch("/api/states", {
-          headers: { Authorization: `Bearer ${HA_TOKEN}` },
-        });
-        if (!res.ok) throw new Error("Fetch fail");
-        const data = await res.json();
-
-        const newState: Record<string, any> = {};
-        data.forEach((ent: any) => {
-          newState[ent.entity_id] = ent;
-        });
-        setStates(newState);
-      } catch (e) {
-        console.error("HA Poll Error", e);
-      }
+    const loadStates = async () => {
+      const data = await fetchHAStates();
+      setStates(data);
     };
 
-    fetchStates();
-    const interval = setInterval(fetchStates, 5000);
+    loadStates();
+    const interval = setInterval(loadStates, 5000);
     return () => clearInterval(interval);
   }, [isOpen]);
 
-  const toggleLight = async (entityId: string) => {
-    const entity = states[entityId];
-    const isOn = entity?.state === "on";
-    const service = isOn ? "turn_off" : "turn_on";
-
-    try {
-      await fetch(`/api/services/light/${service}`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${HA_TOKEN}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ entity_id: entityId }),
-      });
-      setStates((prev) => ({
-        ...prev,
-        [entityId]: { ...prev[entityId], state: isOn ? "off" : "on" },
-      }));
-    } catch (e) {
-      console.error("Toggle Error", e);
-    }
+  const handleToggle = async (entityId: string) => {
+    const currentState = states[entityId]?.state;
+    await toggleEntity(entityId, currentState);
+    // Optimistic update
+    setStates((prev) => ({
+      ...prev,
+      [entityId]: {
+        ...prev[entityId],
+        state: currentState === "on" ? "off" : "on",
+      },
+    }));
   };
 
   return (
@@ -230,7 +129,7 @@ export const HomeControlWidget: React.FC = () => {
             >
               <Header title="LIGHTS CONTROL" />
               <div className="space-y-3">
-                {ENTITIES.LIGHTS.map((light) => {
+                {HA_ENTITIES.LIGHTS.map((light) => {
                   const state = states[light.id]?.state;
                   const isOn = state === "on";
                   return (
@@ -244,7 +143,7 @@ export const HomeControlWidget: React.FC = () => {
                         {light.label}
                       </span>
                       <button
-                        onClick={() => toggleLight(light.id)}
+                        onClick={() => handleToggle(light.id)}
                         className={`p-2 rounded-full transition-all duration-300 ${isOn ? "bg-cyan-400 text-black shadow-[0_0_15px_#00e5ff] scale-110" : "bg-gray-800 text-gray-500 hover:text-cyan-400 hover:bg-gray-700"}`}
                       >
                         <Power size={16} />
@@ -267,7 +166,7 @@ export const HomeControlWidget: React.FC = () => {
             >
               <Header title="ENV. SENSORS" />
               <div className="grid grid-cols-2 gap-3">
-                {ENTITIES.SENSORS.map((sensor) => {
+                {HA_ENTITIES.SENSORS.map((sensor) => {
                   const rawVal = states[sensor.id]?.state;
                   const isAvailable =
                     rawVal && rawVal !== "unavailable" && rawVal !== "unknown";
@@ -311,7 +210,7 @@ export const HomeControlWidget: React.FC = () => {
               className="space-y-4"
             >
               <Header title="3D PRINTERS" />
-              {ENTITIES.PRINTERS.map((printer) => {
+              {HA_ENTITIES.PRINTERS.map((printer) => {
                 const bed = states[printer.bed]?.state ?? 0;
                 const ext = states[printer.ext]?.state ?? 0;
                 const progressState = states[printer.progress]?.state;
@@ -366,7 +265,7 @@ export const HomeControlWidget: React.FC = () => {
               className="space-y-3"
             >
               <Header title="SECURITY STATUS" />
-              {ENTITIES.DOORS.map((door) => {
+              {HA_ENTITIES.DOORS.map((door) => {
                 const isOpen = states[door.id]?.state === "on";
                 return (
                   <div

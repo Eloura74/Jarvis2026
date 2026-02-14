@@ -54,9 +54,9 @@ export function useJarvisBrain({
   // ========================================
   const executeTool = async (toolName: string, toolArgs: any) => {
     // Contexte commun (avec speak pour Vision)
-    const ctx: HandlerContext & { speak?: (text: string) => void } = { 
-      addLog, 
-      setStatus, 
+    const ctx: HandlerContext & { speak?: (text: string) => void } = {
+      addLog,
+      setStatus,
       setVisualMode,
       speak,
     };
@@ -145,6 +145,12 @@ export function useJarvisBrain({
         case "analyze_screen":
           return await handlers.handleAnalyzeScreen(toolArgs, ctx);
 
+        // === HOME ASSISTANT (NOUVEAU) ===
+        case "control_home_automation":
+          // Import dynamique pour éviter les cycles ou chargement immédiat
+          const { handleControlHomeAutomation } = await import("../handlers");
+          return await handleControlHomeAutomation(toolArgs, ctx);
+
         default:
           addLog(`⚠ Unknown tool: "${toolName}"`, "SYSTEM", "error");
           setStatus(SystemStatus.ERROR);
@@ -203,12 +209,12 @@ export function useJarvisBrain({
           const toolCount = result.toolCalls.length;
           console.log(
             `🧠 [BRAIN] Intent: ${toolCount} tool${toolCount > 1 ? "s" : ""} to execute`,
-            result.toolCalls
+            result.toolCalls,
           );
           addLog(
             `Intent: ${toolCount} tool${toolCount > 1 ? "s" : ""} to execute`,
             "OMNI",
-            "info"
+            "info",
           );
           trackCommand(text);
 
@@ -217,29 +223,32 @@ export function useJarvisBrain({
             const toolCall = result.toolCalls[i];
             console.log(
               `⚙️ [KERNEL] [${i + 1}/${toolCount}] Executing: ${toolCall.name}`,
-              toolCall.args
+              toolCall.args,
             );
             addLog(
               `[${i + 1}/${toolCount}] Executing: ${toolCall.name}`,
               "KERNEL",
               "warning",
             );
-            
+
             try {
-              const toolResult = await executeTool(toolCall.name, toolCall.args);
+              const toolResult = await executeTool(
+                toolCall.name,
+                toolCall.args,
+              );
               console.log(
                 `✅ [KERNEL] Tool ${toolCall.name} completed:`,
-                toolResult
+                toolResult,
               );
             } catch (toolError) {
               console.error(
                 `❌ [KERNEL] Tool ${toolCall.name} failed:`,
-                toolError
+                toolError,
               );
               addLog(
                 `Tool ${toolCall.name} failed: ${toolError instanceof Error ? toolError.message : String(toolError)}`,
                 "KERNEL",
-                "error"
+                "error",
               );
             }
           }
@@ -248,13 +257,18 @@ export function useJarvisBrain({
           setCommandHistory((prev) =>
             prev.map((c) =>
               c.timestamp === newCommand.timestamp
-                ? { ...c, status: "success", result: `${toolCount} action${toolCount > 1 ? "s" : ""} exécutée${toolCount > 1 ? "s" : ""}` }
+                ? {
+                    ...c,
+                    status: "success",
+                    result: `${toolCount} action${toolCount > 1 ? "s" : ""} exécutée${toolCount > 1 ? "s" : ""}`,
+                  }
                 : c,
             ),
           );
-          const successMsg = toolCount > 1 
-            ? `${toolCount} commandes exécutées avec succès.`
-            : "Commande exécutée avec succès.";
+          const successMsg =
+            toolCount > 1
+              ? `${toolCount} commandes exécutées avec succès.`
+              : "Commande exécutée avec succès.";
           speak(successMsg);
           if (addConversationMessage)
             addConversationMessage("model", successMsg);
@@ -265,10 +279,10 @@ export function useJarvisBrain({
           result.text &&
           result.toolCalls
         ) {
-          console.log(
-            `💬 [BRAIN] Intent: Mixed (Talk + Action)`,
-            { text: result.text, tools: result.toolCalls }
-          );
+          console.log(`💬 [BRAIN] Intent: Mixed (Talk + Action)`, {
+            text: result.text,
+            tools: result.toolCalls,
+          });
           // Log détaillé des outils
           result.toolCalls.forEach((tool, idx) => {
             console.log(`  [${idx + 1}] Tool: ${tool.name}`, tool.args);
@@ -285,19 +299,28 @@ export function useJarvisBrain({
             const toolCall = result.toolCalls[i];
             console.log(
               `⚙️ [KERNEL] [Mixed ${i + 1}/${result.toolCalls.length}] Executing: ${toolCall.name}`,
-              toolCall.args
+              toolCall.args,
             );
             addLog(`Exec: ${toolCall.name}`, "KERNEL", "warning");
-            
+
             try {
-              const toolResult = await executeTool(toolCall.name, toolCall.args);
-              console.log(`✅ [KERNEL] Tool ${toolCall.name} completed:`, toolResult);
+              const toolResult = await executeTool(
+                toolCall.name,
+                toolCall.args,
+              );
+              console.log(
+                `✅ [KERNEL] Tool ${toolCall.name} completed:`,
+                toolResult,
+              );
             } catch (toolError) {
-              console.error(`❌ [KERNEL] Tool ${toolCall.name} failed:`, toolError);
+              console.error(
+                `❌ [KERNEL] Tool ${toolCall.name} failed:`,
+                toolError,
+              );
               addLog(
                 `Tool ${toolCall.name} failed: ${toolError instanceof Error ? toolError.message : String(toolError)}`,
                 "KERNEL",
-                "error"
+                "error",
               );
             }
           }
