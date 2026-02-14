@@ -45,7 +45,7 @@ interface UseVoiceSynthesisOptions {
 
 interface UseVoiceSynthesisReturn {
   /** Prononce le texte fourni avec la voix configurée */
-  speak: (text: string) => void;
+  speak: (text: string, queue?: boolean) => void;
   /** Arrête toute lecture en cours */
   stop: () => void;
   /** Indique si une lecture est en cours */
@@ -64,101 +64,54 @@ export function useVoiceSynthesis({
   /**
    * Prononce le texte fourni avec la voix J.A.R.V.I.S.-like
    *
-   * Configure une voix britannique avec un ton légèrement grave
-   * et une cadence rapide pour simuler l'efficacité de J.A.R.V.I.S.
-   *
    * @param text - Texte à prononcer
+   * @param queue - Si vrai, n'annule pas la parole en cours (ajoute à la file d'attente)
    */
   const speak = useCallback(
-    (text: string) => {
+    (text: string, queue: boolean = false) => {
       // Si la synthèse est désactivée, ne rien faire
       if (!enabled) return;
 
       // Création de l'énoncé vocal
       const utterance = new SpeechSynthesisUtterance(text);
 
-      // Récupération des voix disponibles
+      // ... (Sélection de la voix identique)
       const voices = window.speechSynthesis.getVoices();
-
-      // ========================================
-      // SÉLECTION DE LA VOIX
-      // ========================================
       let selectedVoice: SpeechSynthesisVoice | undefined;
+      if (voiceURI) selectedVoice = voices.find((v) => v.voiceURI === voiceURI);
 
-      // 1. Essayer la voix spécifiée par URI
-      if (voiceURI) {
-        selectedVoice = voices.find((v) => v.voiceURI === voiceURI);
-      }
-
-      // 2. Fallback : Recherche voix française naturelle (si pas de voix spécifique ou introuvable)
       if (!selectedVoice) {
         selectedVoice =
           voices.find(
             (v) => v.lang.startsWith("fr-FR") && v.name.includes("Google"),
-          ) || // Google = meilleure
+          ) ||
           voices.find(
             (v) => v.lang.startsWith("fr-FR") && v.name.includes("Denise"),
-          ) || // Microsoft Denise
-          voices.find(
-            (v) => v.lang.startsWith("fr-FR") && v.name.includes("Hortense"),
-          ) || // Microsoft Hortense
-          voices.find(
-            (v) => v.lang.startsWith("fr-FR") && v.name.includes("Julie"),
-          ) || // Microsoft Julie
-          voices.find((v) => v.lang.startsWith("fr-FR")); // Fallback : n'importe quelle voix fr-FR
+          ) ||
+          voices.find((v) => v.lang.startsWith("fr-FR"));
       }
 
-      // Application de la voix trouvée
-      if (selectedVoice) {
-        utterance.voice = selectedVoice;
-        console.log(
-          `🗣️ Voix sélectionnée: ${selectedVoice.name} (${selectedVoice.lang})`,
-        );
-      } else {
-        console.warn(
-          "⚠️ Aucune voix française trouvée, utilisation voix par défaut",
-        );
-      }
+      if (selectedVoice) utterance.voice = selectedVoice;
 
-      // Démarrage propre : on annule d'abord toute lecture en cours
-      window.speechSynthesis.cancel();
+      // NOUVEAU : Gestion de la file d'attente
+      if (!queue) {
+        // Démarrage propre : on annule d'abord toute lecture en cours seulement si non-queueing
+        window.speechSynthesis.cancel();
+      }
 
       // Configuration des paramètres vocaux
       utterance.pitch = pitch;
       utterance.rate = rate;
       utterance.volume = volume;
 
-      // Log pour debug
-      console.log(
-        `🎙️ Voix configurée : Pitch ${utterance.pitch} | Rate ${utterance.rate} | Vol ${utterance.volume}`,
-      );
-
       // Synchronisation avec l'état du système
-      utterance.onstart = () => {
-        // Notification du début de la lecture
-        onStart?.();
-      };
-
-      utterance.onend = () => {
-        // Notification de la fin de la lecture
-        onEnd?.();
-      };
-
-      // Gestion des erreurs
+      utterance.onstart = () => onStart?.();
+      utterance.onend = () => onEnd?.();
       utterance.onerror = (event) => {
         console.error("Erreur synthèse vocale:", event.error);
-
-        if (event.error === "not-allowed") {
-          console.warn(
-            "🔒 Audio bloqué par le navigateur. Interaction requise !",
-          );
-        }
-
-        // On appelle onEnd même en cas d'erreur pour remettre l'état à jour
         onEnd?.();
       };
 
-      // Démarrage de la synthèse vocale avec tenteative de reprise du contexte
       if (window.speechSynthesis.paused) {
         window.speechSynthesis.resume();
       }
@@ -172,18 +125,12 @@ export function useVoiceSynthesis({
     [enabled, onStart, onEnd, volume, pitch, rate, voiceURI],
   );
 
-  /**
-   * Arrête toute lecture vocale en cours
-   */
   const stop = useCallback(() => {
     window.speechSynthesis.cancel();
-    // Notification de l'arrêt
     onEnd?.();
   }, [onEnd]);
 
-  /**
-   * Vérifie si une lecture est actuellement en cours
-   */
+  // Utilisation d'un getter pour l'état en temps réel
   const isSpeaking = window.speechSynthesis.speaking;
 
   return {

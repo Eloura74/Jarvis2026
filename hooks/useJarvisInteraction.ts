@@ -75,6 +75,15 @@ export function useJarvisInteraction({
       setTimeout(() => {
         isSpeakingRef.current = false;
 
+        // PROTECTION CRITIQUE : Si la file d'attente vocale a encore des choses à dire,
+        // on ne réactive PAS encore le micro (on attendra le prochain onEnd)
+        if (window.speechSynthesis.speaking) {
+          console.log(
+            "⏳ Parole encore en cours (file d'attente), attente fin réelle...",
+          );
+          return;
+        }
+
         // On ne redémarre PAS si on est en train de quitter
         if (conversationModeRef.current && !isExitingRef.current) {
           console.log("🎤 Mode conversation : Réactivation micro");
@@ -84,7 +93,7 @@ export function useJarvisInteraction({
           console.log("👋 Fin de session confirmée, micro reste coupé.");
           isExitingRef.current = false; // Reset pour la prochaine fois
         }
-      }, 2000); // 2 secondes de sécurité au lieu de 1 pour l'écho
+      }, 1500); // 1.5s de sécurité (ajusté car protection queueing ajoutée)
     },
   });
 

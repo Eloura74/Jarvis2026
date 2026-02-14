@@ -25,7 +25,7 @@ interface UseJarvisBrainProps {
     type?: LogEntry["type"],
   ) => void;
   setStatus: (status: SystemStatus) => void;
-  speak: (text: string) => void;
+  speak: (text: string, queue?: boolean) => void;
   setActiveOverlay: (overlay: string | null) => void;
   // NOUVEAU : Props pour la mémoire conversationnelle
   addConversationMessage?: (role: "user" | "model", text: string) => void;
@@ -382,7 +382,7 @@ export function useJarvisBrain({
                   (toolResult as any).data,
                 );
                 console.log(`🗣️ [BRAIN] Summary generated:`, summary);
-                speak(summary);
+                speak(summary, true); // 🔀 Utilise la file d'attente pour ne pas couper le préambule
                 if (addConversationMessage)
                   addConversationMessage("model", summary);
               }
