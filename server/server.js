@@ -27,9 +27,9 @@ import {
 import * as windowManager from "./windowManager.js";
 import * as automation from "./automation.js";
 import { getSystemStats, getLightStats } from "./systemStats.js";
-import * as fileSystem from "./fileSystem.js";
 import appsRoutes from "./routes/apps.js";
 import googleRoutes from "./routes/google.js";
+import * as systemControl from "./systemControl.js";
 
 const app = express();
 const PORT = 3001;
@@ -517,56 +517,13 @@ app.post("/api/automation/shortcut", async (req, res) => {
 app.post("/api/system/volume", async (req, res) => {
   try {
     const { action, value } = req.body;
-    if (!action) {
-      return res.status(400).json({ error: "Action requise" });
-    }
-
-    // Validation basique (module systemControl fera validation complète)
     console.log(
-      `🔊 Volume ${action}${value !== undefined ? ` (${value}%)` : ""}`,
+      `🔊 [Server] Requête volume: ${action}${value ? ` à ${value}%` : ""}`,
     );
-
-    // Implémentation PowerShell pour contrôle volume Windows
-    const { exec } = await import("child_process");
-    const { promisify } = await import("util");
-    const execAsync = promisify(exec);
-
-    let command;
-    switch (action) {
-      case "set":
-        if (value === undefined || value < 0 || value > 100) {
-          return res.status(400).json({ error: "Volume invalide (0-100)" });
-        }
-        // PowerShell: définir volume (0-100)
-        command = `powershell -Command "(New-Object -ComObject WScript.Shell).SendKeys([char]174); Start-Sleep -Milliseconds 100; $wshell = New-Object -ComObject WScript.Shell; 1..50 | ForEach-Object { $wshell.SendKeys([char]174) }; 1..${value} | ForEach-Object { Start-Sleep -Milliseconds 10; $wshell.SendKeys([char]175) }"`;
-        break;
-
-      case "increase":
-        // Augmenter volume (+2%)
-        command = `powershell -Command "$wshell = New-Object -ComObject WScript.Shell; 1..2 | ForEach-Object { $wshell.SendKeys([char]175) }"`;
-        break;
-
-      case "decrease":
-        // Diminuer volume (-2%)
-        command = `powershell -Command "$wshell = New-Object -ComObject WScript.Shell; 1..2 | ForEach-Object { $wshell.SendKeys([char]174) }"`;
-        break;
-
-      case "mute":
-      case "unmute":
-        // Toggle mute (char 173)
-        command = `powershell -Command "(New-Object -ComObject WScript.Shell).SendKeys([char]173)"`;
-        break;
-
-      default:
-        return res.status(400).json({ error: "Action volume inconnue" });
-    }
-
-    await execAsync(command);
-    console.log(`   ✅ Volume ${action} exécuté`);
-
-    res.json({ success: true, message: `Volume ${action} avec succès` });
+    const result = await systemControl.controlVolume(req.body);
+    res.json(result);
   } catch (error) {
-    console.error("Erreur route volume:", error);
+    console.error(`❌ [Server] Erreur volume:`, error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -578,22 +535,9 @@ app.post("/api/system/volume", async (req, res) => {
  */
 app.post("/api/system/brightness", async (req, res) => {
   try {
-    const { action, value } = req.body;
-    if (!action) {
-      return res.status(400).json({ error: "Action requise" });
-    }
-
-    console.log(
-      `💡 Luminosité ${action}${value !== undefined ? ` (${value}%)` : ""}`,
-    );
-
-    // TODO: Implémenter contrôle luminosité
-    res.json({
-      success: true,
-      message: `Luminosité ${action} - À implémenter`,
-    });
+    const result = await systemControl.controlBrightness(req.body);
+    res.json(result);
   } catch (error) {
-    console.error("Erreur route luminosité:", error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -724,30 +668,9 @@ app.get("/api/files/search", async (req, res) => {
  */
 app.post("/api/system/screenshot", async (req, res) => {
   try {
-    const { savePath } = req.body;
-
-    console.log(`📸 Capture d'écran${savePath ? ` → ${savePath}` : ""}`);
-
-    // Implémentation avec screenshot-desktop
-    const screenshot = (await import("screenshot-desktop")).default;
-    const fs = await import("fs/promises");
-    const pathModule = await import("path");
-
-    const desktopPath = pathModule.join(process.env.USERPROFILE, "Desktop");
-    const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-    const defaultPath = pathModule.join(
-      desktopPath,
-      `JARVIS_screenshot_${timestamp}.png`,
-    );
-
-    const finalPath = savePath || defaultPath;
-    const imgBuffer = await screenshot();
-    await fs.writeFile(finalPath, imgBuffer);
-
-    console.log(`   ✅ Capture sauvegardée: ${finalPath}`);
-    res.json({ success: true, path: finalPath });
+    const result = await systemControl.takeScreenshot(req.body);
+    res.json(result);
   } catch (error) {
-    console.error("Erreur route screenshot:", error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -759,49 +682,9 @@ app.post("/api/system/screenshot", async (req, res) => {
  */
 app.post("/api/system/power", async (req, res) => {
   try {
-    const { action, delay } = req.body;
-
-    if (!action) {
-      return res.status(400).json({ error: "Action requise" });
-    }
-
-    console.log(`🔒 Session ${action}${delay ? ` dans ${delay}s` : ""}`);
-
-    // Implémentation avec commandes Windows
-    const { exec } = await import("child_process");
-    const { promisify } = await import("util");
-    const execAsync = promisify(exec);
-
-    const delaySeconds = delay || 0;
-    let command;
-
-    switch (action) {
-      case "lock":
-        command = "rundll32.exe user32.dll,LockWorkStation";
-        break;
-
-      case "shutdown":
-        command = `shutdown /s /t ${delaySeconds}`;
-        break;
-
-      case "restart":
-        command = `shutdown /r /t ${delaySeconds}`;
-        break;
-
-      case "sleep":
-        command = "rundll32.exe powrprof.dll,SetSuspendState 0,1,0";
-        break;
-
-      default:
-        return res.status(400).json({ error: "Action session inconnue" });
-    }
-
-    await execAsync(command);
-    console.log(`   ✅ Session ${action} programmée`);
-
-    res.json({ success: true, message: `Session ${action} programmée` });
+    const result = await systemControl.controlSession(req.body);
+    res.json(result);
   } catch (error) {
-    console.error("Erreur route power:", error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -813,45 +696,9 @@ app.post("/api/system/power", async (req, res) => {
  */
 app.post("/api/media/control", async (req, res) => {
   try {
-    const { action } = req.body;
-
-    if (!action) {
-      return res.status(400).json({ error: "Action requise" });
-    }
-
-    console.log(`🎵 Média ${action}`);
-
-    // Implémentation avec touches média PowerShell
-    const { exec } = await import("child_process");
-    const { promisify } = await import("util");
-    const execAsync = promisify(exec);
-
-    let keyCode;
-    switch (action) {
-      case "play":
-      case "pause":
-        keyCode = "0xB3"; // Play/Pause
-        break;
-      case "next":
-        keyCode = "0xB0"; // Next track
-        break;
-      case "previous":
-        keyCode = "0xB1"; // Previous track
-        break;
-      case "stop":
-        keyCode = "0xB2"; // Stop
-        break;
-      default:
-        return res.status(400).json({ error: "Action média inconnue" });
-    }
-
-    const command = `powershell -Command "$wshell = New-Object -ComObject WScript.Shell; $wshell.SendKeys([char]${keyCode})"`;
-    await execAsync(command);
-
-    console.log(`   ✅ Média ${action} exécuté`);
-    res.json({ success: true, message: `Média ${action}` });
+    const result = await systemControl.controlMedia(req.body);
+    res.json(result);
   } catch (error) {
-    console.error("Erreur route média:", error);
     res.status(500).json({ error: error.message });
   }
 });
