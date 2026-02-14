@@ -11,7 +11,7 @@ import * as webNav from "../services/webNavigationService";
  */
 export const handleSearchWeb = async (
   args: {
-    engine: "google" | "youtube" | "wikipedia" | "github";
+    engine: "google" | "google_images" | "youtube" | "wikipedia" | "github";
     query: string;
   },
   ctx: HandlerContext,

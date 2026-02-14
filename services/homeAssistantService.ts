@@ -207,17 +207,17 @@ export const getHAContext = async (): Promise<string> => {
 
   const lights = HA_ENTITIES.LIGHTS.map((l) => {
     const s = states[l.id];
-    return `- ${l.label} (${l.id}): ${s?.state || "unknown"}`;
+    return `- ${l.label}: ${s?.state || "unknown"} (ID: ${l.id})`;
   }).join("\n");
 
   const sensors = HA_ENTITIES.SENSORS.map((s) => {
     const st = states[s.id];
-    return `- ${s.label} (${s.id}): ${st?.state || "?"}${s.unit || ""}`;
+    return `- ${s.label}: ${st?.state || "?"}${s.unit || ""} (ID: ${s.id})`;
   }).join("\n");
 
   const doors = HA_ENTITIES.DOORS.map((d) => {
     const st = states[d.id];
-    return `- ${d.label} (${d.id}): ${st?.state === "on" ? "OPEN" : "CLOSED"}`;
+    return `- ${d.label}: ${st?.state === "on" ? "OPEN" : "CLOSED"} (ID: ${d.id})`;
   }).join("\n");
 
   const printers = HA_ENTITIES.PRINTERS.map((p) => {
@@ -229,6 +229,11 @@ export const getHAContext = async (): Promise<string> => {
 
   return `
 **HOME AUTOMATION STATUS (LIVE DATA):**
+[INSTRUCTIONS]
+- When replying, use the device LABEL.
+- NEVER read the entity ID (e.g., "light.canape") out loud.
+- Be natural: "The office light is on" instead of "Office Light: on".
+
 [LIGHTS]
 ${lights}
 

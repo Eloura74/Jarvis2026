@@ -21,11 +21,11 @@ export const ImageOverlay: React.FC<ImageOverlayProps> = ({
   const [images, setImages] = useState<ImageResult[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // console.log("ImageOverlay Render:", { query, isVisible }); // DEBUG
+  console.log("ImageOverlay PROPS:", { query, isVisible }); // DEBUG ACTIVÉ
 
   useEffect(() => {
     if (isVisible && query) {
-      console.log("ImageOverlay Fetching for:", query); // DEBUG
+      console.log("ImageOverlay: Activation détectée, fetch en cours...");
       const fetchImages = async () => {
         setLoading(true);
         setImages([]);
@@ -49,6 +49,9 @@ export const ImageOverlay: React.FC<ImageOverlayProps> = ({
                 title: p.title,
               }));
           }
+          console.log(
+            `ImageOverlay: ${foundImages.length} images trouvées sur Wikipedia`,
+          );
 
           // SOURCE 2: WIKIMEDIA COMMONS (Fallback)
           const commonsEndpoint = `https://commons.wikimedia.org/w/api.php?action=query&format=json&prop=imageinfo&generator=search&gsrsearch=${encodeURIComponent(query)}&gsrlimit=5&gsrnamespace=6&iiprop=url|extmetadata&origin=*`;
@@ -67,6 +70,9 @@ export const ImageOverlay: React.FC<ImageOverlayProps> = ({
                     .replace("File:", "")
                     .replace(".jpg", ""),
                 }));
+              console.log(
+                `ImageOverlay: ${commonImages.length} images trouvées sur Commons`,
+              );
               foundImages = [...foundImages, ...commonImages];
             }
           } catch (e) {
@@ -77,6 +83,10 @@ export const ImageOverlay: React.FC<ImageOverlayProps> = ({
           foundImages = foundImages
             .filter((v, i, a) => a.findIndex((t) => t.url === v.url) === i)
             .slice(0, 6);
+
+          console.log(
+            `ImageOverlay: Total final = ${foundImages.length} images`,
+          );
           setImages(foundImages);
         } catch (error) {
           console.error("Image fetch error", error);
@@ -111,7 +121,7 @@ export const ImageOverlay: React.FC<ImageOverlayProps> = ({
                   <img
                     src={img.url}
                     alt={img.title}
-                    className="w-full h-32 object-cover opacity-80 group-hover:opacity-100 transition-opacity duration-300"
+                    className="w-full h-32 object-cover opacity-100 hover:scale-105 transition-transform duration-300"
                   />
                   <div className="absolute bottom-0 left-0 right-0 bg-black/60 p-1">
                     <p className="text-[10px] font-mono text-cyan-300 truncate">

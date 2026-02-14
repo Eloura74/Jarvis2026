@@ -8,7 +8,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "backend": "cd server && node server.js",
-    "start:all": "start-jarvis.bat"
+    "start:all": "start-jarvis.bat",
+    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0"
   },
   "dependencies": {
     "@google/genai": "^1.39.0",

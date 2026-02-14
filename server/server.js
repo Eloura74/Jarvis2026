@@ -316,7 +316,7 @@ app.get("/api/windows", (req, res) => {
  * Met au premier plan la fenêtre spécifiée
  * Body: { "windowTitle": "Chrome" }
  */
-app.post("/api/windows/focus", (req, res) => {
+app.post("/api/windows/focus", async (req, res) => {
   const { windowTitle } = req.body;
 
   if (!windowTitle) {
@@ -328,7 +328,7 @@ app.post("/api/windows/focus", (req, res) => {
   console.log(`🔍 Focusing window: "${windowTitle}"`);
 
   try {
-    const success = windowManager.focusWindow(windowTitle);
+    const success = await windowManager.focusWindow(windowTitle);
 
     if (success) {
       res.json({ success: true, message: `Focused: ${windowTitle}` });
@@ -346,7 +346,7 @@ app.post("/api/windows/focus", (req, res) => {
  * Ferme la fenêtre spécifiée
  * Body: { "windowTitle": "Notepad" }
  */
-app.post("/api/windows/close", (req, res) => {
+app.post("/api/windows/close", async (req, res) => {
   const { windowTitle } = req.body;
 
   if (!windowTitle) {
@@ -358,7 +358,7 @@ app.post("/api/windows/close", (req, res) => {
   console.log(`❌ Closing window: "${windowTitle}"`);
 
   try {
-    const success = windowManager.closeWindow(windowTitle);
+    const success = await windowManager.closeWindow(windowTitle);
 
     if (success) {
       res.json({ success: true, message: `Closed: ${windowTitle}` });
@@ -376,7 +376,7 @@ app.post("/api/windows/close", (req, res) => {
  * Minimise la fenêtre spécifiée
  * Body: { "windowTitle": "Chrome" }
  */
-app.post("/api/windows/minimize", (req, res) => {
+app.post("/api/windows/minimize", async (req, res) => {
   const { windowTitle } = req.body;
 
   if (!windowTitle) {
@@ -388,7 +388,7 @@ app.post("/api/windows/minimize", (req, res) => {
   console.log(`⬇️  Minimizing window: "${windowTitle}"`);
 
   try {
-    const success = windowManager.minimizeWindow(windowTitle);
+    const success = await windowManager.minimizeWindow(windowTitle);
 
     if (success) {
       res.json({ success: true, message: `Minimized: ${windowTitle}` });
@@ -406,7 +406,7 @@ app.post("/api/windows/minimize", (req, res) => {
  * Agrandit la fenêtre spécifiée
  * Body: { "windowTitle": "Chrome" }
  */
-app.post("/api/windows/maximize", (req, res) => {
+app.post("/api/windows/maximize", async (req, res) => {
   const { windowTitle } = req.body;
 
   if (!windowTitle) {
@@ -418,7 +418,7 @@ app.post("/api/windows/maximize", (req, res) => {
   console.log(`⬆️  Maximizing window: "${windowTitle}"`);
 
   try {
-    const success = windowManager.maximizeWindow(windowTitle);
+    const success = await windowManager.maximizeWindow(windowTitle);
 
     if (success) {
       res.json({ success: true, message: `Maximized: ${windowTitle}` });

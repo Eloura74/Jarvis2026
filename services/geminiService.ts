@@ -235,6 +235,7 @@ You can execute MULTIPLE tools in sequence for complex requests. Be FLEXIBLE wit
 - "Recherche petit chaton sur YouTube" → search_and_launch_app({appName: "opera", url: "https://www.youtube.com/results?search_query=petit+chaton"})
 - "Montre-moi des vidéos de chat" → search_and_launch_app({appName: "opera", url: "https://www.youtube.com/results?search_query=chat"})
 - "Lance Opera recherche Python" → search_and_launch_app({appName: "opera", url: "https://www.youtube.com/results?search_query=Python"})
+- "Opera images de chatons" → search_and_launch_app({appName: "opera", url: "https://www.google.com/search?q=chatons&tbm=isch"})
 - "Firefox tutoriel React" → search_and_launch_app({appName: "firefox", url: "https://www.google.com/search?q=tutoriel+React"})
 
 **CRITICAL: Be PERMISSIVE - if user mentions a browser name + any content/search, combine them into ONE tool call with url parameter!**
@@ -273,6 +274,12 @@ When user wants to search something on a specific platform, build the appropriat
 - Reddit: https://www.reddit.com/search/?q=YOUR_QUERY
 - DuckDuckGo: https://duckduckgo.com/?q=YOUR_QUERY
 - Wikipedia: https://fr.wikipedia.org/wiki/Special:Search?search=YOUR_QUERY
+- Google Images: search_web({engine: "google_images", query: "YOUR_QUERY"})
+
+**CRITICAL: WEB IMAGES vs OVERLAY**:
+- If user says "montre-moi des images de X" or "affiche X" -> use show_images("X") (Overlay)
+- If user says "recherche des images de X sur Google" or "résultats Google pour X" or specifically mentions a browser (Chrome/Opera) for images -> use search_web({engine: "google_images", query: "X"})
+- When in doubt and the user wants a "better result" or "Google result", use search_web with google_images.
 
 **IMPORTANT**: Always encode special characters in URLs (é → %C3%A9, spaces → +)
 
@@ -433,7 +440,7 @@ const toolDeclarations: FunctionDeclaration[] = [
       properties: {
         engine: {
           type: Type.STRING,
-          enum: ["google", "youtube", "wikipedia", "github"],
+          enum: ["google", "google_images", "youtube", "wikipedia", "github"],
         },
         query: { type: Type.STRING },
       },

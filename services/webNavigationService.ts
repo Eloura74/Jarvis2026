@@ -13,7 +13,12 @@
 // TYPES
 // ============================================================================
 
-export type SearchEngine = "google" | "youtube" | "wikipedia" | "github";
+export type SearchEngine =
+  | "google"
+  | "google_images"
+  | "youtube"
+  | "wikipedia"
+  | "github";
 
 export interface Bookmark {
   id: string;
@@ -39,6 +44,7 @@ export function buildSearchUrl(engine: SearchEngine, query: string): string {
 
   const urls: Record<SearchEngine, string> = {
     google: `https://www.google.com/search?q=${encodedQuery}`,
+    google_images: `https://www.google.com/search?q=${encodedQuery}&tbm=isch`,
     youtube: `https://www.youtube.com/results?search_query=${encodedQuery}`,
     wikipedia: `https://fr.wikipedia.org/wiki/${encodedQuery.replace(/%20/g, "_")}`,
     github: `https://github.com/search?q=${encodedQuery}&type=repositories`,
