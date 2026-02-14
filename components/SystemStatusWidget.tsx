@@ -75,7 +75,17 @@ export const SystemStatusWidget: React.FC<SystemStatusWidgetProps> = ({
       transition={{ duration: 0.8, ease: "easeOut" }}
       className="jarvis-panel-glass p-3 rounded-2xl border border-cyan-400/30 bg-black/20 backdrop-blur-xl relative overflow-hidden group hover:border-cyan-400/50 transition-all duration-500 shadow-[0_0_20px_rgba(0,229,255,0.1)] w-full"
     >
-      <div className="absolute inset-0 bg-gradient-to-br from-cyan-400/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+      {/* BACKGROUND IMAGE WITH OVERLAY */}
+      <div className="absolute inset-0 z-0">
+        <img
+          src="https://images.unsplash.com/photo-1518770660439-4636190af475?q=80&w=1000&auto=format&fit=crop"
+          alt="System Background"
+          className="w-full h-full object-cover opacity-50"
+        />
+        <div className="absolute inset-0 bg-gradient-to-br from-black/80 via-black/50 to-transparent" />
+      </div>
+
+      <div className="absolute inset-0 bg-gradient-to-br from-cyan-400/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 z-10" />
 
       {/* HEADER */}
       <div className="flex justify-between items-center mb-2 relative z-10">

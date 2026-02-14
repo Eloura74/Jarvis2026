@@ -195,7 +195,7 @@ export const WeatherWidget: React.FC = () => {
         <img
           src={getBackgroundImage()}
           alt="Météo Background"
-          className="w-full h-full object-cover opacity-60 transition-opacity duration-700"
+          className="w-full h-full object-cover opacity-80 transition-opacity duration-700"
         />
         {/* Gradient pour lisibilité texte */}
         <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/50 to-transparent" />
@@ -228,10 +228,10 @@ export const WeatherWidget: React.FC = () => {
       </div>
 
       {/* Détails supplémentaires (vent et précipitations) */}
-      <div className="flex flex-col gap-3 text-[10px] text-cyan-100 text-right relative z-10 border-l border-cyan-500/30 pl-3 bg-black/30 p-2 rounded-l-lg backdrop-blur-sm">
+      <div className="flex flex-col gap-3 text-[16px] text-cyan-100 text-center relative z-10 border-l border-cyan-500/30 pl-3 bg-black/30 p-2 rounded-l-lg backdrop-blur-sm">
         {/* Vitesse du vent */}
         <div
-          className="flex items-center justify-end gap-1.5 group/wind"
+          className="flex items-center justify-center gap-1.5 group/wind"
           title="Vitesse du vent"
         >
           <span className="opacity-0 group-hover/wind:opacity-100 transition-opacity text-[8px] text-cyan-300">
@@ -249,7 +249,7 @@ export const WeatherWidget: React.FC = () => {
 
         {/* Probabilité de précipitations */}
         <div
-          className="flex items-center justify-end gap-1.5 group/humidity"
+          className="flex items-center justify-center gap-1.5 group/humidity"
           title="Humidité"
         >
           <span className="opacity-0 group-hover/humidity:opacity-100 transition-opacity text-[8px] text-cyan-300">

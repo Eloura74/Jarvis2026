@@ -79,8 +79,18 @@ export const NetworkWidget: React.FC = () => {
 
   return (
     <div className="w-full h-24 relative rounded-xl border border-cyan-400/30 bg-black/20 backdrop-blur-xl overflow-hidden group hover:border-cyan-400/50 transition-all duration-500 shadow-[0_0_15px_rgba(0,229,255,0.1)]">
-      <canvas ref={canvasRef} className="w-full h-full" />
-      <div className="absolute inset-0 bg-gradient-to-t from-cyan-900/10 to-transparent pointer-events-none" />
+      {/* BACKGROUND IMAGE */}
+      <div className="absolute inset-0 z-0">
+        <img
+          src="https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=1000&auto=format&fit=crop"
+          alt="Network Background"
+          className="w-full h-full object-cover opacity-50"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-cyan-900/10 to-transparent" />
+      </div>
+
+      <canvas ref={canvasRef} className="w-full h-full relative z-10" />
+      <div className="absolute inset-0 bg-gradient-to-t from-cyan-900/10 to-transparent pointer-events-none z-20" />
     </div>
   );
 };
