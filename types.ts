@@ -53,7 +53,14 @@ export enum SystemStatus {
 export interface LogEntry {
   id: string; // Identifiant unique (pour React keys)
   timestamp: string; // ISO 8601 (ex: "2026-02-01T00:42:00.000Z")
-  source: "SYSTEM" | "USER" | "OMNI" | "KERNEL" | "VOICE"; // Origine du log
+  source:
+    | "SYSTEM"
+    | "USER"
+    | "OMNI"
+    | "KERNEL"
+    | "VOICE"
+    | "GMAIL"
+    | "CALENDAR"; // Origine du log
   message: string; // Message descriptif en anglais
   type: "info" | "success" | "warning" | "error"; // Type visuel (affecte la couleur)
 }

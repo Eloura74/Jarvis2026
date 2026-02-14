@@ -149,6 +149,14 @@ export function useJarvisBrain({
         case "analyze_screen":
           return await handlers.handleAnalyzeScreen(toolArgs, ctx);
 
+        // === GOOGLE SERVICES (NOUVEAU) ===
+        case "gmail_read":
+          return await handlers.handleGmailRead(toolArgs, ctx);
+        case "gmail_send":
+          return await handlers.handleGmailSend(toolArgs, ctx);
+        case "calendar_list":
+          return await handlers.handleCalendarList(toolArgs, ctx);
+
         // === HOME ASSISTANT (NOUVEAU) ===
         case "control_home_automation":
           // Import dynamique pour éviter les cycles ou chargement immédiat

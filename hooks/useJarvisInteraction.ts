@@ -103,19 +103,38 @@ export function useJarvisInteraction({
         if (isSpeakingRef.current || window.speechSynthesis.speaking) {
           return;
         }
-
         // 2. Période de sécurité (Echo cancellation)
         if (Date.now() - lastMicActivationTime.current < 1500) {
           return;
         }
 
-        // 3. Gestion des Mots de fin de conversation
+        // 3. Gestion des Mots de fin de conversation et ARRÊT IMMEDIAT (Barge-in)
+        const textLower = text.toLowerCase();
+        const STOP_KEYWORDS = [
+          "stop",
+          "arrête",
+          "arrête-toi",
+          "tais-toi",
+          "silence",
+          "stoppe",
+        ];
+
+        // Si l'utilisateur dit STOP pendant que Jarvis parle : on coupe immédiatement
+        if (
+          STOP_KEYWORDS.some((k) => textLower.includes(k)) &&
+          (isSpeakingRef.current || window.speechSynthesis.speaking)
+        ) {
+          console.log("🛑 BARGE-IN: Interruption vocale demandée");
+          stopSpeech();
+          setStatus(SystemStatus.IDLE);
+          return;
+        }
+
         const END_KEYWORDS = [
           "au revoir",
           "stop écoute",
           "merci c'est tout",
           "terminé",
-          "arrête",
           "a bientôt",
           "à bientôt",
           "bye",
@@ -125,9 +144,8 @@ export function useJarvisInteraction({
           "repos",
           "pause",
           "ferme ta gueule",
-          "stop",
         ];
-        if (END_KEYWORDS.some((k) => text.toLowerCase().includes(k))) {
+        if (END_KEYWORDS.some((k) => textLower.includes(k))) {
           setConversationMode(false);
           speak("À bientôt !");
           addLog("👋 Mode conversation désactivé", "SYSTEM", "info");
@@ -140,8 +158,8 @@ export function useJarvisInteraction({
           addLog("🎤 Mode conversation activé", "SYSTEM", "info");
         }
 
-        // 5. Interruption de la parole de Jarvis (Barge-in)
-        if (window.speechSynthesis.speaking) {
+        // 5. Interruption de la parole de Jarvis pour une nouvelle commande (Barge-in standard)
+        if (isSpeakingRef.current || window.speechSynthesis.speaking) {
           stopSpeech();
         }
 

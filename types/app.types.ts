@@ -3,9 +3,10 @@
  * Complète les types de base dans ./types
  */
 
-// Réexport types de base
-export type { LogEntry, OmniDecision } from "../types";
-export { SystemStatus } from "../types";
+import { SystemStatus, LogEntry, OmniDecision } from "../types";
+
+export { SystemStatus };
+export type { LogEntry, OmniDecision };
 
 /**
  * Configuration utilisateur JARVIS
@@ -34,10 +35,18 @@ export interface CommandInfo {
 export interface HandlerContext {
   addLog: (
     message: string,
-    source?: "SYSTEM" | "USER" | "OMNI" | "KERNEL" | "VOICE",
+    source?:
+      | "SYSTEM"
+      | "USER"
+      | "OMNI"
+      | "KERNEL"
+      | "VOICE"
+      | "GMAIL"
+      | "CALENDAR",
     type?: "info" | "success" | "error" | "warning",
   ) => void;
   setStatus: (status: SystemStatus) => void;
-  setVisualMode?: (query: string | null, isVisible: boolean) => void; // Optionnel pour compatibilité
-  stopConversation?: () => void; // NOUVEAU : Pour arrêter la boucle d'écoute
+  speak: (text: string) => void;
+  setVisualMode?: (query: string | null, isVisible: boolean) => void;
+  stopConversation?: () => void;
 }

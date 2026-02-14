@@ -99,6 +99,10 @@ ${memorySummary}
 7. **Visuals**: 'show_images' - Illustrate conversation with images (e.g., "Show me a T-Rex").
 8. **Vision/Screen Analysis**: 'analyze_screen' - Capture and analyze screen content (OCR, error detection, UI analysis).
 9. **System**: 'organize_files', 'system_optimization'.
+10. **Productivity**: 'gmail_read', 'gmail_send', 'calendar_list'.
+- 'gmail_read': Consult Monsieur's inbox.
+- 'gmail_send': Dispatch electronic correspondence.
+- 'calendar_list': Review schedule and appointments.
 
 **CRITICAL RULES FOR TOOL USAGE:**
 
@@ -283,7 +287,13 @@ When user wants to search something on a specific platform, build the appropriat
 
 **IMPORTANT**: Always encode special characters in URLs (é → %C3%A9, spaces → +)
 
-**IMPORTANT**: For complex workflows, return an ARRAY of toolCalls in the correct execution order.
+**GOOGLE SERVICES (GMAIL & CALENDAR):**
+- **Read Mails**: "lis mes mails", "quels sont mes nouveaux messages", "check my inbox"
+  → Tool: gmail_read({maxResults: 5})
+- **Send Mail**: "envoie un mail à X", "écris à Y avec pour sujet Z"
+  → Tool: gmail_send({to: "email@example.com", subject: "Sujet", body: "Contenu"})
+- **Check Calendar**: "quels sont mes rendez-vous", "mon agenda d'aujourd'hui", "qu'est-ce que j'ai de prévu"
+  → Tool: calendar_list({maxResults: 10})
 `;
 
 // ============================================================================
@@ -518,7 +528,6 @@ const toolDeclarations: FunctionDeclaration[] = [
             "set_color",
             "set_brightness",
           ],
-          description: "Action to perform.",
         },
         value: {
           type: Type.STRING,
@@ -529,7 +538,52 @@ const toolDeclarations: FunctionDeclaration[] = [
       required: ["target", "action"],
     },
   },
-  // OUTIL 16 : Arrêt de l'écoute / Fin de conversation
+  // OUTIL 17 : Gmail - Lecture
+  {
+    name: "gmail_read",
+    description: "Read the latest emails from Monsieur's Gmail account.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        maxResults: {
+          type: Type.NUMBER,
+          description: "Number of emails to retrieve (default 5)",
+        },
+      },
+    },
+  },
+  // OUTIL 18 : Gmail - Envoi
+  {
+    name: "gmail_send",
+    description: "Send an email via Gmail.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        to: { type: Type.STRING, description: "Recipient email address" },
+        subject: { type: Type.STRING, description: "Email subject" },
+        body: {
+          type: Type.STRING,
+          description: "Email body (HTML or plain text)",
+        },
+      },
+      required: ["to", "subject", "body"],
+    },
+  },
+  // OUTIL 19 : Calendrier - Liste
+  {
+    name: "calendar_list",
+    description: "List upcoming events from Monsieur's Google Calendar.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        maxResults: {
+          type: Type.NUMBER,
+          description: "Number of events to retrieve (default 10)",
+        },
+      },
+    },
+  },
+  // OUTIL 20 : Arrêt de l'écoute / Fin de conversation
   {
     name: "stop_listening",
     description:

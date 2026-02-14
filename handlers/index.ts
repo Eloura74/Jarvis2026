@@ -26,3 +26,6 @@ export * from "./visionHandlers";
 
 // Home Assistant
 export * from "./haHandlers";
+
+// Google Services (Gmail, Calendar)
+export * from "./googleHandlers";

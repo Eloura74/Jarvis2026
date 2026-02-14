@@ -12,6 +12,11 @@
 
 import express from "express";
 import cors from "cors";
+import dotenv from "dotenv";
+import path from "path";
+
+// Charger les variables d'environnement (.env.local dans le dossier server ou racine)
+dotenv.config({ path: path.join(process.cwd(), ".env.local") });
 import { spawn } from "child_process";
 import {
   indexApplications,
@@ -24,13 +29,16 @@ import * as automation from "./automation.js";
 import { getSystemStats, getLightStats } from "./systemStats.js";
 import * as fileSystem from "./fileSystem.js";
 import appsRoutes from "./routes/apps.js";
+import googleRoutes from "./routes/google.js";
 
 const app = express();
 const PORT = 3001;
 
-// Middleware
-app.use(cors()); // Permettre les requêtes depuis le frontend (localhost:5003)
+app.use(cors());
 app.use(express.json());
+
+// Routes API - Gestion Google
+app.use("/api/google", googleRoutes);
 
 // Routes API - Gestion des applications (CRUD)
 app.use("/api/apps", appsRoutes);
