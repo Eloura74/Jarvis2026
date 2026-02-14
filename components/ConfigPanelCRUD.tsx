@@ -1,6 +1,6 @@
 /**
  * Config Panel avec CRUD Complet - J.A.R.V.I.S.
- * 
+ *
  * Fonctionnalités :
  * - Liste toutes les applications
  * - Ajouter une application
@@ -12,10 +12,23 @@
 
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { 
-  X, Folder, Keyboard, Zap, Plus, Trash2, Save, Edit, 
-  Play, Check, Search, AlertCircle 
+import {
+  X,
+  Folder,
+  Keyboard,
+  Zap,
+  Plus,
+  Trash2,
+  Save,
+  Edit,
+  Play,
+  Check,
+  Search,
+  AlertCircle,
+  Mic,
 } from "lucide-react";
+
+import { VoiceSettingsTab } from "./VoiceSettingsTab";
 
 // Types
 interface AppData {
@@ -32,16 +45,19 @@ interface ConfigPanelCRUDProps {
   onClose: () => void;
 }
 
-type TabType = "apps" | "shortcuts" | "commands";
+type TabType = "apps" | "shortcuts" | "commands" | "voice";
 type ViewMode = "list" | "add" | "edit";
 
-export const ConfigPanelCRUD: React.FC<ConfigPanelCRUDProps> = ({ isOpen, onClose }) => {
+export const ConfigPanelCRUD: React.FC<ConfigPanelCRUDProps> = ({
+  isOpen,
+  onClose,
+}) => {
   const [activeTab, setActiveTab] = useState<TabType>("apps");
   const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [apps, setApps] = useState<Record<string, AppData>>({});
   const [searchQuery, setSearchQuery] = useState("");
   const [editingApp, setEditingApp] = useState<string | null>(null);
-  
+
   // Form state
   const [formName, setFormName] = useState("");
   const [formPath, setFormPath] = useState("");
@@ -72,9 +88,17 @@ export const ConfigPanelCRUD: React.FC<ConfigPanelCRUDProps> = ({ isOpen, onClos
       name: formName,
       path: formPath,
       category: formCategory,
-      keywords: formKeywords.split(",").map(k => k.trim()).filter(k => k),
+      keywords: formKeywords
+        .split(",")
+        .map((k) => k.trim())
+        .filter((k) => k),
       description: formDescription,
-      aliases: formAliases ? formAliases.split(",").map(a => a.trim()).filter(a => a) : undefined,
+      aliases: formAliases
+        ? formAliases
+            .split(",")
+            .map((a) => a.trim())
+            .filter((a) => a)
+        : undefined,
     };
 
     try {
@@ -99,9 +123,12 @@ export const ConfigPanelCRUD: React.FC<ConfigPanelCRUDProps> = ({ isOpen, onClos
     if (!confirm(`Supprimer "${appName}" ?`)) return;
 
     try {
-      const response = await fetch(`http://localhost:3001/api/apps/${appName}`, {
-        method: "DELETE",
-      });
+      const response = await fetch(
+        `http://localhost:3001/api/apps/${appName}`,
+        {
+          method: "DELETE",
+        },
+      );
 
       if (response.ok) {
         await loadApps();
@@ -157,10 +184,11 @@ export const ConfigPanelCRUD: React.FC<ConfigPanelCRUDProps> = ({ isOpen, onClos
   };
 
   // Filtrer les apps par recherche
-  const filteredApps = Object.entries(apps).filter(([name, data]) =>
-    name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    data.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    data.category.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredApps = Object.entries(apps).filter(
+    ([name, data]) =>
+      name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      data.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      data.category.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
   if (!isOpen) return null;
@@ -214,6 +242,12 @@ export const ConfigPanelCRUD: React.FC<ConfigPanelCRUDProps> = ({ isOpen, onClos
               icon={<Zap size={18} />}
               label="Commandes"
             />
+            <TabButton
+              active={activeTab === "voice"}
+              onClick={() => setActiveTab("voice")}
+              icon={<Mic size={18} />}
+              label="Voix"
+            />
           </div>
 
           {/* Content */}
@@ -225,7 +259,10 @@ export const ConfigPanelCRUD: React.FC<ConfigPanelCRUDProps> = ({ isOpen, onClos
                     {/* Barre d'actions */}
                     <div className="flex gap-4 items-center mb-6">
                       <div className="flex-1 relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-cyan-400" size={20} />
+                        <Search
+                          className="absolute left-3 top-1/2 -translate-y-1/2 text-cyan-400"
+                          size={20}
+                        />
                         <input
                           type="text"
                           placeholder="Rechercher une application..."
@@ -257,8 +294,12 @@ export const ConfigPanelCRUD: React.FC<ConfigPanelCRUDProps> = ({ isOpen, onClos
                         >
                           <div className="flex items-start justify-between">
                             <div className="flex-1">
-                              <h3 className="text-lg font-semibold text-cyan-300">{name}</h3>
-                              <p className="text-sm text-gray-400 mt-1">{data.description}</p>
+                              <h3 className="text-lg font-semibold text-cyan-300">
+                                {name}
+                              </h3>
+                              <p className="text-sm text-gray-400 mt-1">
+                                {data.description}
+                              </p>
                               <div className="flex gap-4 mt-2 text-xs text-gray-500">
                                 <span>📁 {data.category}</span>
                                 <span>📍 {data.path}</span>
@@ -266,7 +307,10 @@ export const ConfigPanelCRUD: React.FC<ConfigPanelCRUDProps> = ({ isOpen, onClos
                               {data.keywords && data.keywords.length > 0 && (
                                 <div className="flex flex-wrap gap-2 mt-2">
                                   {data.keywords.map((kw, i) => (
-                                    <span key={i} className="px-2 py-1 bg-cyan-500/10 text-cyan-400 rounded text-xs">
+                                    <span
+                                      key={i}
+                                      className="px-2 py-1 bg-cyan-500/10 text-cyan-400 rounded text-xs"
+                                    >
                                       {kw}
                                     </span>
                                   ))}
@@ -303,7 +347,10 @@ export const ConfigPanelCRUD: React.FC<ConfigPanelCRUDProps> = ({ isOpen, onClos
 
                     {filteredApps.length === 0 && (
                       <div className="text-center py-12 text-gray-500">
-                        <AlertCircle size={48} className="mx-auto mb-4 opacity-50" />
+                        <AlertCircle
+                          size={48}
+                          className="mx-auto mb-4 opacity-50"
+                        />
                         <p>Aucune application trouvée</p>
                       </div>
                     )}
@@ -313,12 +360,16 @@ export const ConfigPanelCRUD: React.FC<ConfigPanelCRUDProps> = ({ isOpen, onClos
                 {(viewMode === "add" || viewMode === "edit") && (
                   <div className="max-w-2xl mx-auto">
                     <h3 className="text-xl font-bold text-cyan-300 mb-6">
-                      {viewMode === "add" ? "➕ Ajouter une application" : "✏️ Modifier l'application"}
+                      {viewMode === "add"
+                        ? "➕ Ajouter une application"
+                        : "✏️ Modifier l'application"}
                     </h3>
 
                     <div className="space-y-4">
                       <div>
-                        <label className="block text-sm font-medium text-cyan-400 mb-2">Nom</label>
+                        <label className="block text-sm font-medium text-cyan-400 mb-2">
+                          Nom
+                        </label>
                         <input
                           type="text"
                           value={formName}
@@ -329,7 +380,9 @@ export const ConfigPanelCRUD: React.FC<ConfigPanelCRUDProps> = ({ isOpen, onClos
                       </div>
 
                       <div>
-                        <label className="block text-sm font-medium text-cyan-400 mb-2">Chemin</label>
+                        <label className="block text-sm font-medium text-cyan-400 mb-2">
+                          Chemin
+                        </label>
                         <input
                           type="text"
                           value={formPath}
@@ -340,7 +393,9 @@ export const ConfigPanelCRUD: React.FC<ConfigPanelCRUDProps> = ({ isOpen, onClos
                       </div>
 
                       <div>
-                        <label className="block text-sm font-medium text-cyan-400 mb-2">Catégorie</label>
+                        <label className="block text-sm font-medium text-cyan-400 mb-2">
+                          Catégorie
+                        </label>
                         <select
                           value={formCategory}
                           onChange={(e) => setFormCategory(e.target.value)}
@@ -358,7 +413,9 @@ export const ConfigPanelCRUD: React.FC<ConfigPanelCRUDProps> = ({ isOpen, onClos
                       </div>
 
                       <div>
-                        <label className="block text-sm font-medium text-cyan-400 mb-2">Description</label>
+                        <label className="block text-sm font-medium text-cyan-400 mb-2">
+                          Description
+                        </label>
                         <input
                           type="text"
                           value={formDescription}
@@ -369,7 +426,9 @@ export const ConfigPanelCRUD: React.FC<ConfigPanelCRUDProps> = ({ isOpen, onClos
                       </div>
 
                       <div>
-                        <label className="block text-sm font-medium text-cyan-400 mb-2">Mots-clés (séparés par virgules)</label>
+                        <label className="block text-sm font-medium text-cyan-400 mb-2">
+                          Mots-clés (séparés par virgules)
+                        </label>
                         <input
                           type="text"
                           value={formKeywords}
@@ -380,7 +439,9 @@ export const ConfigPanelCRUD: React.FC<ConfigPanelCRUDProps> = ({ isOpen, onClos
                       </div>
 
                       <div>
-                        <label className="block text-sm font-medium text-cyan-400 mb-2">Alias (séparés par virgules, optionnel)</label>
+                        <label className="block text-sm font-medium text-cyan-400 mb-2">
+                          Alias (séparés par virgules, optionnel)
+                        </label>
                         <input
                           type="text"
                           value={formAliases}
@@ -417,6 +478,7 @@ export const ConfigPanelCRUD: React.FC<ConfigPanelCRUDProps> = ({ isOpen, onClos
 
             {activeTab === "shortcuts" && <ShortcutsTab />}
             {activeTab === "commands" && <CommandsTab />}
+            {activeTab === "voice" && <VoiceSettingsTab />}
           </div>
         </motion.div>
       </motion.div>

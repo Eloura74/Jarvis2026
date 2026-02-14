@@ -23,7 +23,10 @@ import { useJarvisInteraction } from "./hooks/useJarvisInteraction";
 import { useJarvisBrain } from "./hooks/useJarvisBrain";
 import { useAutonomy } from "./hooks/useAutonomy";
 import { useSystemStats } from "./hooks/useSystemStats";
-import { useGlobalShortcuts, createListenShortcut } from "./hooks/useGlobalShortcuts";
+import {
+  useGlobalShortcuts,
+  createListenShortcut,
+} from "./hooks/useGlobalShortcuts";
 
 // ============================================================================
 // SHELL (Composant Interne avec accès au Kernel)
@@ -159,9 +162,29 @@ const JarvisShell: React.FC = () => {
 // APP ROOT (Wrapper Provider)
 // ============================================================================
 
+import { StartOverlay } from "./components/StartOverlay";
+
 const App: React.FC = () => {
+  // Fonction pour "réveiller" l'audio context
+  const unlockAudio = () => {
+    const synth = window.speechSynthesis;
+    if (synth) {
+      // 1. Resume
+      if (synth.paused) synth.resume();
+
+      // 2. Jouer un silence
+      const utterance = new SpeechSynthesisUtterance("");
+      utterance.volume = 0;
+      utterance.rate = 1; // Bug fix: some browsers need rate defined
+      synth.speak(utterance);
+
+      console.log("🔓 Audio Context débloqué via interaction utilisateur");
+    }
+  };
+
   return (
     <KernelProvider>
+      <StartOverlay onStart={unlockAudio} />
       <JarvisShell />
     </KernelProvider>
   );

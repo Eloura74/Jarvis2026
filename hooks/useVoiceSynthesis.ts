@@ -35,6 +35,12 @@ interface UseVoiceSynthesisOptions {
   onEnd?: () => void;
   /** Volume de la voix (0-1), par défaut 1.0 */
   volume?: number;
+  /** Hauteur de la voix (0-2), par défaut 1.0 */
+  pitch?: number;
+  /** Vitesse de la voix (0.1-10), par défaut 1.0 */
+  rate?: number;
+  /** URI de la voix spécifique à utiliser */
+  voiceURI?: string | null;
 }
 
 interface UseVoiceSynthesisReturn {
@@ -51,6 +57,9 @@ export function useVoiceSynthesis({
   onStart,
   onEnd,
   volume = 1.0,
+  pitch = 1.0,
+  rate = 1.0,
+  voiceURI = null,
 }: UseVoiceSynthesisOptions): UseVoiceSynthesisReturn {
   /**
    * Prononce le texte fourni avec la voix J.A.R.V.I.S.-like
@@ -72,48 +81,57 @@ export function useVoiceSynthesis({
       const voices = window.speechSynthesis.getVoices();
 
       // ========================================
-      // RECHERCHE VOIX FRANÇAISE FÉMININE NATURELLE
+      // SÉLECTION DE LA VOIX
       // ========================================
-      // Ordre de préférence (voix féminines, fluides, naturelles) :
-      // 1. Google Français (fr-FR) - très naturelle
-      // 2. Microsoft Denise (fr-FR) - excellente qualité
-      // 3. Microsoft Hortense (fr-FR) - bonne qualité
-      // 4. Microsoft Julie (fr-FR)
-      // 5. Toute voix fr-FR féminine
-      const preferredVoice =
-        voices.find(
-          (v) => v.lang.startsWith("fr-FR") && v.name.includes("Google")
-        ) || // Google = meilleure
-        voices.find(
-          (v) => v.lang.startsWith("fr-FR") && v.name.includes("Denise")
-        ) || // Microsoft Denise
-        voices.find(
-          (v) => v.lang.startsWith("fr-FR") && v.name.includes("Hortense")
-        ) || // Microsoft Hortense
-        voices.find(
-          (v) => v.lang.startsWith("fr-FR") && v.name.includes("Julie")
-        ) || // Microsoft Julie
-        voices.find((v) => v.lang.startsWith("fr-FR")); // Fallback : n'importe quelle voix fr-FR
+      let selectedVoice: SpeechSynthesisVoice | undefined;
+
+      // 1. Essayer la voix spécifiée par URI
+      if (voiceURI) {
+        selectedVoice = voices.find((v) => v.voiceURI === voiceURI);
+      }
+
+      // 2. Fallback : Recherche voix française naturelle (si pas de voix spécifique ou introuvable)
+      if (!selectedVoice) {
+        selectedVoice =
+          voices.find(
+            (v) => v.lang.startsWith("fr-FR") && v.name.includes("Google"),
+          ) || // Google = meilleure
+          voices.find(
+            (v) => v.lang.startsWith("fr-FR") && v.name.includes("Denise"),
+          ) || // Microsoft Denise
+          voices.find(
+            (v) => v.lang.startsWith("fr-FR") && v.name.includes("Hortense"),
+          ) || // Microsoft Hortense
+          voices.find(
+            (v) => v.lang.startsWith("fr-FR") && v.name.includes("Julie"),
+          ) || // Microsoft Julie
+          voices.find((v) => v.lang.startsWith("fr-FR")); // Fallback : n'importe quelle voix fr-FR
+      }
 
       // Application de la voix trouvée
-      if (preferredVoice) {
-        utterance.voice = preferredVoice;
+      if (selectedVoice) {
+        utterance.voice = selectedVoice;
         console.log(
-          `🗣️ Voix sélectionnée: ${preferredVoice.name} (${preferredVoice.lang})`
+          `🗣️ Voix sélectionnée: ${selectedVoice.name} (${selectedVoice.lang})`,
         );
       } else {
         console.warn(
-          "⚠️ Aucune voix française trouvée, utilisation voix par défaut"
+          "⚠️ Aucune voix française trouvée, utilisation voix par défaut",
         );
       }
 
-      // Configuration des paramètres vocaux (style NATUREL, DOUX, FLUIDE)
-      utterance.pitch = 1.0; // Pitch neutre = plus naturel et moins robotique
-      utterance.rate = 0.95; // Légèrement plus rapide = plus fluide et moins haché
-      utterance.volume = volume; // Volume depuis settings
-      
+      // Démarrage propre : on annule d'abord toute lecture en cours
+      window.speechSynthesis.cancel();
+
+      // Configuration des paramètres vocaux
+      utterance.pitch = pitch;
+      utterance.rate = rate;
+      utterance.volume = volume;
+
       // Log pour debug
-      console.log(`🎙️ Voix configurée : Pitch ${utterance.pitch} | Rate ${utterance.rate} (Naturelle & Fluide)`);
+      console.log(
+        `🎙️ Voix configurée : Pitch ${utterance.pitch} | Rate ${utterance.rate} | Vol ${utterance.volume}`,
+      );
 
       // Synchronisation avec l'état du système
       utterance.onstart = () => {
@@ -129,14 +147,29 @@ export function useVoiceSynthesis({
       // Gestion des erreurs
       utterance.onerror = (event) => {
         console.error("Erreur synthèse vocale:", event.error);
+
+        if (event.error === "not-allowed") {
+          console.warn(
+            "🔒 Audio bloqué par le navigateur. Interaction requise !",
+          );
+        }
+
         // On appelle onEnd même en cas d'erreur pour remettre l'état à jour
         onEnd?.();
       };
 
-      // Démarrage de la synthèse vocale
-      window.speechSynthesis.speak(utterance);
+      // Démarrage de la synthèse vocale avec tenteative de reprise du contexte
+      if (window.speechSynthesis.paused) {
+        window.speechSynthesis.resume();
+      }
+
+      try {
+        window.speechSynthesis.speak(utterance);
+      } catch (e) {
+        console.error("Exception synthèse vocale:", e);
+      }
     },
-    [enabled, onStart, onEnd, volume]
+    [enabled, onStart, onEnd, volume, pitch, rate, voiceURI],
   );
 
   /**

@@ -19,6 +19,13 @@ import { INITIAL_LOGS } from "../constants";
 // TYPES
 // ========================================
 
+export interface VoiceSettings {
+  voiceURI: string | null;
+  pitch: number;
+  rate: number;
+  volume: number;
+}
+
 interface KernelContextType {
   // État Système
   status: SystemStatus;
@@ -47,6 +54,10 @@ interface KernelContextType {
   // Mode Visuel (Images)
   visualMode: { query: string | null; isVisible: boolean };
   setVisualMode: (query: string | null, isVisible: boolean) => void;
+
+  // Paramètres Voix
+  voiceSettings: VoiceSettings;
+  setVoiceSettings: (settings: VoiceSettings) => void;
 }
 
 // ========================================
@@ -118,6 +129,25 @@ export const KernelProvider: React.FC<KernelProviderProps> = ({ children }) => {
     [],
   );
 
+  // 6. Paramètres Voix (NOUVEAU)
+  const [voiceSettings, setVoiceSettingsState] = useState<VoiceSettings>(() => {
+    // Charger depuis localStorage si dispo
+    const saved = localStorage.getItem("jarvis_voice_settings");
+    return saved
+      ? JSON.parse(saved)
+      : {
+          voiceURI: null,
+          pitch: 1.0,
+          rate: 1.0,
+          volume: 1.0,
+        };
+  });
+
+  const setVoiceSettings = useCallback((settings: VoiceSettings) => {
+    setVoiceSettingsState(settings);
+    localStorage.setItem("jarvis_voice_settings", JSON.stringify(settings));
+  }, []);
+
   // Valeur exposée
   const value: KernelContextType = {
     status,
@@ -134,6 +164,8 @@ export const KernelProvider: React.FC<KernelProviderProps> = ({ children }) => {
     getConversationContext,
     visualMode,
     setVisualMode,
+    voiceSettings, // NOUVEAU
+    setVoiceSettings, // NOUVEAU
   };
 
   return (

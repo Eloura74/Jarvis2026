@@ -36,6 +36,8 @@ interface UseWakeWordOptions {
   language?: string;
 }
 
+const DEFAULT_KEYWORDS = ["jarvis", "hey jarvis", "ok jarvis"];
+
 /**
  * Hook de détection du Wake Word
  *
@@ -48,8 +50,8 @@ export function useWakeWord(
   options: UseWakeWordOptions = {},
 ) {
   const {
-    keywords = ["jarvis", "hey jarvis", "ok jarvis"],
-    confidenceThreshold = 0.6,
+    keywords = DEFAULT_KEYWORDS,
+    confidenceThreshold = 0.4, // Seuil baissé
     language = "fr-FR",
   } = options;
 
@@ -59,6 +61,13 @@ export function useWakeWord(
 
   const recognitionRef = useRef<any>(null);
   const restartTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const isEnabledRef = useRef(isEnabled);
+
+  // Sync ref
+  useEffect(() => {
+    isEnabledRef.current = isEnabled;
+  }, [isEnabled]);
 
   /**
    * Démarre l'écoute continue du wake word
@@ -74,15 +83,20 @@ export function useWakeWord(
     }
 
     if (recognitionRef.current) {
-      recognitionRef.current.stop();
+      try {
+        recognitionRef.current.onend = null;
+        recognitionRef.current.stop();
+      } catch (e) {
+        /* ignore */
+      }
     }
 
     // Créer nouvelle instance
     const recognition = new SpeechRecognition();
-    recognition.continuous = true; // Écoute continue
-    recognition.interimResults = true; // Résultats intermédiaires
+    recognition.continuous = true; // ✅ Mode continu (meilleur pour Wake Word)
+    recognition.interimResults = true;
     recognition.lang = language;
-    recognition.maxAlternatives = 3; // Max 3 alternatives
+    recognition.maxAlternatives = 3;
 
     // --- ÉVÉNEMENT: Résultat de reconnaissance ---
     recognition.onresult = (event: any) => {
@@ -98,7 +112,7 @@ export function useWakeWord(
         const confidence = alternative.confidence;
 
         console.log(
-          `🎤 Wake Word listening: "${transcript}" (${(confidence * 100).toFixed(0)}%)`,
+          `🎤 Wake Word entendu: "${transcript}" (${confidence.toFixed(2)})`,
         );
 
         // Vérifier si wake word détecté avec confiance suffisante
@@ -113,12 +127,6 @@ export function useWakeWord(
 
           // Pause brève pour éviter double détection
           recognition.stop();
-          setTimeout(() => {
-            if (recognitionRef.current === recognition && isEnabled) {
-              recognition.start();
-            }
-          }, 1000);
-
           break;
         }
       }
@@ -132,54 +140,68 @@ export function useWakeWord(
 
     // --- ÉVÉNEMENT: Fin ---
     recognition.onend = () => {
-      console.log("👂 Wake Word: écoute terminée");
+      console.log("🛑 Wake Word: écoute terminée (onend)");
       setIsListening(false);
 
-      // Redémarrer automatiquement si toujours activé
-      if (isEnabled && recognitionRef.current === recognition) {
+      // Redémarrer automatiquement si toujours activé (via REF pour éviter closure stale)
+      if (isEnabledRef.current && recognitionRef.current === recognition) {
+        // Nettoyer l'ancien timeout s'il existe
+        if (restartTimeoutRef.current) clearTimeout(restartTimeoutRef.current);
+
         restartTimeoutRef.current = setTimeout(() => {
           try {
-            recognition.start();
+            // Vérifier à nouveau si on doit redémarrer
+            if (
+              isEnabledRef.current &&
+              recognitionRef.current === recognition
+            ) {
+              recognition.start();
+            }
           } catch (error) {
-            console.error("Erreur redémarrage wake word:", error);
+            // console.error("Erreur redémarrage wake word:", error);
           }
-        }, 500);
+        }, 1000); // 1s de pause avant relance
       }
     };
 
     // --- ÉVÉNEMENT: Erreur ---
     recognition.onerror = (event: any) => {
-      console.warn("⚠️ Wake Word erreur:", event.error);
+      // Ignorer "aborted" (stop manuel ou conflit)
+      if (event.error === "aborted") return;
 
-      // Ignorer erreurs "no-speech" et "aborted" (normales en écoute continue)
-      if (event.error === "no-speech" || event.error === "aborted") {
+      // Ignorer "no-speech" (silence)
+      if (event.error === "no-speech") return;
+
+      // Gérer erreur réseau
+      if (event.error === "network") {
+        console.warn(
+          "⚠️ Problème réseau vocal (tentative de reconnexion auto via onend...)",
+        );
         return;
       }
 
-      // Redémarrer en cas d'erreur
-      if (isEnabled) {
-        setTimeout(() => {
-          if (recognitionRef.current === recognition) {
-            recognition.start();
-          }
-        }, 1000);
-      }
+      console.warn("⚠️ Wake Word erreur:", event.error);
     };
 
     recognitionRef.current = recognition;
 
-    // Démarrer
+    // Démarrer avec protection
     try {
       recognition.start();
     } catch (error) {
-      console.error("❌ Impossible de démarrer wake word:", error);
+      // console.error("❌ Impossible de démarrer wake word:", error);
     }
-  }, [isEnabled, keywords, confidenceThreshold, language, onWakeWordDetected]);
-
-  /**
-   * Arrête l'écoute du wake word
-   */
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    JSON.stringify(keywords),
+    confidenceThreshold,
+    language,
+    onWakeWordDetected,
+  ]);
   const stopListening = useCallback(() => {
+    // 🛑 Arrêt critique : on met le ref à false immédiatement pour bloquer tout restart
+    isEnabledRef.current = false;
+
     if (restartTimeoutRef.current) {
       clearTimeout(restartTimeoutRef.current);
       restartTimeoutRef.current = null;
@@ -187,9 +209,10 @@ export function useWakeWord(
 
     if (recognitionRef.current) {
       try {
+        recognitionRef.current.onend = null; // Important: ne pas déclencher onend
         recognitionRef.current.stop();
       } catch (error) {
-        console.warn("Erreur arrêt wake word:", error);
+        // ignore
       }
       recognitionRef.current = null;
     }
@@ -228,8 +251,16 @@ export function useWakeWord(
     /** Active/désactive le wake word */
     toggleWakeWord,
     /** Désactive manuellement */
-    disable: () => setIsEnabled(false),
+    disable: useCallback(() => {
+      // console.log("🛑 Wake Word Désactivé");
+      isEnabledRef.current = false; // Sync immédiat
+      setIsEnabled(false);
+    }, []),
     /** Active manuellement */
-    enable: () => setIsEnabled(true),
+    enable: useCallback(() => {
+      // console.log("🟢 Wake Word Activé");
+      isEnabledRef.current = true; // Sync immédiat
+      setIsEnabled(true);
+    }, []),
   };
 }

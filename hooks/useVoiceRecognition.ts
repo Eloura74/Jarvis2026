@@ -147,14 +147,22 @@ export function useVoiceRecognition(
             else {
               // Éviter log spam (seulement si changement significatif)
               if (transcript !== lastInterimTranscript) {
-                console.log(`🎤 Preview: "${transcript}"`);
+                // console.log(`🎤 Preview: "${transcript}"`);
                 lastInterimTranscript = transcript;
               }
             }
           };
           // Événement : erreur de reconnaissance
           recognition.onerror = (event: any) => {
-            console.error("Erreur reconnaissance vocale:", event.error);
+            // Ignorer les erreurs "aborted" et "no-speech" qui sont fréquentes/normales
+            if (event.error === "aborted" || event.error === "no-speech") {
+              console.warn(
+                `⚠️ Reconnaissance vocale interrompue (${event.error})`,
+              );
+            } else {
+              console.error("Erreur reconnaissance vocale:", event.error);
+            }
+
             isStartingRef.current = false; // Réinitialisation du flag en cas d'erreur
             isListeningRef.current = false; // ✅ Mise à jour ref synchrone
             setIsListening(false);
@@ -192,9 +200,9 @@ export function useVoiceRecognition(
 
   // Méthode : démarrage de l'écoute
   const startListening = useCallback(() => {
-    console.log(
-      `🎤 startListening appelé - recognitionRef=${!!recognitionRef.current}, isListeningRef=${isListeningRef.current}, isStarting=${isStartingRef.current}`,
-    );
+    // console.log(
+    //   `🎤 startListening appelé - recognitionRef=${!!recognitionRef.current}, isListeningRef=${isListeningRef.current}, isStarting=${isStartingRef.current}`,
+    // );
 
     if (!recognitionRef.current) {
       console.error("❌ recognitionRef.current est null");
@@ -203,14 +211,14 @@ export function useVoiceRecognition(
 
     // ✅ VÉRIFICATION AVEC REF (synchrone) au lieu du state (asynchrone)
     if (isListeningRef.current || isStartingRef.current) {
-      console.warn(
-        `⚠️ startListening bloqué : isListeningRef=${isListeningRef.current}, isStarting=${isStartingRef.current}`,
-      );
+      // console.warn(
+      //   `⚠️ startListening bloqué : isListeningRef=${isListeningRef.current}, isStarting=${isStartingRef.current}`,
+      // );
       return;
     }
 
     try {
-      console.log("✅ Démarrage reconnaissance vocale...");
+      // console.log("✅ Démarrage reconnaissance vocale...");
       isStartingRef.current = true;
       recognitionRef.current.start();
     } catch (error: any) {
@@ -255,7 +263,9 @@ export function useVoiceRecognition(
         return;
       }
 
-      console.log("🛑 stopAndWait : arrêt en cours, attente événement onend...");
+      console.log(
+        "🛑 stopAndWait : arrêt en cours, attente événement onend...",
+      );
 
       // Créer un handler unique pour cet arrêt
       const onEndHandler = () => {

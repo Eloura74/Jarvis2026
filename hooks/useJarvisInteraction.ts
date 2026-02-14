@@ -13,6 +13,7 @@ import { useVoiceRecognition } from "./useVoiceRecognition";
 import { useVoiceSynthesis } from "./useVoiceSynthesis";
 import { useWakeWord } from "./useWakeWord";
 import { SystemStatus, LogEntry } from "../types";
+import { useKernel } from "../contexts/KernelContext";
 
 interface UseJarvisInteractionProps {
   status: SystemStatus;
@@ -32,6 +33,7 @@ export function useJarvisInteraction({
   onCommandReceived,
 }: UseJarvisInteractionProps) {
   const [conversationMode, setConversationMode] = useState(false);
+  const { voiceSettings } = useKernel();
 
   // Refs pour gestion asynchrone
   const lastMicActivationTime = useRef<number>(0);
@@ -52,10 +54,14 @@ export function useJarvisInteraction({
   // ========================================
   const { speak: rawSpeak, stop: stopSpeech } = useVoiceSynthesis({
     enabled: true,
+    voiceURI: voiceSettings.voiceURI,
+    pitch: voiceSettings.pitch,
+    rate: voiceSettings.rate,
+    volume: voiceSettings.volume,
     onStart: async () => {
       isSpeakingRef.current = true;
       setStatus(SystemStatus.SPEAKING);
-      console.log("🛑 Jarvis parle - Arrêt micro");
+      // console.log("🛑 Jarvis parle - Arrêt micro");
 
       // Si on écoutait, on arrête proprement
       if (isListening) {
@@ -150,15 +156,33 @@ export function useJarvisInteraction({
   // ========================================
   // WAKE WORD
   // ========================================
-  const { enable: enableWakeWord, disable: disableWakeWord } = useWakeWord(
+  const {
+    enable: enableWakeWord,
+    disable: disableWakeWord,
+    lastDetection, // Récupérer la date de dernière détection
+  } = useWakeWord(
     useCallback(() => {
-      if (status === SystemStatus.IDLE) {
-        addLog("Wake word detected", "VOICE", "info");
+      // Callback vide par sécurité (tout est géré dans le useEffect ci-dessous)
+    }, []),
+  );
+
+  // 🛑 GESTION WAKE WORD DÉTECTÉ (via useEffect pour éviter erreur d'initialisation)
+  useEffect(() => {
+    // Si une détection récente a eu lieu et qu'on est en IDLE
+    if (lastDetection && status === SystemStatus.IDLE) {
+      addLog("Wake word detected", "VOICE", "info");
+
+      // 1. Désactiver immédiatement le module wake word
+      disableWakeWord();
+
+      // 2. Pause de sécurité (500ms) pour libérer le micro
+      setTimeout(() => {
         lastMicActivationTime.current = Date.now();
         startListening();
-      }
-    }, [status, addLog, startListening]),
-  );
+      }, 500);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lastDetection]); // Se déclenche UNIQUEENT quand lastDetection change (nouvelle détection)
 
   // Gestion intelligente du Wake Word
   // Désactive le wake word quand on est déjà en train d'écouter ou que Jarvis parle
@@ -174,11 +198,22 @@ export function useJarvisInteraction({
   // GESTION MANUELLE MICRO
   // ========================================
   const handleMicrophoneClick = useCallback(() => {
+    // Si on démarre l'écoute manuelle
     if (!isListening) {
-      lastMicActivationTime.current = Date.now();
+      console.log("🖱️ Clic Micro : Désactivation forcée du Wake Word");
+      disableWakeWord(); // 🛑 On coupe d'abord le wake word
+
+      // Petit délai pour laisser le temps au wake word de s'éteindre
+      // (Même mécanisme que pour la détection vocale autom)
+      setTimeout(() => {
+        lastMicActivationTime.current = Date.now();
+        startListening();
+      }, 300);
+    } else {
+      // Arrêt normal
+      toggleListening();
     }
-    toggleListening();
-  }, [isListening, toggleListening]);
+  }, [isListening, toggleListening, disableWakeWord, startListening]);
 
   return {
     isListening,
