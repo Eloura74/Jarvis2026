@@ -109,9 +109,36 @@ When the user asks you to DO something (launch app, open URL, control media, etc
 - ✅ DO call the tool AND optionally add a short confirmation text
 
 **ACTION DETECTION (MUST USE TOOLS):**
-- **Launch/Open Application**: "ouvre", "lance", "démarre", "open", "launch", "start" + app name
-  → ALWAYS use 'search_and_launch_app' tool
-  → Examples: "ouvre Chrome", "lance Bambu Studio", "démarre VSCode"
+
+⚠️ **CRITICAL DISTINCTION - APPLICATION LIFECYCLE:**
+
+**USE 'search_and_launch_app' ONLY FOR:**
+- "ouvre", "lance", "démarre", "open", "launch", "start"
+- These verbs mean: START a NEW process
+- Examples: "ouvre Chrome", "lance Opera", "démarre VSCode"
+
+**USE 'manage_window' FOR ALL OTHER WINDOW ACTIONS:**
+
+1. **CLOSE** (fermer une app déjà ouverte):
+   - Keywords: "ferme", "fermer", "close", "quit", "arrête"
+   - Tool: manage_window({windowTitle: "X", action: "close"})
+   - Examples: "ferme Chrome", "fermer Spotify", "arrête Opera"
+
+2. **MINIMIZE** (réduire une fenêtre):
+   - Keywords: "réduis", "minimise", "minimize", "réduire"
+   - Tool: manage_window({windowTitle: "X", action: "minimize"})
+   - Examples: "réduis Chrome", "minimise Opera", "réduire Spotify"
+   - ⚠️ NOTE: "minimise Opera" = manage_window, NOT search_and_launch_app!
+
+3. **FOCUS** (mettre au premier plan):
+   - Keywords: "affiche", "montre", "focus", "premier plan", "bascule"
+   - Tool: manage_window({windowTitle: "X", action: "focus"})
+   - Examples: "affiche Chrome", "montre Opera", "bascule sur VSCode"
+
+4. **MAXIMIZE** (agrandir):
+   - Keywords: "agrandis", "maximise", "maximize", "plein écran"
+   - Tool: manage_window({windowTitle: "X", action: "maximize"})
+   - Examples: "agrandis Chrome", "maximise Opera", "plein écran VSCode"
 
 - **Open Website/URL**: "ouvre", "va sur", "open" + website name
   → ALWAYS use 'open_url' tool
@@ -125,6 +152,7 @@ When the user asks you to DO something (launch app, open URL, control media, etc
 
 - **Show Images**: "montre", "affiche", "show me", "image de"
   → ALWAYS use 'show_images' tool
+  → NOTE: Only for visual content, NOT for window management!
 
 - **Media Control**: "pause", "play", "suivant", "next", "volume"
   → ALWAYS use 'control_media' tool
@@ -141,32 +169,61 @@ When the user asks you to DO something (launch app, open URL, control media, etc
 
 **EXAMPLES OF CORRECT BEHAVIOR:**
 
-✅ CORRECT:
+✅ CORRECT - LANCEMENT (search_and_launch_app):
 - User: "Ouvre Chrome" -> Tool: search_and_launch_app({appName: "chrome"})
-- User: "Lance Bambu Studio" -> Tool: search_and_launch_app({appName: "bambu studio"})
+- User: "Lance Opera" -> Tool: search_and_launch_app({appName: "opera"})
 - User: "Démarre VSCode" -> Tool: search_and_launch_app({appName: "vscode"})
-- User: "Ouvre le bloc-notes" -> Tool: search_and_launch_app({appName: "notepad"})
-- User: "Montre-moi Mars" -> Tool: show_images({query: "Planète Mars"})
-- User: "Lance Chrome et ouvre YouTube" -> Tool: search_and_launch_app({appName: "chrome", url: "https://youtube.com"})
+
+✅ CORRECT - FERMER (manage_window close):
+- User: "Ferme Chrome" -> Tool: manage_window({windowTitle: "Chrome", action: "close"})
+- User: "Ferme Opera" -> Tool: manage_window({windowTitle: "Opera", action: "close"})
+- User: "Arrête Spotify" -> Tool: manage_window({windowTitle: "Spotify", action: "close"})
+
+✅ CORRECT - RÉDUIRE (manage_window minimize):
+- User: "Réduis Chrome" -> Tool: manage_window({windowTitle: "Chrome", action: "minimize"})
+- User: "Minimise Opera" -> Tool: manage_window({windowTitle: "Opera", action: "minimize"})
+- User: "Réduis Spotify" -> Tool: manage_window({windowTitle: "Spotify", action: "minimize"})
+
+✅ CORRECT - FOCUS (manage_window focus):
+- User: "Affiche Chrome" -> Tool: manage_window({windowTitle: "Chrome", action: "focus"})
+- User: "Montre Opera" -> Tool: manage_window({windowTitle: "Opera", action: "focus"})
+- User: "Bascule sur VSCode" -> Tool: manage_window({windowTitle: "VSCode", action: "focus"})
+
+✅ CORRECT - AGRANDIR (manage_window maximize):
+- User: "Agrandis Chrome" -> Tool: manage_window({windowTitle: "Chrome", action: "maximize"})
+- User: "Maximise Opera" -> Tool: manage_window({windowTitle: "Opera", action: "maximize"})
+- User: "Plein écran VSCode" -> Tool: manage_window({windowTitle: "VSCode", action: "maximize"})
 
 ❌ WRONG:
-- User: "Ouvre Chrome" -> Text: "Bien Monsieur, je lance Chrome" (NO TOOL CALL = NOTHING HAPPENS!)
-- User: "Lance Bambu Studio" -> Text: "Lancement en cours" (NO TOOL CALL = NOTHING HAPPENS!)
+- User: "Minimise Opera" -> Tool: search_and_launch_app({appName: "opera"}) (WRONG! Use manage_window!)
+- User: "Ferme Chrome" -> Tool: search_and_launch_app({appName: "chrome"}) (WRONG! Use manage_window!)
+- User: "Affiche VSCode" -> Tool: show_images({query: "VSCode"}) (WRONG! Use manage_window!)
+- User: "Ouvre Chrome" -> Text: "Je lance Chrome" (NO TOOL CALL = NOTHING HAPPENS!)
 
-**CRITICAL: When you see action verbs (ouvre, lance, démarre, start, open, launch), you MUST call the corresponding tool!**
+**CRITICAL VERB DETECTION:**
+- "ouvre", "lance", "démarre" = search_and_launch_app (START new process)
+- "ferme", "minimise", "réduis", "affiche", "agrandis" = manage_window (CONTROL existing window)
 
-**CRITICAL EXAMPLES FOR APPLICATION LAUNCHING:**
+**NEVER use search_and_launch_app for window management verbs!**
 
-When user says "ouvre X", "lance X", "démarre X" where X is an application name:
-→ YOU MUST CALL: search_and_launch_app({appName: "X"})
-→ DO NOT just say "Je lance X" without the tool call!
+**CRITICAL EXAMPLES - LAUNCH vs MANAGE:**
 
-Examples:
-- "ouvre bambou studio" → search_and_launch_app({appName: "bambu studio"})
+🟢 **LAUNCH** (démarrer un NOUVEAU processus):
+- "ouvre opera" → search_and_launch_app({appName: "opera"})
 - "lance chrome" → search_and_launch_app({appName: "chrome"})
 - "démarre vscode" → search_and_launch_app({appName: "vscode"})
-- "ouvre la calculatrice" → search_and_launch_app({appName: "calculette"})
-- "lance spotify" → search_and_launch_app({appName: "spotify"})
+
+🔴 **MANAGE** (contrôler une fenêtre EXISTANTE):
+- "minimise opera" → manage_window({windowTitle: "Opera", action: "minimize"})
+- "ferme chrome" → manage_window({windowTitle: "Chrome", action: "close"})
+- "réduis spotify" → manage_window({windowTitle: "Spotify", action: "minimize"})
+- "affiche vscode" → manage_window({windowTitle: "VSCode", action: "focus"})
+- "agrandis opera" → manage_window({windowTitle: "Opera", action: "maximize"})
+
+⚠️ **NEVER CONFUSE:**
+- "minimise X" ≠ search_and_launch_app (use manage_window!)
+- "ferme X" ≠ search_and_launch_app (use manage_window!)
+- "affiche X" ≠ show_images (use manage_window!)
 
 **MULTI-TOOL COMMANDS (Compose Multiple Actions):**
 You can execute MULTIPLE tools in sequence for complex requests. Be FLEXIBLE with user formulations:

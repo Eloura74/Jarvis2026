@@ -269,6 +269,10 @@ export function useJarvisBrain({
             `💬 [BRAIN] Intent: Mixed (Talk + Action)`,
             { text: result.text, tools: result.toolCalls }
           );
+          // Log détaillé des outils
+          result.toolCalls.forEach((tool, idx) => {
+            console.log(`  [${idx + 1}] Tool: ${tool.name}`, tool.args);
+          });
           addLog(`Intent: Mixed (Talk + Action)`, "OMNI", "info");
 
           // 1. Parler
@@ -277,9 +281,25 @@ export function useJarvisBrain({
             addConversationMessage("model", result.text);
 
           // 2. Exécuter les outils (ex: show_images)
-          for (const toolCall of result.toolCalls) {
+          for (let i = 0; i < result.toolCalls.length; i++) {
+            const toolCall = result.toolCalls[i];
+            console.log(
+              `⚙️ [KERNEL] [Mixed ${i + 1}/${result.toolCalls.length}] Executing: ${toolCall.name}`,
+              toolCall.args
+            );
             addLog(`Exec: ${toolCall.name}`, "KERNEL", "warning");
-            await executeTool(toolCall.name, toolCall.args);
+            
+            try {
+              const toolResult = await executeTool(toolCall.name, toolCall.args);
+              console.log(`✅ [KERNEL] Tool ${toolCall.name} completed:`, toolResult);
+            } catch (toolError) {
+              console.error(`❌ [KERNEL] Tool ${toolCall.name} failed:`, toolError);
+              addLog(
+                `Tool ${toolCall.name} failed: ${toolError instanceof Error ? toolError.message : String(toolError)}`,
+                "KERNEL",
+                "error"
+              );
+            }
           }
 
           setCommandHistory((prev) =>

@@ -169,39 +169,54 @@ export const handleSearchAndLaunchApp = async (
  * HANDLER 2: Gestion fenêtres
  */
 export const handleManageWindow = async (
-  args: { action: string; window_title: string },
+  args: { action: string; windowTitle: string },
   ctx: HandlerContext,
 ) => {
-  const { action, window_title } = args;
+  const { action, windowTitle } = args;
   const { addLog, setStatus } = ctx;
 
-  addLog(`Window action: ${action} on "${window_title}"`, "SYSTEM", "info");
+  addLog(`Window action: ${action} on "${windowTitle}"`, "SYSTEM", "info");
   setStatus(SystemStatus.EXECUTING);
 
   try {
+    let success = false;
+    
     switch (action) {
       case "focus":
-        await focusWindow(window_title);
+        success = await focusWindow(windowTitle);
         break;
       case "close":
-        await closeWindow(window_title);
+        success = await closeWindow(windowTitle);
         break;
       case "minimize":
-        await minimizeWindow(window_title);
+        success = await minimizeWindow(windowTitle);
         break;
       case "maximize":
-        await maximizeWindow(window_title);
+        success = await maximizeWindow(windowTitle);
         break;
       default:
         addLog(`Unknown window action: ${action}`, "SYSTEM", "error");
+        setStatus(SystemStatus.ERROR);
+        setTimeout(() => setStatus(SystemStatus.IDLE), 2000);
+        return { status: "error", message: `Unknown action: ${action}` };
     }
 
-    addLog(`Window ${action} successful`, "SYSTEM", "success");
-    setStatus(SystemStatus.IDLE);
+    if (success) {
+      addLog(`Window ${action} successful`, "SYSTEM", "success");
+      setStatus(SystemStatus.IDLE);
+      return { status: "success", message: `Window ${action} completed` };
+    } else {
+      addLog(`Window ${action} failed (window not found?)`, "SYSTEM", "warning");
+      setStatus(SystemStatus.ERROR);
+      setTimeout(() => setStatus(SystemStatus.IDLE), 2000);
+      return { status: "error", message: `Window "${windowTitle}" not found` };
+    }
   } catch (error) {
-    addLog(`Window action failed: ${error}`, "SYSTEM", "error");
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    addLog(`Window action failed: ${errorMsg}`, "SYSTEM", "error");
     setStatus(SystemStatus.ERROR);
     setTimeout(() => setStatus(SystemStatus.IDLE), 2000);
+    return { status: "error", message: errorMsg };
   }
 };
 
