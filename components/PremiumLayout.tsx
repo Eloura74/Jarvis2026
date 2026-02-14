@@ -19,6 +19,7 @@ import { NetworkWidget } from "./NetworkWidget";
 import { CameraWidget } from "./CameraWidget";
 import { HomeControlWidget } from "./HomeControlWidget";
 import { FileExplorer } from "./FileExplorer";
+import { SystemStatusWidget } from "./SystemStatusWidget";
 
 interface PremiumLayoutProps {
   status: "idle" | "listening" | "processing" | "speaking";
@@ -92,85 +93,23 @@ export const PremiumLayout: React.FC<PremiumLayoutProps> = ({
       {/* ========================================
           MAIN HUD LAYER (Interactive) - RESPONSIVE
           ======================================== */}
-      <div className="relative z-10 w-full min-h-screen grid 
+      <div
+        className="relative z-10 w-full min-h-screen grid 
                       grid-cols-1 
                       md:grid-cols-[300px_1fr] 
                       xl:grid-cols-[350px_1fr_350px] 
                       p-3 md:p-4 xl:p-6 
                       gap-3 md:gap-4 xl:gap-6 
-                      pointer-events-none">
+                      pointer-events-none"
+      >
         {/* === LEFT COLUMN === */}
         <div className="flex flex-col gap-3 md:gap-4 xl:gap-6 pointer-events-auto z-20">
           {/* SYSTEM STATUS PANEL */}
-          <motion.div
-            initial={{ x: -100, opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            transition={{ duration: 0.8, ease: "easeOut" }}
-            className="jarvis-panel-glass p-4 rounded-2xl border border-cyan-400/30 bg-black/20 backdrop-blur-xl relative overflow-hidden group hover:border-cyan-400/50 transition-all duration-500 shadow-[0_0_20px_rgba(0,229,255,0.1)]"
-          >
-            <div className="absolute inset-0 bg-gradient-to-br from-cyan-400/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold tracking-widest text-cyan-300 drop-shadow-[0_0_5px_rgba(0,229,255,0.8)]">
-                SYS.STATUS
-              </h2>
-              <div className="w-2 h-2 bg-cyan-400 rounded-full animate-pulse shadow-[0_0_10px_#00e5ff]" />
-            </div>
-
-            <div className="space-y-4">
-              {/* CPU */}
-              <div>
-                <div className="flex justify-between text-xs mb-1 opacity-90 tracking-wider text-cyan-200">
-                  <span>CPU LOAD</span>
-                  <span className="text-cyan-300 font-bold">{cpuUsage}%</span>
-                </div>
-                <div className="h-1 bg-cyan-900/30 rounded-full overflow-hidden">
-                  <motion.div
-                    initial={{ width: 0 }}
-                    animate={{ width: `${cpuUsage}%` }}
-                    className="h-full bg-cyan-400 shadow-[0_0_10px_#00e5ff]"
-                  />
-                </div>
-              </div>
-
-              {/* MEMORY */}
-              <div>
-                <div className="flex justify-between text-xs mb-1 opacity-90 tracking-wider text-cyan-200">
-                  <span>RAM USAGE</span>
-                  <span className="text-cyan-300 font-bold">{memoryUsage}</span>
-                </div>
-                <div className="h-1 bg-cyan-900/30 rounded-full overflow-hidden">
-                  <motion.div
-                    initial={{ width: 0 }}
-                    animate={{ width: `${parseFloat(memoryUsage)}%` }} // Adjust max as needed
-                    className="h-full bg-cyan-400 shadow-[0_0_10px_#00e5ff]"
-                  />
-                </div>
-              </div>
-
-              {/* PROCESSES */}
-              <div className="flex justify-between items-center border-t border-cyan-400/30 pt-4">
-                <span className="text-xs opacity-90 tracking-wider text-cyan-200">
-                  ACTIVE PROCESSES
-                </span>
-                <span className="text-xl font-bold text-cyan-300 drop-shadow-[0_0_5px_rgba(0,229,255,0.5)]">
-                  {processes}
-                </span>
-              </div>
-            </div>
-
-            {/* DECORATIVE CORNER */}
-            <div className="absolute top-0 right-0 p-2 opacity-80">
-              <svg width="20" height="20" viewBox="0 0 20 20">
-                <path
-                  d="M0 0 L20 0 L20 20"
-                  fill="none"
-                  stroke="#00e5ff"
-                  strokeWidth="2"
-                />
-              </svg>
-            </div>
-          </motion.div>
+          <SystemStatusWidget
+            cpuUsage={cpuUsage}
+            memoryUsage={memoryUsage}
+            processes={processes}
+          />
 
           {/* WEATHER WIDGET */}
           <motion.div
@@ -217,15 +156,23 @@ export const PremiumLayout: React.FC<PremiumLayoutProps> = ({
         </div>
 
         {/* === CENTER COLUMN (HUD) - RESPONSIVE === */}
-        <div className="relative flex items-center justify-center 
+        <div
+          className="relative flex items-center justify-center 
                         order-1 md:order-2
-                        min-h-[400px] md:min-h-[500px] xl:min-h-0">
+                        min-h-[400px] md:min-h-[500px] xl:min-h-0"
+        >
           {/* CENTRAL HUD - Taille adaptative */}
           <div className="absolute inset-0 flex items-center justify-center z-0">
-            <JarvisHUDAuthentic 
-              status={status} 
-              size={typeof window !== 'undefined' && window.innerWidth < 768 ? 300 : window.innerWidth < 1280 ? 400 : 600} 
-              showDetails={true} 
+            <JarvisHUDAuthentic
+              status={status}
+              size={
+                typeof window !== "undefined" && window.innerWidth < 768
+                  ? 300
+                  : window.innerWidth < 1280
+                    ? 400
+                    : 600
+              }
+              showDetails={true}
             />
           </div>
 
@@ -235,7 +182,13 @@ export const PremiumLayout: React.FC<PremiumLayoutProps> = ({
               isActive={status === "speaking"}
               isListening={isListening || status === "listening"}
               audioLevel={status === "speaking" ? 80 : 0}
-              size={typeof window !== 'undefined' && window.innerWidth < 768 ? 500 : window.innerWidth < 1280 ? 650 : 850}
+              size={
+                typeof window !== "undefined" && window.innerWidth < 768
+                  ? 500
+                  : window.innerWidth < 1280
+                    ? 650
+                    : 850
+              }
               baseColor="#00e5ff"
               activeColor="#00e5ff"
             />
@@ -303,10 +256,12 @@ export const PremiumLayout: React.FC<PremiumLayoutProps> = ({
         </div>
 
         {/* === RIGHT COLUMN - RESPONSIVE === */}
-        <div className="flex flex-col gap-3 md:gap-4 pointer-events-auto 
+        <div
+          className="flex flex-col gap-3 md:gap-4 pointer-events-auto 
                         md:h-[90vh] mt-0 md:mt-8 z-20 
                         order-2 md:order-3
-                        xl:order-3">
+                        xl:order-3"
+        >
           {/* DATE & TIME PANEL */}
           <motion.div
             initial={{ x: 100, opacity: 0 }}
