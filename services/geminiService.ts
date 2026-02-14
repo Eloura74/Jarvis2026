@@ -522,6 +522,16 @@ const toolDeclarations: FunctionDeclaration[] = [
       required: ["target", "action"],
     },
   },
+  // OUTIL 16 : Arrêt de l'écoute / Fin de conversation
+  {
+    name: "stop_listening",
+    description:
+      "Call this tool when the user says 'goodbye', 'stop', 'thank you', or indicates they are done. This will stop the microphone loop.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {},
+    },
+  },
 ];
 
 // ============================================================================

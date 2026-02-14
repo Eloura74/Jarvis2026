@@ -31,7 +31,9 @@ interface UseJarvisBrainProps {
   addConversationMessage?: (role: "user" | "model", text: string) => void;
   getConversationContext?: () => string;
   // NOUVEAU : Mode Visuel
+  // NOUVEAU : Mode Visuel
   setVisualMode?: (query: string | null, isVisible: boolean) => void;
+  stopConversation?: () => void;
 }
 
 export function useJarvisBrain({
@@ -45,6 +47,7 @@ export function useJarvisBrain({
   addConversationMessage,
   getConversationContext,
   setVisualMode,
+  stopConversation,
 }: UseJarvisBrainProps) {
   const [commandHistory, setCommandHistory] = useState<CommandInfo[]>([]);
   const [successTrigger, setSuccessTrigger] = useState(0);
@@ -53,12 +56,13 @@ export function useJarvisBrain({
   // EXÉCUTION DES OUTILS
   // ========================================
   const executeTool = async (toolName: string, toolArgs: any) => {
-    // Contexte commun (avec speak pour Vision)
+    // Contexte commun (avec speak pour Vision et stopConversation)
     const ctx: HandlerContext & { speak?: (text: string) => void } = {
       addLog,
       setStatus,
       setVisualMode,
       speak,
+      stopConversation,
     };
 
     // Dépendances additionnelles
@@ -150,6 +154,18 @@ export function useJarvisBrain({
           // Import dynamique pour éviter les cycles ou chargement immédiat
           const { handleControlHomeAutomation } = await import("../handlers");
           return await handleControlHomeAutomation(toolArgs, ctx);
+
+        // === CONVERSATION CONTROL ===
+        case "stop_listening":
+          if (ctx.stopConversation) {
+            ctx.stopConversation();
+            addLog("Conversation terminée par l'IA", "SYSTEM", "info");
+            return { status: "success", message: "Conversation stoppée." };
+          }
+          return {
+            status: "warning",
+            message: "Impossible d'arrêter (fonction manquante).",
+          };
 
         default:
           addLog(`⚠ Unknown tool: "${toolName}"`, "SYSTEM", "error");

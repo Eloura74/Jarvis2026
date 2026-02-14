@@ -116,6 +116,16 @@ export function useJarvisInteraction({
           "merci c'est tout",
           "terminé",
           "arrête",
+          "a bientôt",
+          "à bientôt",
+          "bye",
+          "adieu",
+          "c'est bon",
+          "ça suffira",
+          "repos",
+          "pause",
+          "ferme ta gueule",
+          "stop",
         ];
         if (END_KEYWORDS.some((k) => text.toLowerCase().includes(k))) {
           setConversationMode(false);

@@ -39,4 +39,5 @@ export interface HandlerContext {
   ) => void;
   setStatus: (status: SystemStatus) => void;
   setVisualMode?: (query: string | null, isVisible: boolean) => void; // Optionnel pour compatibilité
+  stopConversation?: () => void; // NOUVEAU : Pour arrêter la boucle d'écoute
 }
