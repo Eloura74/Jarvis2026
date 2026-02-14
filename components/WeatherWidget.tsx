@@ -105,38 +105,37 @@ export const WeatherWidget: React.FC = () => {
   };
 
   /**
-   * Retourne l'URL de l'image de fond depuis Unsplash source
-   * Utilisation de source.unsplash.com pour des images aléatoires de haute qualité sur un thème précis
+   * Retourne l'URL de l'image de fond locale (générée par IA)
+   * Garantit une stabilité et un design premium JARVIS.
    */
   const getBackgroundImage = () => {
-    if (!weather)
-      return "https://images.unsplash.com/photo-1478760329108-5c3ed9d495a0?q=80&w=1000&auto=format&fit=crop"; // Sombre par défaut
+    if (!weather) return "/weather/clear.png";
 
     const condition = weather.condition.toLowerCase();
 
     // ORAGE
     if (condition.includes("orage") || condition.includes("thunder")) {
-      return "https://images.unsplash.com/photo-1605727216801-e27ce1d0cc28?q=80&w=1000&auto=format&fit=crop";
+      return "/weather/clouds.png"; // Fallback sur clouds si thunder manquant
     }
     // PLUIE
     if (condition.includes("pluie") || condition.includes("rain")) {
-      return "https://images.unsplash.com/photo-1515694346937-94d85e41e6f0?q=80&w=1000&auto=format&fit=crop";
+      return "/weather/rain.png";
     }
     // NEIGE
     if (condition.includes("neige") || condition.includes("snow")) {
-      return "https://images.unsplash.com/photo-1491002052546-bf38f186af56?q=80&w=1000&auto=format&fit=crop";
+      return "/weather/clouds.png"; // Fallback
     }
     // NUAGES
     if (condition.includes("nuage") || condition.includes("cloud")) {
-      return "https://images.unsplash.com/photo-1534088568595-a066f410bcda?q=80&w=1000&auto=format&fit=crop";
+      return "/weather/clouds.png";
     }
-    // BRUME
+    // BRUME / BROUILLARD
     if (
       condition.includes("brume") ||
       condition.includes("mist") ||
       condition.includes("fog")
     ) {
-      return "https://images.unsplash.com/photo-1487621167305-5d248087c724?q=80&w=1000&auto=format&fit=crop";
+      return "/weather/clouds.png";
     }
     // SOLEIL / CLAIR
     if (
@@ -144,10 +143,10 @@ export const WeatherWidget: React.FC = () => {
       condition.includes("clear") ||
       condition.includes("sun")
     ) {
-      return "https://images.unsplash.com/photo-1541119638723-c51cbe2262ae?q=80&w=1000&auto=format&fit=crop"; // Ciel bleu sans trop de soleil direct pour lisibilité
+      return "/weather/clear.png";
     }
 
-    return "https://images.unsplash.com/photo-1513002749550-c59d786b8e6c?q=80&w=1000&auto=format&fit=crop"; // Ciel par défaut
+    return "/weather/clear.png"; // Par défaut
   };
 
   // ========================================

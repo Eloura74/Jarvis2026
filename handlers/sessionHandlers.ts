@@ -4,20 +4,25 @@
 
 import { HandlerContext } from "../types/app.types";
 import { SystemStatus } from "../types";
+import { controlPowerOnBackend } from "../services/backendApi";
 
 /**
  * Verrouiller la session Windows
  */
-export const handleLockSession = async (args: {}, ctx: HandlerContext) => {
+export const handleLockSession = async (_args: {}, ctx: HandlerContext) => {
   const { addLog, setStatus } = ctx;
 
   setStatus(SystemStatus.EXECUTING);
   addLog("Locking session...", "SYSTEM", "info");
 
-  // PowerShell: rundll32.exe user32.dll,LockWorkStation
-  // Backend call
+  const success = await controlPowerOnBackend("lock");
 
-  addLog("Session locked", "SYSTEM", "success");
+  if (success) {
+    addLog("Session locked", "SYSTEM", "success");
+  } else {
+    addLog("Failed to lock session", "SYSTEM", "error");
+  }
+
   setStatus(SystemStatus.IDLE);
 };
 
@@ -34,9 +39,14 @@ export const handleShutdownSystem = async (
   setStatus(SystemStatus.EXECUTING);
   addLog(`Shutdown scheduled in ${delay}s`, "SYSTEM", "warning");
 
-  // PowerShell: shutdown /s /t {delay}
+  const success = await controlPowerOnBackend("shutdown", delay);
 
-  addLog("Shutdown initiated", "SYSTEM", "success");
+  if (success) {
+    addLog("Shutdown initiated", "SYSTEM", "success");
+  } else {
+    addLog("Failed to initiate shutdown", "SYSTEM", "error");
+  }
+
   setStatus(SystemStatus.IDLE);
 };
 
@@ -53,23 +63,33 @@ export const handleRestartSystem = async (
   setStatus(SystemStatus.EXECUTING);
   addLog(`Restart scheduled in ${delay}s`, "SYSTEM", "warning");
 
-  // PowerShell: shutdown /r /t {delay}
+  const success = await controlPowerOnBackend("restart", delay);
 
-  addLog("Restart initiated", "SYSTEM", "success");
+  if (success) {
+    addLog("Restart initiated", "SYSTEM", "success");
+  } else {
+    addLog("Failed to initiate restart", "SYSTEM", "error");
+  }
+
   setStatus(SystemStatus.IDLE);
 };
 
 /**
  * Mettre en veille
  */
-export const handleSleepSystem = async (args: {}, ctx: HandlerContext) => {
+export const handleSleepSystem = async (_args: {}, ctx: HandlerContext) => {
   const { addLog, setStatus } = ctx;
 
   setStatus(SystemStatus.EXECUTING);
   addLog("Entering sleep mode...", "SYSTEM", "info");
 
-  // PowerShell: rundll32.exe powrprof.dll,SetSuspendState 0,1,0
+  const success = await controlPowerOnBackend("sleep");
 
-  addLog("Sleep mode activated", "SYSTEM", "success");
+  if (success) {
+    addLog("Sleep mode activated", "SYSTEM", "success");
+  } else {
+    addLog("Failed to enter sleep mode", "SYSTEM", "error");
+  }
+
   setStatus(SystemStatus.IDLE);
 };

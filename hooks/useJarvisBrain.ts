@@ -88,28 +88,24 @@ export function useJarvisBrain({
         case "keyboard_automation":
           return await handlers.handleKeyboardAutomation(toolArgs, ctx);
 
-        // === SESSION ===
-        case "lock_session":
-          return await handlers.handleLockSession({}, ctx);
-        case "shutdown_system":
-          return await handlers.handleShutdownSystem({}, ctx);
-        case "restart_system":
-          return await handlers.handleRestartSystem({}, ctx);
-        case "sleep_system":
-          return await handlers.handleSleepSystem({}, ctx);
-
-        // === OPTIMIZATION ===
-        case "system_optimization":
-          addLog("Optimisation système simulée...", "SYSTEM", "success");
-          return { status: "success", message: "Optimisation terminée" };
-
-        // === MEDIA ===
+        // === MEDIA & VOLUME ===
         case "adjust_volume":
           return await handlers.handleAdjustVolume(toolArgs, ctx);
-        case "control_media":
-          return await handlers.handleControlMedia(toolArgs, ctx);
         case "take_screenshot":
           return await handlers.handleTakeScreenshot({}, ctx);
+
+        // === SESSION ===
+        case "control_session":
+          const { action: sessionAction } = toolArgs;
+          if (sessionAction === "lock")
+            return await handlers.handleLockSession({}, ctx);
+          if (sessionAction === "shutdown")
+            return await handlers.handleShutdownSystem(toolArgs, ctx);
+          if (sessionAction === "restart")
+            return await handlers.handleRestartSystem(toolArgs, ctx);
+          if (sessionAction === "sleep")
+            return await handlers.handleSleepSystem({}, ctx);
+          return null;
 
         // === FILES ===
         case "create_file":
@@ -243,6 +239,8 @@ export function useJarvisBrain({
           trackCommand(text);
 
           // Exécution séquentielle de tous les outils
+          let hasSpokenSummary = false;
+
           for (let i = 0; i < result.toolCalls.length; i++) {
             const toolCall = result.toolCalls[i];
             console.log(
@@ -285,7 +283,11 @@ export function useJarvisBrain({
                   (toolResult as any).data,
                 );
                 console.log(`🗣️ [BRAIN] Summary generated:`, summary);
-                speak(summary);
+
+                // On utilise la file d'attente si Monsieur a déjà commencé à parler
+                speak(summary, hasSpokenSummary);
+                hasSpokenSummary = true;
+
                 if (addConversationMessage)
                   addConversationMessage("model", summary);
               }
@@ -314,13 +316,17 @@ export function useJarvisBrain({
                 : c,
             ),
           );
-          const successMsg =
-            toolCount > 1
-              ? `${toolCount} commandes exécutées avec succès.`
-              : "Commande exécutée avec succès.";
-          speak(successMsg);
-          if (addConversationMessage)
-            addConversationMessage("model", successMsg);
+
+          // Si on n'a pas de résumé intelligent, on dit le message de succès classique
+          if (!hasSpokenSummary) {
+            const successMsg =
+              toolCount > 1
+                ? `${toolCount} commandes exécutées avec succès.`
+                : "Commande exécutée avec succès.";
+            speak(successMsg);
+            if (addConversationMessage)
+              addConversationMessage("model", successMsg);
+          }
         }
         // CAS 2 : RÉPONSE MIXTE (Texte + Outils) - NOUVEAU
         else if (

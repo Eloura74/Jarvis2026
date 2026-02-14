@@ -48,7 +48,10 @@ export async function searchAppOnBackend(query: string): Promise<any[]> {
  * @param path - Chemin de l'application
  * @param args - Arguments optionnels (ex: URL pour navigateur)
  */
-export async function launchAppOnBackend(path: string, args?: string[]): Promise<boolean> {
+export async function launchAppOnBackend(
+  path: string,
+  args?: string[],
+): Promise<boolean> {
   try {
     const response = await fetch(`${BACKEND_URL}/api/launch`, {
       method: "POST",
@@ -66,6 +69,66 @@ export async function launchAppOnBackend(path: string, args?: string[]): Promise
     return data.success;
   } catch (error) {
     console.error("Backend launch error:", error);
+    return false;
+  }
+}
+
+/**
+ * Contrôle le volume système via le backend
+ * @param action - 'increase', 'decrease', 'set', 'mute', 'unmute'
+ * @param value - Valeur optionnelle (0-100)
+ */
+export async function controlVolumeOnBackend(
+  action: string,
+  value?: number,
+): Promise<boolean> {
+  try {
+    const response = await fetch(`${BACKEND_URL}/api/system/volume`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action, value }),
+    });
+    return response.ok;
+  } catch (error) {
+    console.error("Backend volume error:", error);
+    return false;
+  }
+}
+
+/**
+ * Prend une capture d'écran via le backend
+ */
+export async function takeScreenshotOnBackend(): Promise<string | null> {
+  try {
+    const response = await fetch(`${BACKEND_URL}/api/system/screenshot`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    });
+    const data = await response.json();
+    return data.success ? data.path : null;
+  } catch (error) {
+    console.error("Backend screenshot error:", error);
+    return null;
+  }
+}
+
+/**
+ * Contrôle l'alimentation/session via le backend
+ */
+export async function controlPowerOnBackend(
+  action: string,
+  delay?: number,
+): Promise<boolean> {
+  try {
+    const response = await fetch(`${BACKEND_URL}/api/system/power`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action, delay }),
+    });
+    return response.ok;
+  } catch (error) {
+    console.error("Backend power error:", error);
     return false;
   }
 }
