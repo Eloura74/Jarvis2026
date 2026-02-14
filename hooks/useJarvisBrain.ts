@@ -264,6 +264,31 @@ export function useJarvisBrain({
                 `✅ [KERNEL] Tool ${toolCall.name} completed:`,
                 toolResult,
               );
+
+              // NOUVEAU : Si l'outil retourne des données riches (ex: gmail_read), on demande une synthèse
+              const isRichTool =
+                toolCall.name.startsWith("gmail") ||
+                toolCall.name.startsWith("calendar");
+              if (
+                toolResult &&
+                typeof toolResult === "object" &&
+                "data" in toolResult &&
+                isRichTool
+              ) {
+                console.log(
+                  `🤖 [BRAIN] Generating intelligent summary for ${toolCall.name}...`,
+                );
+                const { summarizeToolResults } =
+                  await import("../services/geminiService");
+                const summary = await summarizeToolResults(
+                  toolCall.name,
+                  (toolResult as any).data,
+                );
+                console.log(`🗣️ [BRAIN] Summary generated:`, summary);
+                speak(summary);
+                if (addConversationMessage)
+                  addConversationMessage("model", summary);
+              }
             } catch (toolError) {
               console.error(
                 `❌ [KERNEL] Tool ${toolCall.name} failed:`,
@@ -336,6 +361,31 @@ export function useJarvisBrain({
                 `✅ [KERNEL] Tool ${toolCall.name} completed:`,
                 toolResult,
               );
+
+              // NOUVEAU : Synthèse intelligente pour les réponses mixtes aussi
+              const isRichTool =
+                toolCall.name.startsWith("gmail") ||
+                toolCall.name.startsWith("calendar");
+              if (
+                toolResult &&
+                typeof toolResult === "object" &&
+                "data" in toolResult &&
+                isRichTool
+              ) {
+                console.log(
+                  `🤖 [BRAIN] Generating intelligent summary for ${toolCall.name} (Mixed mode)...`,
+                );
+                const { summarizeToolResults } =
+                  await import("../services/geminiService");
+                const summary = await summarizeToolResults(
+                  toolCall.name,
+                  (toolResult as any).data,
+                );
+                console.log(`🗣️ [BRAIN] Summary generated:`, summary);
+                speak(summary);
+                if (addConversationMessage)
+                  addConversationMessage("model", summary);
+              }
             } catch (toolError) {
               console.error(
                 `❌ [KERNEL] Tool ${toolCall.name} failed:`,

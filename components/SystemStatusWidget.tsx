@@ -155,8 +155,9 @@ export const SystemStatusWidget: React.FC<SystemStatusWidgetProps> = ({
             <ResponsiveContainer
               width="100%"
               height="100%"
-              minWidth={0}
-              minHeight={0}
+              minWidth={100}
+              minHeight={32}
+              debounce={100}
             >
               <AreaChart
                 data={cpuData}
@@ -204,8 +205,9 @@ export const SystemStatusWidget: React.FC<SystemStatusWidgetProps> = ({
             <ResponsiveContainer
               width="100%"
               height="100%"
-              minWidth={0}
-              minHeight={0}
+              minWidth={100}
+              minHeight={32}
+              debounce={100}
             >
               <AreaChart
                 data={memData}

@@ -37,7 +37,9 @@ export function useJarvisInteraction({
 
   // Refs pour gestion asynchrone
   const lastMicActivationTime = useRef<number>(0);
+  const lastSpeechEndTime = useRef<number>(0); // NOUVEAU : Traceur de fin de parole
   const isSpeakingRef = useRef(false);
+  const isExitingRef = useRef(false); // NOUVEAU : Verrou pour éviter les boucles de fin
   const conversationModeRef = useRef(conversationMode);
   const onCommandRef = useRef(onCommandReceived);
 
@@ -61,27 +63,28 @@ export function useJarvisInteraction({
     onStart: async () => {
       isSpeakingRef.current = true;
       setStatus(SystemStatus.SPEAKING);
-      // console.log("🛑 Jarvis parle - Arrêt micro");
-
-      // Si on écoutait, on arrête proprement
-      if (isListening) {
-        await stopAndWait();
-      }
+      // console.log("🛑 J.A.R.V.I.S. parle");
+      // On ne coupe plus le micro ici pour permettre le "STOP" (Barge-in)
     },
     onEnd: () => {
       console.log("🔊 Fin parole Jarvis");
       setStatus(SystemStatus.IDLE);
+      lastSpeechEndTime.current = Date.now(); // Marquer le moment exact
 
-      // Redémarrage automatique si mode conversation
+      // Redémarrage automatique si mode conversation (avec sécurité renforcée)
       setTimeout(() => {
         isSpeakingRef.current = false;
 
-        if (conversationModeRef.current) {
+        // On ne redémarre PAS si on est en train de quitter
+        if (conversationModeRef.current && !isExitingRef.current) {
           console.log("🎤 Mode conversation : Réactivation micro");
           lastMicActivationTime.current = Date.now();
           startListening();
+        } else if (isExitingRef.current) {
+          console.log("👋 Fin de session confirmée, micro reste coupé.");
+          isExitingRef.current = false; // Reset pour la prochaine fois
         }
-      }, 1000);
+      }, 2000); // 2 secondes de sécurité au lieu de 1 pour l'écho
     },
   });
 
@@ -96,19 +99,10 @@ export function useJarvisInteraction({
   // ========================================
   // RECONNAISSANCE VOCALE
   // ========================================
-  const { isListening, toggleListening, startListening, stopAndWait } =
+  const { isListening, toggleListening, startListening, stopListening } =
     useVoiceRecognition(
       (text) => {
-        // 1. Filtrer si Jarvis parle
-        if (isSpeakingRef.current || window.speechSynthesis.speaking) {
-          return;
-        }
-        // 2. Période de sécurité (Echo cancellation)
-        if (Date.now() - lastMicActivationTime.current < 1500) {
-          return;
-        }
-
-        // 3. Gestion des Mots de fin de conversation et ARRÊT IMMEDIAT (Barge-in)
+        // 1. GESTION STOP PRIORITAIRE (Barge-in)
         const textLower = text.toLowerCase();
         const STOP_KEYWORDS = [
           "stop",
@@ -117,18 +111,42 @@ export function useJarvisInteraction({
           "tais-toi",
           "silence",
           "stoppe",
+          "annule",
         ];
 
-        // Si l'utilisateur dit STOP pendant que Jarvis parle : on coupe immédiatement
-        if (
-          STOP_KEYWORDS.some((k) => textLower.includes(k)) &&
-          (isSpeakingRef.current || window.speechSynthesis.speaking)
-        ) {
-          console.log("🛑 BARGE-IN: Interruption vocale demandée");
-          stopSpeech();
-          setStatus(SystemStatus.IDLE);
+        const isCurrentlySpeaking =
+          isSpeakingRef.current || window.speechSynthesis.speaking;
+
+        if (STOP_KEYWORDS.some((k) => textLower.includes(k))) {
+          if (isCurrentlySpeaking) {
+            console.log("🛑 BARGE-IN: Interruption vocale détectée");
+            stopSpeech();
+            isSpeakingRef.current = false;
+            setStatus(SystemStatus.IDLE);
+            addLog("🛑 Interruption vocale", "VOICE", "info");
+            return;
+          }
+        }
+
+        // 2. Filtrer si Jarvis parle (pour éviter qu'il ne s'écoute lui-même)
+        if (isCurrentlySpeaking) {
           return;
         }
+
+        // 3. Période de sécurité (Echo cancellation temporelle)
+        // On ignore tout résultat arrivant dans les 2s après que Jarvis ait fini de parler
+        const timeSinceSpeech = Date.now() - lastSpeechEndTime.current;
+        if (timeSinceSpeech < 2000) {
+          // console.log("⏳ Écho filtré (Security period)");
+          return;
+        }
+
+        if (Date.now() - lastMicActivationTime.current < 1500) {
+          return;
+        }
+
+        // Verrou de fin de conversation
+        if (isExitingRef.current) return;
 
         const END_KEYWORDS = [
           "au revoir",
@@ -143,10 +161,12 @@ export function useJarvisInteraction({
           "ça suffira",
           "repos",
           "pause",
-          "ferme ta gueule",
         ];
         if (END_KEYWORDS.some((k) => textLower.includes(k))) {
+          console.log("👋 Fin de conversation demandée");
+          isExitingRef.current = true;
           setConversationMode(false);
+          stopListening(); // 🛑 Coupe le micro immédiatement pour éviter l'écho
           speak("À bientôt !");
           addLog("👋 Mode conversation désactivé", "SYSTEM", "info");
           return;
@@ -156,11 +176,6 @@ export function useJarvisInteraction({
         if (!conversationMode) {
           setConversationMode(true);
           addLog("🎤 Mode conversation activé", "SYSTEM", "info");
-        }
-
-        // 5. Interruption de la parole de Jarvis pour une nouvelle commande (Barge-in standard)
-        if (isSpeakingRef.current || window.speechSynthesis.speaking) {
-          stopSpeech();
         }
 
         // 6. Transmission de la commande
@@ -176,6 +191,37 @@ export function useJarvisInteraction({
           // (Pour ne pas écraser PROCESSING ou SPEAKING)
           if (status === SystemStatus.LISTENING) {
             setStatus(SystemStatus.IDLE);
+          }
+        }
+      },
+      // onInterimTranscript (Pour réactivité instantanée du STOP)
+      (interimText) => {
+        const textLower = interimText.toLowerCase();
+        const STOP_KEYWORDS = [
+          "stop",
+          "arrête",
+          "arrête-toi",
+          "tais-toi",
+          "silence",
+          "stoppe",
+          "annule",
+        ];
+
+        if (STOP_KEYWORDS.some((k) => textLower.includes(k))) {
+          if (isSpeakingRef.current || window.speechSynthesis.speaking) {
+            console.log("⚡ BARGE-IN PRIORITAIRE: Interruption détectée");
+
+            // 1. Coupe la synthèse immédiatement
+            stopSpeech();
+            window.speechSynthesis.cancel(); // Double sécurité : vide la file d'attente browser
+
+            // 2. Reset l'état
+            isSpeakingRef.current = false;
+            setStatus(SystemStatus.IDLE);
+            addLog("🛑 Interruption immédiate", "VOICE", "info");
+
+            // 3. Forcer un silence (Optionnel : jouer un petit son de stop ?)
+            // return;
           }
         }
       },
@@ -244,11 +290,20 @@ export function useJarvisInteraction({
     }
   }, [isListening, toggleListening, disableWakeWord, startListening]);
 
+  // Fonction de clôture propre (utilisée par l'IA ou le local)
+  const stopFullConversation = useCallback(() => {
+    console.log("👋 Fermeture de la session de conversation");
+    isExitingRef.current = true;
+    setConversationMode(false);
+    // On ne dit rien ici, on laisse l'appelant décider s'il veut speak()
+  }, []);
+
   return {
     isListening,
     handleMicrophoneClick,
     speak,
     conversationMode,
     setConversationMode,
+    stopFullConversation, // NOUVEAU
   };
 }

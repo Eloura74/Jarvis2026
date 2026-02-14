@@ -47,6 +47,7 @@ interface UseVoiceRecognitionReturn {
 export function useVoiceRecognition(
   onTranscript: (text: string) => void,
   onStatusChange?: (listening: boolean) => void,
+  onInterimTranscript?: (text: string) => void,
 ): UseVoiceRecognitionReturn {
   const [isListening, setIsListening] = useState(false);
   const [isSupported, setIsSupported] = useState(false);
@@ -143,12 +144,26 @@ export function useVoiceRecognition(
                 );
               }
             }
-            // CAS 2 : Résultat INTERIM → preview uniquement
+            // CAS 2 : Résultat INTERIM → preview et commandes rapides
             else {
+              const confidence = lastResult[0].confidence || 0;
+
               // Éviter log spam (seulement si changement significatif)
               if (transcript !== lastInterimTranscript) {
-                // console.log(`🎤 Preview: "${transcript}"`);
+                // Log pour débug Monsieur : voir ce que Jarvis entend pendant qu'il parle
+                if (window.speechSynthesis.speaking) {
+                  console.log(
+                    `🎤 [SPEAKING] Conf: ${(confidence * 100).toFixed(0)}% | Entendu: "${transcript}"`,
+                  );
+                }
+
                 lastInterimTranscript = transcript;
+
+                // Envoi transcription intermédiaire au parent
+                // On accepte un niveau de confiance plus bas pour le STOP (priorité réactivité)
+                if (onInterimTranscript) {
+                  onInterimTranscript(transcript);
+                }
               }
             }
           };

@@ -15,8 +15,8 @@ import cors from "cors";
 import dotenv from "dotenv";
 import path from "path";
 
-// Charger les variables d'environnement (.env.local dans le dossier server ou racine)
-dotenv.config({ path: path.join(process.cwd(), ".env.local") });
+// Charger les variables d'environnement (.env.local)
+dotenv.config({ path: "./.env.local" });
 import { spawn } from "child_process";
 import {
   indexApplications,
@@ -1018,6 +1018,10 @@ initializeIndex().then(() => {
     console.log(`   POST /api/windows/maximize    - Maximize window`);
     console.log(`   POST /api/automation/type     - Type text`);
     console.log(`   POST /api/automation/shortcut - Send shortcut`);
+    console.log(`   GET  /api/google/auth-url     - Get Google Auth URL`);
+    console.log(`   GET  /api/google/callback     - Google OAuth callback`);
+    console.log(`   GET  /api/google/gmail/list   - List recent emails`);
+    console.log(`   GET  /api/google/calendar/events - List calendar events`);
     console.log(`\n🎯 Ready to serve requests!`);
     console.log(
       `🛡️  Global error handlers active - server crash protection enabled\n`,

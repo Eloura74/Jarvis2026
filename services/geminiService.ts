@@ -294,6 +294,14 @@ When user wants to search something on a specific platform, build the appropriat
   → Tool: gmail_send({to: "email@example.com", subject: "Sujet", body: "Contenu"})
 - **Check Calendar**: "quels sont mes rendez-vous", "mon agenda d'aujourd'hui", "qu'est-ce que j'ai de prévu"
   → Tool: calendar_list({maxResults: 10})
+
+**STYLE FOR GOOGLE SERVICES (MANDATORY):**
+- **EMAIL SUMMARIES**: NEVER read the full email address.
+  * ✅ Say: "Un mail de Thomas" (sender's name only)
+  * ❌ NEVER say: "thomas.martin.78@gmail.com"
+  * Summarize the core message in 10-15 words.
+- **CALENDAR**: Group events by time of day (morning, afternoon). Stay brief.
+- **TONE**: Keep it natural, like a real assistant giving a quick briefing.
 `;
 
 // ============================================================================
@@ -693,8 +701,47 @@ export const parseCommand = async (
     console.error("OMNI Core Error:", error);
     return {
       type: "ERROR",
-      text: "Connection to Stark Servers failed.",
+      text: "Error in Neural Core process.",
       confidence: 0,
     };
+  }
+};
+
+/**
+ * Synthétise les résultats bruts d'un outil en une réponse naturelle
+ * @param toolName - Nom de l'outil exécuté
+ * @param resultData - Données retournées par l'outil
+ * @returns Texte de synthèse prêt à être lu par JARVIS
+ */
+export const summarizeToolResults = async (
+  toolName: string,
+  resultData: any,
+): Promise<string> => {
+  try {
+    const prompt = `Summarize these results from the tool '${toolName}' naturally for Monsieur. 
+    DATA: ${JSON.stringify(resultData)}
+    
+    RULES:
+    - BE EXTREMELY CONCISE.
+    - NEVER read full email addresses (e.g. news@travelton.com -> Travelton).
+    - Focus on human names and core subjects.
+    - 1-2 sentences maximum for the whole summary.
+    - Language: French.`;
+
+    const response = await ai.models.generateContent({
+      model: "gemini-2.0-flash",
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
+      config: {
+        temperature: 0.1,
+      },
+    });
+
+    return (
+      response.candidates?.[0].content?.parts?.[0].text ||
+      "Commande exécutée, Monsieur."
+    );
+  } catch (err) {
+    console.error("Summarization error:", err);
+    return "J'ai les résultats, Monsieur. Voulez-vous que je les affiche ?";
   }
 };

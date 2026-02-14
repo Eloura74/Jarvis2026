@@ -126,7 +126,7 @@ const JarvisShell: React.FC = () => {
     setVisualMode, // NOUVEAU
     addConversationMessage, // NOUVEAU
     getConversationContext, // NOUVEAU
-    stopConversation: () => interaction.setConversationMode(false), // NOUVEAU : Arrêt de la boucle conversationnelle
+    stopConversation: interaction.stopFullConversation, // NOUVEAU : Arrêt sécurisé de la boucle
   });
 
   brainRef.current = brain;

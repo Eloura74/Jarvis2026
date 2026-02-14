@@ -11,7 +11,7 @@ export async function handleGmailRead(
   args: { max?: number },
   ctx: HandlerContext,
 ) {
-  const { addLog, speak } = ctx;
+  const { addLog } = ctx;
   const max = args.max || 3;
 
   try {
@@ -25,17 +25,14 @@ export async function handleGmailRead(
 
     const emails = data.emails;
     if (emails.length === 0) {
-      speak("Vous n'avez aucun nouveau message.");
-      return { status: "success", message: "Aucun email trouvé" };
+      return { status: "success", message: "Aucun email trouvé", data: [] };
     }
 
-    let summary = `Vous avez ${emails.length} nouveaux messages. `;
-    emails.forEach((email: any, i: number) => {
-      summary += `Message ${i + 1} de ${email.from}, sujet : ${email.subject}. `;
+    // On ne "speak" plus ici, on laisse le brain générer une synthèse intelligente via Gemini
+    emails.forEach((email: any) => {
       addLog(`Email de ${email.from}: ${email.subject}`, "GMAIL", "info");
     });
 
-    speak(summary);
     return { status: "success", data: emails };
   } catch (error: any) {
     addLog(
@@ -43,7 +40,6 @@ export async function handleGmailRead(
       "SYSTEM",
       "error",
     );
-    speak("Désolé, je n'ai pas pu consulter vos emails.");
     throw error;
   }
 }
@@ -55,7 +51,7 @@ export async function handleGmailSend(
   args: { to: string; subject: string; body: string },
   ctx: HandlerContext,
 ) {
-  const { addLog, speak } = ctx;
+  const { addLog } = ctx;
   const { to, subject, body } = args;
 
   try {
@@ -72,15 +68,13 @@ export async function handleGmailSend(
 
     if (data.error) throw new Error(data.error);
 
-    speak(`C'est fait, le mail a été envoyé à ${to}.`);
-    return { status: "success", message: "Email envoyé" };
+    return { status: "success", message: "Email envoyé", data: { to } };
   } catch (error: any) {
     addLog(
       `Erreur envoi Gmail: ${error.message || String(error)}`,
       "SYSTEM",
       "error",
     );
-    speak("Désolé, je n'ai pas pu envoyer l'email.");
     throw error;
   }
 }
@@ -92,7 +86,7 @@ export async function handleCalendarList(
   args: { max?: number },
   ctx: HandlerContext,
 ) {
-  const { addLog, speak } = ctx;
+  const { addLog } = ctx;
   const max = args.max || 5;
 
   try {
@@ -106,26 +100,18 @@ export async function handleCalendarList(
 
     const events = data.events;
     if (events.length === 0) {
-      speak("Votre agenda est vide pour le moment.");
-      return { status: "success", message: "Aucun évènement" };
+      return { status: "success", message: "Aucun évènement", data: [] };
     }
 
-    let summary = `Vous avez ${events.length} évènements prévus. `;
     events.forEach((event: any) => {
       const date = new Date(event.start).toLocaleDateString("fr-FR", {
         weekday: "long",
         day: "numeric",
         month: "long",
       });
-      const time = new Date(event.start).toLocaleTimeString("fr-FR", {
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-      summary += `${event.summary}, le ${date} à ${time}. `;
       addLog(`RDV: ${event.summary} (${date})`, "CALENDAR", "info");
     });
 
-    speak(summary);
     return { status: "success", data: events };
   } catch (error: any) {
     addLog(
@@ -133,7 +119,6 @@ export async function handleCalendarList(
       "SYSTEM",
       "error",
     );
-    speak("Je n'ai pas pu accéder à votre calendrier.");
     throw error;
   }
 }
