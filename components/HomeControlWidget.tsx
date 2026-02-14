@@ -155,10 +155,20 @@ export const HomeControlWidget: React.FC = () => {
     <motion.div
       initial={false}
       animate={{ width: isOpen ? 340 : 60 }}
-      className="relative h-full jarvis-panel-glass bg-black/60 border border-cyan-400/30 overflow-hidden flex flex-row rounded-xl transition-all duration-500 shadow-[0_0_20px_rgba(0,229,255,0.15)] backdrop-blur-md"
+      className="relative h-full jarvis-panel-glass overflow-hidden flex flex-row rounded-xl transition-all duration-500 shadow-[0_0_20px_rgba(0,229,255,0.15)] group hover:border-cyan-400/50 border border-cyan-400/30"
     >
+      {/* BACKGROUND IMAGE */}
+      <div className="absolute inset-0 z-0">
+        <img
+          src="https://images.unsplash.com/photo-1558002038-1091a0a4e9d0?q=80&w=1000&auto=format&fit=crop"
+          alt="Home Control Background"
+          className="w-full h-full object-cover opacity-30"
+        />
+        <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/80 to-cyan-900/20" />
+      </div>
+
       {/* SIDEBAR TABS */}
-      <div className="w-[60px] flex flex-col items-center py-4 gap-6 bg-cyan-950/40 border-r border-cyan-400/20 z-10 shrink-0">
+      <div className="w-[60px] flex flex-col items-center py-4 gap-6 bg-black/40 border-r border-cyan-400/20 z-10 shrink-0 backdrop-blur-sm">
         <button
           onClick={() => setIsOpen(!isOpen)}
           className="p-2 rounded-full hover:bg-cyan-500/20 text-cyan-300 transition-all mb-2 hover:shadow-[0_0_10px_#00e5ff]"

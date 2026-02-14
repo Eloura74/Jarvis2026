@@ -201,40 +201,47 @@ export const PremiumLayout: React.FC<PremiumLayoutProps> = ({
             transition={{ duration: 1, delay: 0.5 }}
             className="absolute top-4 md:top-8 xl:top-12 text-center z-0"
           >
-            <h1 className="text-3xl md:text-5xl xl:text-6xl font-bold tracking-[0.3em] md:tracking-[0.5em] text-white/90 drop-shadow-[0_0_15px_rgba(0,229,255,0.5)]">
+            {/* Simple Glow Background for contrast */}
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-24 bg-cyan-500/20 blur-[50px] -z-10 rounded-full" />
+
+            <h1 className="text-3xl md:text-5xl xl:text-6xl font-bold tracking-[0.3em] md:tracking-[0.5em] text-white drop-shadow-[0_0_10px_rgba(0,229,255,0.8)] border-b border-transparent">
               J.A.R.V.I.S
             </h1>
-            <div className="text-[8px] md:text-[10px] tracking-[0.5em] md:tracking-[1em] opacity-60 text-cyan-200 mt-1 md:mt-2 hidden md:block">
+            <div className="text-[8px] md:text-[10px] tracking-[0.5em] md:tracking-[1em] opacity-80 text-cyan-200 mt-1 md:mt-2 hidden md:block drop-shadow-[0_0_2px_#00e5ff] font-light">
               JUST A RATHER VERY INTELLIGENT SYSTEM
             </div>
           </motion.div>
 
-          {/* MICROPHONE BUTTON - Responsive */}
+          {/* MICROPHONE BUTTON - Responsive - CLEAN & SLEEK DESIGN */}
           <motion.div
             className="absolute bottom-8 md:bottom-16 pointer-events-auto z-50 py-4 md:py-10"
-            whileHover={{ scale: 1.1 }}
+            whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
           >
             <div className="relative group flex flex-col items-center justify-center">
-              {/* Outer Rotating Rings - Hidden on mobile */}
-              <div className="hidden md:block absolute inset-0 rounded-full border border-cyan-500/30 w-24 md:w-32 h-24 md:h-32 -ml-[12px] md:-ml-[16px] -mt-[12px] md:-mt-[16px] animate-[spin_10s_linear_infinite]" />
-              <div className="hidden md:block absolute inset-0 rounded-full border border-cyan-500/20 w-32 md:w-40 h-32 md:h-40 -ml-[24px] md:-ml-[32px] -mt-[24px] md:-mt-[32px] animate-[spin_15s_linear_infinite_reverse]" />
+              {/* Sleek Rotating Rings */}
+              <div className="hidden md:block absolute inset-0 rounded-full border border-cyan-400/20 w-32 md:w-36 h-32 md:h-36 -ml-[16px] md:-ml-[18px] -mt-[16px] md:-mt-[18px] animate-[spin_8s_linear_infinite]" />
+              <div className="hidden md:block absolute inset-0 rounded-full border border-cyan-500/10 w-40 md:w-44 h-40 md:h-44 -ml-[32px] md:-ml-[34px] -mt-[32px] md:-mt-[34px] animate-[spin_12s_linear_infinite_reverse]" />
 
+              {/* Pulse Effect */}
               <div
-                className={`absolute inset-0 rounded-full blur-2xl transition-all duration-300 w-16 md:w-24 h-16 md:h-24 ${isListening ? "bg-red-500/60" : "bg-cyan-500/30 group-hover:bg-cyan-500/50"}`}
+                className={`absolute inset-0 rounded-full blur-2xl transition-all duration-300 w-24 md:w-28 h-24 md:h-28 -ml-[4px] md:-ml-[4px] -mt-[4px] md:-mt-[4px] ${isListening ? "bg-red-500/40" : "bg-cyan-400/20"}`}
               />
 
               <button
                 onClick={onMicrophoneClick}
-                className={`relative w-16 md:w-24 h-16 md:h-24 rounded-full border-2 flex items-center justify-center transition-all duration-300 backdrop-blur-md z-10 ${
+                className={`relative w-24 md:w-28 h-24 md:h-28 rounded-full border border-cyan-500/30 flex items-center justify-center transition-all duration-300 backdrop-blur-xl z-10 shadow-[0_0_20px_rgba(0,0,0,0.5)] ${
                   isListening
-                    ? "border-red-500 bg-red-900/30 text-red-500 shadow-[0_0_50px_rgba(239,68,68,0.6)] animate-pulse"
-                    : "border-cyan-500/50 bg-black/60 text-cyan-400 hover:border-cyan-400 hover:text-cyan-200 hover:shadow-[0_0_30px_rgba(0,229,255,0.5)]"
+                    ? "bg-red-950/40 text-red-500 shadow-[0_0_30px_rgba(239,68,68,0.4)]"
+                    : "bg-black/40 text-cyan-300 hover:text-cyan-100 hover:border-cyan-400/60 hover:shadow-[0_0_30px_rgba(0,229,255,0.3)]"
                 }`}
               >
+                {/* Inner Ring */}
+                <div className="absolute inset-1 rounded-full border border-cyan-500/10" />
+
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
-                  className="h-8 md:h-10 w-8 md:w-10"
+                  className={`h-10 md:h-12 w-10 md:w-12 relative z-20 ${isListening ? "animate-pulse" : ""}`}
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -242,13 +249,13 @@ export const PremiumLayout: React.FC<PremiumLayoutProps> = ({
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
-                    strokeWidth={1.5}
+                    strokeWidth={1.2}
                     d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
                   />
                 </svg>
               </button>
 
-              <div className="absolute -bottom-8 md:-bottom-10 text-[10px] md:text-xs tracking-[0.2em] md:tracking-[0.3em] font-bold opacity-80 whitespace-nowrap text-cyan-300">
+              <div className="absolute -bottom-8 md:-bottom-10 text-[10px] md:text-xs tracking-[0.3em] font-medium opacity-60 whitespace-nowrap text-cyan-400 uppercase">
                 {isListening ? "LISTENING" : "VOICE"}
               </div>
             </div>
