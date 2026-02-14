@@ -16,10 +16,22 @@ interface NeuralFeedProps {
 export const NeuralFeed: React.FC<NeuralFeedProps> = ({ messages }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Auto-scroll to bottom
+  // Auto-scroll intelligent vers le bas
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    const container = scrollRef.current;
+    if (container) {
+      // Vérifier si l'utilisateur est déjà proche du bas (seuil de 150px)
+      // Ou si le dernier message vient d'être ajouté et qu'on veut forcer la vue
+      const isNearBottom =
+        container.scrollHeight - container.scrollTop <=
+        container.clientHeight + 150;
+
+      if (isNearBottom) {
+        container.scrollTo({
+          top: container.scrollHeight,
+          behavior: "smooth",
+        });
+      }
     }
   }, [messages]);
 

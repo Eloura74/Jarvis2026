@@ -58,6 +58,10 @@ interface KernelContextType {
   // Paramètres Voix
   voiceSettings: VoiceSettings;
   setVoiceSettings: (settings: VoiceSettings) => void;
+
+  // Wake Word (NOUVEAU)
+  wakeWordEnabled: boolean;
+  setWakeWordEnabled: (enabled: boolean) => void;
 }
 
 // ========================================
@@ -148,6 +152,17 @@ export const KernelProvider: React.FC<KernelProviderProps> = ({ children }) => {
     localStorage.setItem("jarvis_voice_settings", JSON.stringify(settings));
   }, []);
 
+  // 7. Gestion du Wake Word (NOUVEAU)
+  const [wakeWordEnabled, setWakeWordEnabledState] = useState<boolean>(() => {
+    const saved = localStorage.getItem("jarvis_wake_word_enabled");
+    return saved !== null ? JSON.parse(saved) : true;
+  });
+
+  const setWakeWordEnabled = useCallback((enabled: boolean) => {
+    setWakeWordEnabledState(enabled);
+    localStorage.setItem("jarvis_wake_word_enabled", JSON.stringify(enabled));
+  }, []);
+
   // Valeur exposée
   const value: KernelContextType = {
     status,
@@ -164,8 +179,10 @@ export const KernelProvider: React.FC<KernelProviderProps> = ({ children }) => {
     getConversationContext,
     visualMode,
     setVisualMode,
-    voiceSettings, // NOUVEAU
-    setVoiceSettings, // NOUVEAU
+    voiceSettings,
+    setVoiceSettings,
+    wakeWordEnabled,
+    setWakeWordEnabled,
   };
 
   return (

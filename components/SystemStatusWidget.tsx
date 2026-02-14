@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { AreaChart, Area, ResponsiveContainer, YAxis } from "recharts";
+import { Mic, MicOff } from "lucide-react";
+import { useKernel } from "../contexts/KernelContext";
 
 interface SystemStatusWidgetProps {
   cpuUsage: number;
@@ -23,6 +25,8 @@ export const SystemStatusWidget: React.FC<SystemStatusWidgetProps> = ({
   memoryUsage,
   processes,
 }) => {
+  const { wakeWordEnabled, setWakeWordEnabled } = useKernel();
+
   // Historique des données pour les graphiques
   const [cpuData, setCpuData] = useState<ChartData[]>([]);
   const [memData, setMemData] = useState<ChartData[]>([]);
@@ -92,13 +96,47 @@ export const SystemStatusWidget: React.FC<SystemStatusWidgetProps> = ({
         <h2 className="text-lg font-bold tracking-widest text-cyan-300 drop-shadow-[0_0_5px_rgba(0,229,255,0.8)]">
           SYS.STATUS
         </h2>
-        <div className="flex gap-1">
-          <motion.div
-            animate={{ opacity: [0.5, 1, 0.5] }}
-            transition={{ duration: 2, repeat: Infinity }}
-            className="w-1.5 h-1.5 bg-cyan-400 rounded-full shadow-[0_0_10px_#00e5ff]"
-          />
-          <div className="w-1.5 h-1.5 bg-cyan-900/50 rounded-full" />
+
+        <div className="flex items-center gap-3">
+          {/* WAKE WORD TOGGLE BUTTON (VISIBILITÉ AMÉLIORÉE) */}
+          <button
+            onClick={() => setWakeWordEnabled(!wakeWordEnabled)}
+            className={`flex items-center gap-2 px-2 py-1 rounded-md border transition-all duration-300 group/btn hover:scale-105 active:scale-95 ${
+              wakeWordEnabled
+                ? "border-cyan-400 bg-cyan-400/20 text-cyan-100 shadow-[0_0_15px_rgba(0,229,255,0.4)]"
+                : "border-red-500/50 bg-red-500/10 text-red-400 opacity-80"
+            }`}
+            title={
+              wakeWordEnabled
+                ? "Wake Word Active (JARVIS)"
+                : "Wake Word Desactivé"
+            }
+          >
+            {wakeWordEnabled ? (
+              <Mic
+                size={18}
+                className="animate-pulse drop-shadow-[0_0_8px_rgba(0,229,255,1)]"
+              />
+            ) : (
+              <MicOff size={18} />
+            )}
+            <span
+              className={`text-[10px] font-black tracking-widest uppercase transition-colors ${
+                wakeWordEnabled ? "text-cyan-200" : "text-red-400 opacity-70"
+              }`}
+            >
+              {wakeWordEnabled ? "Wake On" : "Wake Off"}
+            </span>
+          </button>
+
+          <div className="flex gap-1">
+            <motion.div
+              animate={{ opacity: [0.5, 1, 0.5] }}
+              transition={{ duration: 2, repeat: Infinity }}
+              className="w-1.5 h-1.5 bg-cyan-400 rounded-full shadow-[0_0_10px_#00e5ff]"
+            />
+            <div className="w-1.5 h-1.5 bg-cyan-900/50 rounded-full" />
+          </div>
         </div>
       </div>
 

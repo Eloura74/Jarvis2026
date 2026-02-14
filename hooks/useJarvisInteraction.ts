@@ -33,7 +33,7 @@ export function useJarvisInteraction({
   onCommandReceived,
 }: UseJarvisInteractionProps) {
   const [conversationMode, setConversationMode] = useState(false);
-  const { voiceSettings } = useKernel();
+  const { voiceSettings, wakeWordEnabled } = useKernel();
 
   // Refs pour gestion asynchrone
   const lastMicActivationTime = useRef<number>(0);
@@ -195,14 +195,15 @@ export function useJarvisInteraction({
   }, [lastDetection]); // Se déclenche UNIQUEENT quand lastDetection change (nouvelle détection)
 
   // Gestion intelligente du Wake Word
-  // Désactive le wake word quand on est déjà en train d'écouter ou que Jarvis parle
+  // Désactive le wake word quand on est déjà en train d'écouter ou que Jarvis parle,
+  // ou si l'option est désactivée dans les paramètres
   useEffect(() => {
-    if (!isListening && status === SystemStatus.IDLE) {
+    if (wakeWordEnabled && !isListening && status === SystemStatus.IDLE) {
       enableWakeWord();
     } else {
       disableWakeWord();
     }
-  }, [status, isListening, enableWakeWord, disableWakeWord]);
+  }, [status, isListening, enableWakeWord, disableWakeWord, wakeWordEnabled]);
 
   // ========================================
   // GESTION MANUELLE MICRO
