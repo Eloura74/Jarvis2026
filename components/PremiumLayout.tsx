@@ -195,9 +195,9 @@ export const PremiumLayout: React.FC<PremiumLayoutProps> = ({
                     ? 450
                     : 600
               }
-              baseColor="#00e5ff"
-              activeColor="#ef4444"
-              listeningColor="#ef4444"
+              baseColor="#0099cc"
+              activeColor="#d32f2f"
+              listeningColor="#d32f2f"
             />
           </div>
 
