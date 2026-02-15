@@ -8,6 +8,7 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { Toaster } from "react-hot-toast";
+import { AnimatePresence } from "framer-motion";
 import { checkBackendStatus } from "./services/backendApi";
 
 // Context
@@ -33,7 +34,11 @@ import {
 // SHELL (Composant Interne avec accès au Kernel)
 // ============================================================================
 
-const JarvisShell: React.FC = () => {
+interface JarvisShellProps {
+  shouldGreet?: boolean;
+}
+
+const JarvisShell: React.FC<JarvisShellProps> = ({ shouldGreet }) => {
   // Accès au "Noyau" via Context
   const {
     status,
@@ -43,10 +48,10 @@ const JarvisShell: React.FC = () => {
     appMemory,
     updateMemory,
     findApp,
-    visualMode, // NOUVEAU
-    setVisualMode, // NOUVEAU
-    addConversationMessage, // NOUVEAU
-    getConversationContext, // NOUVEAU
+    visualMode,
+    setVisualMode,
+    addConversationMessage,
+    getConversationContext,
   } = useKernel();
 
   // État local UI (non-partagé)
@@ -141,6 +146,44 @@ const JarvisShell: React.FC = () => {
   });
 
   // ========================================
+  // SALUTATION AU DÉMARRAGE (IRON MAN STYLE)
+  // ========================================
+  const hasGreeted = useRef(false);
+
+  useEffect(() => {
+    if (shouldGreet && !hasGreeted.current && systemStats.cpuUsage) {
+      hasGreeted.current = true;
+
+      // 1. Déterminer le moment de la journée
+      const hour = new Date().getHours();
+      let greeting = "Bonjour";
+      if (hour >= 18) greeting = "Bonsoir";
+      else if (hour < 5) greeting = "Salutations nocturnes";
+
+      // 2. Construire le rapport système
+      const cpu = Math.round(systemStats.cpuUsage);
+
+      const messages = [
+        `${greeting} Monsieur.`,
+        "Initialisation des protocoles terminée.",
+        `CPU stable à ${cpu} pourcents.`,
+        "Tous les systèmes sont opérationnels.",
+        "Je suis à votre service.",
+      ];
+
+      // 3. Parler
+      let delay = 500;
+      messages.forEach((msg) => {
+        setTimeout(() => {
+          interaction.speak(msg);
+        }, delay);
+        // Estimation temps de parole : ~60ms par caractère + pause
+        delay += msg.length * 60 + 1000;
+      });
+    }
+  }, [shouldGreet, systemStats.cpuUsage, interaction]);
+
+  // ========================================
   // RACCOURCIS CLAVIER GLOBAUX
   // ========================================
 
@@ -208,29 +251,54 @@ const JarvisShell: React.FC = () => {
 // ============================================================================
 
 import { StartOverlay } from "./components/StartOverlay";
+import { IntroSequence } from "./components/IntroSequence";
 
 const App: React.FC = () => {
+  const [showStart, setShowStart] = useState(true);
+  const [showIntro, setShowIntro] = useState(false);
+  const [introFinished, setIntroFinished] = useState(false);
+
   // Fonction pour "réveiller" l'audio context
   const unlockAudio = () => {
     const synth = window.speechSynthesis;
     if (synth) {
-      // 1. Resume
       if (synth.paused) synth.resume();
-
-      // 2. Jouer un silence
       const utterance = new SpeechSynthesisUtterance("");
       utterance.volume = 0;
-      utterance.rate = 1; // Bug fix: some browsers need rate defined
+      utterance.rate = 1;
       synth.speak(utterance);
-
       console.log("🔓 Audio Context débloqué via interaction utilisateur");
     }
   };
 
+  const handleStart = () => {
+    unlockAudio();
+    setShowStart(false);
+    setShowIntro(true); // Lancer la vidéo d'intro
+  };
+
+  const handleIntroComplete = () => {
+    setShowIntro(false);
+    setIntroFinished(true); // Active la salutation de JARVIS
+  };
+
   return (
     <KernelProvider>
-      <StartOverlay onStart={unlockAudio} />
-      <JarvisShell />
+      <AnimatePresence>
+        {showStart && (
+          <StartOverlay onStart={handleStart} key="start-overlay" />
+        )}
+
+        {showIntro && (
+          <IntroSequence
+            onComplete={handleIntroComplete}
+            key="intro-sequence"
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Le Shell est toujours là mais caché par les overlays z-index élevés */}
+      <JarvisShell shouldGreet={introFinished} />
     </KernelProvider>
   );
 };
