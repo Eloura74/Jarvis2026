@@ -9,6 +9,7 @@ interface RealSphereProps {
   baseColor?: string;
   activeColor?: string;
   listeningColor?: string;
+  isThinking?: boolean;
 }
 
 // ============================================================================
@@ -18,6 +19,7 @@ const vertexShader = `
   uniform float time;
   uniform float amplitude;
   uniform float audioLevel;
+  uniform float thinking;
   
   varying vec3 vNormal;
   varying vec3 vPosition;
@@ -81,7 +83,7 @@ const vertexShader = `
     vUv = uv;
     
     // VORTEX EFFECT: Rotation based on height (y) using noise
-    float swirl = position.y * 2.0 + time * 0.5;
+    float swirl = position.y * 2.0 + time * (0.5 + thinking * 2.0);
     float c = cos(swirl * 0.5);
     float s = sin(swirl * 0.5);
     mat2 rot = mat2(c, -s, s, c);
@@ -91,8 +93,8 @@ const vertexShader = `
 
     // Turbulence / Grain
     float noiseFreq = 3.0; // Higher frequency for texture
-    float noiseAmp = 0.3 * (0.8 + audioLevel); 
-    vec3 noisePos = vec3(twistedPos.x * noiseFreq + time, twistedPos.y * noiseFreq, twistedPos.z * noiseFreq);
+    float noiseAmp = 0.3 * (0.8 + audioLevel + thinking * 0.5); 
+    vec3 noisePos = vec3(twistedPos.x * (noiseFreq + thinking * 5.0) + time * (1.0 + thinking * 3.0), twistedPos.y * noiseFreq, twistedPos.z * noiseFreq);
     float n = snoise(noisePos);
     vNoise = n; 
 
@@ -106,6 +108,7 @@ const fragmentShader = `
   uniform vec3 color;
   uniform float time;
   uniform float opacity;
+  uniform float thinking;
   
   varying vec3 vNormal;
   varying vec3 vPosition;
@@ -135,7 +138,7 @@ const fragmentShader = `
     
     // Deep volume shadow on edges to make it look round/touchable
     float volumeShadow = smoothstep(0.2, 0.5, viewDot);
-    finalColor *= (volumeShadow + 0.3); 
+    finalColor *= (volumeShadow + 0.3 + (sin(time * 20.0) * 0.1 * thinking)); 
 
     gl_FragColor = vec4(finalColor, opacity * 0.85); // Slightly more transparent
   }
@@ -149,6 +152,7 @@ export const RealSphere: React.FC<RealSphereProps> = ({
   baseColor = "#00e5ff", // Cyan Blue
   activeColor = "#00e5ff",
   listeningColor = "#ef4444", // Red
+  isThinking = false,
 }) => {
   const mountRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<THREE.Scene | null>(null);
@@ -191,6 +195,7 @@ export const RealSphere: React.FC<RealSphereProps> = ({
         color: { value: new THREE.Color(baseColor) },
         amplitude: { value: 1.0 },
         audioLevel: { value: 0.0 },
+        thinking: { value: 0.0 },
         opacity: { value: 0.8 },
       },
       vertexShader,
@@ -250,8 +255,9 @@ export const RealSphere: React.FC<RealSphereProps> = ({
         uniforms.time.value = t;
 
         // Intensité de la déformation
-        const baseAmp = isListening ? 0.2 : isActive ? 0.5 : 0.05; // Idle très calme
+        const baseAmp = isListening ? 0.2 : isActive ? 0.5 : 0.05;
         uniforms.audioLevel.value = baseAmp + currentAudioLevel.current * 0.8;
+        uniforms.thinking.value = isThinking ? 1.0 : 0.0;
 
         // NOTE: Lerp couleur manuel serait mieux mais complexe en hook non-frame
         // Ici on change direct via Props useEffect plus bas
@@ -314,6 +320,7 @@ export const RealSphere: React.FC<RealSphereProps> = ({
     baseColor,
     activeColor,
     listeningColor,
+    isThinking,
   ]);
 
   return (

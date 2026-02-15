@@ -524,6 +524,12 @@ const toolDeclarations: FunctionDeclaration[] = [
       },
     },
   },
+  {
+    name: "get_neural_briefing",
+    description:
+      "Provide a high-level J.A.R.V.I.S. briefing about current status and logic links.",
+    parameters: { type: Type.OBJECT, properties: {} },
+  },
 ];
 
 // ============================================================================
@@ -690,5 +696,76 @@ export const summarizeToolResults = async (
   } catch (err) {
     console.error("Summarization error:", err);
     return "J'ai les résultats, Monsieur. Voulez-vous que je les affiche ?";
+  }
+};
+
+/**
+ * Analyse QMS (Quantum Memory Stitching)
+ * Détecte des opportunités d'actions proactives en liant les logs récents.
+ */
+export const getQMSAnalysis = async (
+  logs: string[],
+  taskContext: string,
+): Promise<any> => {
+  try {
+    const prompt = `You are J.A.R.V.I.S. Neural Observer. 
+    Analyze these recent system logs and the current context to see if any "magical" proactive action can assist Monsieur.
+    
+    LOGS: ${JSON.stringify(logs)}
+    CONTEXT: ${taskContext}
+    
+    CRITERIA for a "Magical" Action:
+    1. It must save Monsieur time.
+    2. It must be logical (e.g., if he's reading a legal file, offer to search legal terms).
+    3. It must NOT be intrusive.
+    
+    OUTPUT FORMAT (JSON):
+    {
+      "hasSuggestion": boolean,
+      "tool": "tool_name" | null,
+      "args": {},
+      "explanation": "Why this action is magical (short, French)"
+    }`;
+
+    const response = await ai.models.generateContent({
+      model: "gemini-2.0-flash",
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
+      config: {
+        temperature: 0.1,
+        responseMimeType: "application/json",
+      },
+    });
+
+    const text = response.candidates?.[0].content?.parts?.[0].text;
+    return text ? JSON.parse(text) : { hasSuggestion: false };
+  } catch (err) {
+    console.error("QMS Analysis error:", err);
+    return { hasSuggestion: false };
+  }
+};
+
+/**
+ * Neural Briefing
+ * Génère un résumé "magique" de la situation actuelle de Monsieur.
+ */
+export const getNeuralBriefing = async (contextData: any): Promise<string> => {
+  try {
+    const prompt = `Monsieur is currently working. Here is his context: ${JSON.stringify(contextData)}.
+    Provide a "J.A.R.V.I.S." style briefing: elegant, British, and insightful.
+    Summarize what he is doing and offer a philosophical or tactical thought.
+    Language: French. Max 2 sentences.`;
+
+    const response = await ai.models.generateContent({
+      model: "gemini-2.0-flash",
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
+      config: { temperature: 0.7 },
+    });
+
+    return (
+      response.candidates?.[0].content?.parts?.[0].text ||
+      "Le système est stable, Monsieur."
+    );
+  } catch (err) {
+    return "Je reste à votre entière disposition, Monsieur.";
   }
 };

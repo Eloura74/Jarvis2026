@@ -218,6 +218,7 @@ const JarvisCore: React.FC<JarvisCoreProps> = ({ status }) => {
           <RealSphere
             isActive={isProcessing || (status as string) === "SPEAKING"}
             isListening={isListening}
+            isThinking={isProcessing}
             audioLevel={isListening ? 0.8 : 0.2} // Simulation niveau audio
             size={300}
             baseColor={colors.primary}

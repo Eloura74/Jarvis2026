@@ -18,6 +18,7 @@ import { MemoryProvider } from "./contexts/MemoryContext"; // NOUVEAU
 // Composants UI
 import { PremiumLayout } from "./components/PremiumLayout";
 import { ImageOverlay } from "./components/ImageOverlay";
+import HolographicHUD from "./components/HolographicHUD";
 import { toasterConfig } from "./utils/toasterConfig";
 import { SystemStatus } from "./types";
 
@@ -244,6 +245,9 @@ const JarvisShell: React.FC<JarvisShellProps> = ({ shouldGreet }) => {
       />
 
       <Toaster {...toasterConfig} />
+
+      {/* HUD Holographique pour les suggestions magiques */}
+      <HolographicHUD notifications={brain.hudNotifications} />
     </>
   );
 };
