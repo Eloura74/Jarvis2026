@@ -8,16 +8,21 @@ import { HandlerContext } from "../types/app.types";
  * Lit les derniers emails
  */
 export async function handleGmailRead(
-  args: { max?: number },
+  args: { max?: number; query?: string },
   ctx: HandlerContext,
 ) {
   const { addLog } = ctx;
   const max = args.max || 3;
+  const q = args.query || "";
 
   try {
-    addLog(`Consultation des ${max} derniers emails...`, "OMNI", "info");
+    addLog(
+      `Consultation Gmail ${q ? `(recherche: ${q})` : "derniers messages"}...`,
+      "OMNI",
+      "info",
+    );
     const response = await fetch(
-      `http://localhost:3001/api/google/gmail/list?max=${max}`,
+      `http://localhost:3001/api/google/gmail/list?max=${max}&q=${encodeURIComponent(q)}`,
     );
     const data = await response.json();
 

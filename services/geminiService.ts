@@ -68,14 +68,23 @@ You are J.A.R.V.I.S., the sophisticated AI assistant of Monsieur.
 9. **gmail & calendar**: Manage Monsieur's schedule and correspondence.
 10. **file_ops**: create, delete, move, copy, search or organize files.
 
-**CRITICAL RULES:**
-- NEVER talk about doing it without calling the tool.
-- If user says "ouvre X", use 'search_and_launch_app'.
-- If user says "cherche X sur Google", use 'search_web'.
-- If user says "mets le volume à 50%", use 'adjust_volume'.
+**CONVERSATION CONTINUITY:**
+- ALWAYS prioritize the current conversation context.
+- If you asked "On which platform?", and the user says "TikTok", THIS IS NOT a command to open the TikTok app. 
+- It means: "The platform for the previous request (ChatGPT search) is TikTok".
+- COMPLETE THE PREVIOUS INTENT (e.g. search on ChatGPT about views on TikTok).
+
+**TARGETED SEARCHES (URL Only):**
+- **MakerWorld**: Use 'https://makerworld.com/en/search/models?keyword=QUERY'
+- **ChatGPT**: Use 'https://chatgpt.com/?q=QUERY'
+- **Bambu Lab**: Use 'https://bambulab.com/en/search?q=QUERY'
+
+**AUTO-SUBMIT RULE:**
+- When opening a search URL (MakerWorld, ChatGPT, etc.), ALWAYS set 'autoSubmit: true' in 'open_url' to automatically press Enter.
 
 **MEMORY:** ${memorySummary}
-**CONTEXT:** ${conversationContext}
+**CONTEXT:**
+${conversationContext}
 `;
 
 // ============================================================================
@@ -148,6 +157,11 @@ const toolDeclarations: FunctionDeclaration[] = [
       type: Type.OBJECT,
       properties: {
         url: { type: Type.STRING },
+        autoSubmit: {
+          type: Type.BOOLEAN,
+          description:
+            "Set to true to automatically press Enter after 3 seconds (to validate search forms).",
+        },
       },
       required: ["url"],
     },
@@ -167,6 +181,19 @@ const toolDeclarations: FunctionDeclaration[] = [
     },
   },
   {
+    name: "manage_hardware",
+    description: "Control hardware devices via command line.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        deviceType: { type: Type.STRING },
+        command: { type: Type.STRING },
+        deviceName: { type: Type.STRING },
+      },
+      required: ["deviceType", "command"],
+    },
+  },
+  {
     name: "keyboard_automation",
     description: "Type text or send keyboard shortcuts.",
     parameters: {
@@ -181,13 +208,13 @@ const toolDeclarations: FunctionDeclaration[] = [
   },
   {
     name: "control_home_automation",
+    description: "Control home assistant entities.",
     parameters: {
       type: Type.OBJECT,
       properties: {
         target: {
           type: Type.STRING,
-          description:
-            "Name of the device or room (e.g., 'salon', 'bureau', 'light.canape').",
+          description: "Entity name or friendly name.",
         },
         action: {
           type: Type.STRING,
@@ -199,65 +226,50 @@ const toolDeclarations: FunctionDeclaration[] = [
             "set_brightness",
           ],
         },
-        value: {
-          type: Type.STRING,
-          description:
-            "Optional value (e.g., 'red', 'blue', '50%', '255'). For colors, use English names.",
-        },
+        value: { type: Type.STRING },
       },
       required: ["target", "action"],
     },
   },
-  // OUTIL 17 : Gmail - Lecture
   {
     name: "gmail_read",
-    description: "Read the latest emails from Monsieur's Gmail account.",
+    description: "Read emails with optional search query.",
     parameters: {
       type: Type.OBJECT,
       properties: {
-        maxResults: {
-          type: Type.NUMBER,
-          description: "Number of emails to retrieve (default 5)",
+        maxResults: { type: Type.NUMBER },
+        query: {
+          type: Type.STRING,
+          description:
+            "Gmail search operator (e.g. 'from:laura', 'subject:meeting')",
         },
       },
     },
   },
-  // OUTIL 18 : Gmail - Envoi
   {
     name: "gmail_send",
-    description: "Send an email via Gmail.",
+    description: "Send an email.",
     parameters: {
       type: Type.OBJECT,
       properties: {
-        to: { type: Type.STRING, description: "Recipient email address" },
-        subject: { type: Type.STRING, description: "Email subject" },
-        body: {
-          type: Type.STRING,
-          description: "Email body (HTML or plain text)",
-        },
+        to: { type: Type.STRING },
+        subject: { type: Type.STRING },
+        body: { type: Type.STRING },
       },
       required: ["to", "subject", "body"],
     },
   },
-  // OUTIL 19 : Calendrier - Liste
   {
     name: "calendar_list",
-    description: "List upcoming events from Monsieur's Google Calendar.",
+    description: "List upcoming calendar events.",
     parameters: {
       type: Type.OBJECT,
-      properties: {
-        maxResults: {
-          type: Type.NUMBER,
-          description: "Number of events to retrieve (default 10)",
-        },
-      },
+      properties: { maxResults: { type: Type.NUMBER } },
     },
   },
-  // OUTIL 20 : Arrêt de l'écoute / Fin de conversation
   {
     name: "stop_listening",
-    description:
-      "Call this tool when the user says 'goodbye', 'stop', 'thank you', or indicates they are done. This will stop the microphone loop.",
+    description: "Stop the continuous conversation loop.",
     parameters: {
       type: Type.OBJECT,
       properties: {},

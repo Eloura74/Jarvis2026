@@ -112,13 +112,14 @@ async function getAuthorizedClient() {
 /**
  * GMAIL : Liste les derniers messages
  */
-export async function listEmails(maxResults = 5) {
+export async function listEmails(maxResults = 5, q = "") {
   const auth = await getAuthorizedClient();
   const gmail = google.gmail({ version: "v1", auth });
 
   const res = await gmail.users.messages.list({
     userId: "me",
     maxResults,
+    q, // Ajout du filtre de recherche (ex: "from:laura", "subject:important")
   });
 
   const messages = res.data.messages || [];

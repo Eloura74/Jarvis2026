@@ -73,7 +73,8 @@ router.get("/callback", async (req, res) => {
  */
 router.get("/gmail/list", async (req, res) => {
   try {
-    const emails = await googleService.listEmails(req.query.max || 5);
+    const { max, q } = req.query;
+    const emails = await googleService.listEmails(max || 5, q || "");
     res.json({ emails });
   } catch (error) {
     res.status(500).json({ error: error.message });

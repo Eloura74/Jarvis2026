@@ -27,7 +27,7 @@ export interface ChatMessage {
 
 /**
  * Charge l'historique depuis localStorage
- * 
+ *
  * @returns Tableau de messages ou tableau vide si aucun historique
  */
 const loadHistoryFromStorage = (): ChatMessage[] => {
@@ -36,7 +36,7 @@ const loadHistoryFromStorage = (): ChatMessage[] => {
     if (!stored) return [];
 
     const parsed = JSON.parse(stored);
-    
+
     // Reconvertir les timestamps string en Date
     return parsed.map((msg: any) => ({
       ...msg,
@@ -50,7 +50,7 @@ const loadHistoryFromStorage = (): ChatMessage[] => {
 
 /**
  * Sauvegarde l'historique dans localStorage
- * 
+ *
  * @param history - Tableau de messages à sauvegarder
  */
 const saveHistoryToStorage = (history: ChatMessage[]) => {
@@ -63,7 +63,7 @@ const saveHistoryToStorage = (history: ChatMessage[]) => {
 
 /**
  * Hook de gestion de la mémoire conversationnelle
- * 
+ *
  * @returns Fonctions et données de l'historique
  */
 export const useConversationMemory = () => {
@@ -81,7 +81,7 @@ export const useConversationMemory = () => {
 
   /**
    * Ajoute un message à l'historique
-   * 
+   *
    * @param role - Rôle du message ("user" ou "model")
    * @param text - Contenu du message
    */
@@ -110,14 +110,14 @@ export const useConversationMemory = () => {
 
   /**
    * Génère le contexte formaté pour Gemini
-   * 
+   *
    * @returns String formaté avec les derniers échanges
    */
   const getContext = useCallback(() => {
-    // Garder seulement les 10 derniers messages pour le contexte Gemini
-    // (éviter de dépasser les limites de tokens)
-    const recentHistory = history.slice(-10);
-    
+    // Garder seulement les 20 derniers messages pour le contexte Gemini
+    // (équilibrer entre précision et limite de tokens)
+    const recentHistory = history.slice(-20);
+
     return recentHistory
       .map((msg) => `${msg.role === "user" ? "User" : "JARVIS"}: ${msg.text}`)
       .join("\n");
@@ -125,7 +125,7 @@ export const useConversationMemory = () => {
 
   /**
    * Exporte l'historique en JSON
-   * 
+   *
    * @returns String JSON de l'historique complet
    */
   const exportHistory = useCallback(() => {
@@ -134,14 +134,14 @@ export const useConversationMemory = () => {
 
   /**
    * Importe un historique depuis JSON
-   * 
+   *
    * @param jsonData - String JSON à importer
    * @returns true si succès, false sinon
    */
   const importHistory = useCallback((jsonData: string): boolean => {
     try {
       const parsed = JSON.parse(jsonData);
-      
+
       // Validation basique
       if (!Array.isArray(parsed)) {
         throw new Error("Format invalide : doit être un tableau");
