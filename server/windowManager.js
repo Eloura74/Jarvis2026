@@ -16,14 +16,32 @@ import { exec } from "child_process";
 import { promisify } from "util";
 
 const execAsync = promisify(exec);
+const IS_WINDOWS = process.platform === "win32";
 
 /**
  * Liste toutes les fenêtres ouvertes et visibles
- * Utilise PowerShell avec .NET Framework (Get-Process)
- *
- * @returns {Promise<Array<{id: number, title: string, processId: number}>>} Liste des fenêtres
  */
 export async function listWindows() {
+  if (!IS_WINDOWS) {
+    try {
+      // Version Linux utilisant wmctrl
+      const { stdout } = await execAsync("wmctrl -l");
+      return stdout
+        .split("\n")
+        .filter((line) => line.trim())
+        .map((line) => {
+          const parts = line.split(/\s+/);
+          const id = parts[0];
+          const title = parts.slice(3).join(" ");
+          return { id, title, processId: 0, processName: "linux-app" };
+        });
+    } catch (e) {
+      console.warn("wmctrl non trouvé ou erreur Linux:", e.message);
+      return [];
+    }
+  }
+
+  // Reste du code Windows...
   try {
     // Forcer l'encodage UTF8 pour PowerShell pour éviter les problèmes de caractères spéciaux
     const psCommand = `[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; Get-Process | Where-Object {$_.MainWindowTitle} | Select-Object Id,ProcessName,MainWindowTitle | ConvertTo-Json -Compress`;
@@ -191,32 +209,27 @@ async function findWindow(partialTitle, maxRetries = 5) {
 export async function focusWindow(partialTitle) {
   try {
     const window = await findWindow(partialTitle);
+    if (!window) return false;
 
-    if (!window) {
-      return false;
+    if (!IS_WINDOWS) {
+      await execAsync(`wmctrl -R "${window.title}"`);
+      return true;
     }
 
-    // Script VBS pour activer la fenêtre
+    // Script VBS pour activer la fenêtre (Windows)
     const vbsScript = `
 Set objShell = CreateObject("WScript.Shell")
 objShell.AppActivate "${window.title.replace(/"/g, '""')}"
     `.trim();
 
-    // Utilisation des imports ESM dynamiques
     const fs = await import("fs/promises");
     const path = await import("path");
     const os = await import("os");
-
     const tempDir = os.tmpdir();
     const scriptPath = path.join(tempDir, `jarvis-focus-${Date.now()}.vbs`);
-
     await fs.writeFile(scriptPath, vbsScript, "utf-8");
-
     await execAsync(`cscript //nologo "${scriptPath}"`);
-
-    // Cleanup
     await fs.unlink(scriptPath).catch(() => {});
-
     return true;
   } catch (error) {
     console.error("Error focusing window:", error);
@@ -224,35 +237,18 @@ objShell.AppActivate "${window.title.replace(/"/g, '""')}"
   }
 }
 
-/**
- * Ferme la fenêtre spécifiée
- * Utilise PowerShell Stop-Process
- *
- * @param {string} partialTitle - Titre de la fenêtre
- * @returns {Promise<boolean>} True si succès, false sinon
- */
 export async function closeWindow(partialTitle) {
   try {
     const window = await findWindow(partialTitle);
+    if (!window) return false;
 
-    if (!window) {
-      console.log(`❌ Window "${partialTitle}" not found`);
-      return false;
+    if (!IS_WINDOWS) {
+      await execAsync(`wmctrl -c "${window.title}"`);
+      return true;
     }
 
-    console.log(
-      `➡️ Closing window: "${window.title}" (PID: ${window.processId})`,
-    );
-
-    // Utiliser PowerShell pour fermer proprement
     const psScript = `Stop-Process -Id ${window.processId}`;
-    const { stdout, stderr } = await execAsync(
-      `powershell -Command "${psScript}"`,
-    );
-
-    console.log(`✅ Process closed`);
-    if (stderr) console.error(`⚠️ PowerShell stderr: ${stderr}`);
-
+    await execAsync(`powershell -Command "${psScript}"`);
     return true;
   } catch (error) {
     console.error("Error closing window:", error);
@@ -270,32 +266,22 @@ export async function closeWindow(partialTitle) {
 export async function minimizeWindow(partialTitle) {
   try {
     const window = await findWindow(partialTitle);
+    if (!window) return false;
 
-    if (!window) {
-      console.log(`❌ Window "${partialTitle}" not found`);
-      return false;
+    if (!IS_WINDOWS) {
+      // 0 = normal, 1 = minimize, 2 = maximize dans wmctrl (approx)
+      // On utilise l'état _NET_WM_STATE_HIDDEN ou juste -b add,iconic
+      await execAsync(`wmctrl -r "${window.title}" -b add,iconic`);
+      return true;
     }
 
-    console.log(
-      `➡️ Minimizing window: "${window.title}" (PID: ${window.processId})`,
-    );
-
-    // Utiliser ShowWindow via API Windows (6 = SW_MINIMIZE)
-    // Encoder en Base64 pour éviter tous les problèmes d'échappement
     const psCommand = `$proc = Get-Process -Id ${window.processId} -ErrorAction Stop; if ($proc.MainWindowHandle -ne 0) { $signature = '[DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);'; $type = Add-Type -MemberDefinition $signature -Name Win32ShowWindow -Namespace User32 -PassThru; $result = $type::ShowWindow($proc.MainWindowHandle, 6); Write-Output "Result: $result" } else { Write-Output "Error: No window handle" }`;
     const psCommandBase64 = Buffer.from(psCommand, "utf16le").toString(
       "base64",
     );
-
-    const { stdout, stderr } = await execAsync(
+    const { stdout } = await execAsync(
       `powershell.exe -ExecutionPolicy Bypass -NoProfile -NonInteractive -EncodedCommand ${psCommandBase64}`,
-      { encoding: "utf8", timeout: 5000 },
     );
-
-    console.log(`✅ PowerShell output: ${stdout.trim()}`);
-    if (stderr && stderr.trim())
-      console.error(`⚠️ PowerShell stderr: ${stderr.trim()}`);
-
     return stdout.includes("True") || stdout.includes("Result");
   } catch (error) {
     console.error("Error minimizing window:", error.message);
@@ -303,42 +289,25 @@ export async function minimizeWindow(partialTitle) {
   }
 }
 
-/**
- * Agrandit (maximize) la fenêtre spécifiée
- * Utilise PowerShell avec user32.dll ShowWindow (SW_MAXIMIZE = 3)
- *
- * @param {string} partialTitle - Titre de la fenêtre
- * @returns {Promise<boolean>} True si succès, false sinon
- */
 export async function maximizeWindow(partialTitle) {
   try {
     const window = await findWindow(partialTitle);
+    if (!window) return false;
 
-    if (!window) {
-      console.log(`❌ Window "${partialTitle}" not found`);
-      return false;
+    if (!IS_WINDOWS) {
+      await execAsync(
+        `wmctrl -r "${window.title}" -b add,maximized_vert,maximized_horz`,
+      );
+      return true;
     }
 
-    console.log(
-      `➡️ Maximizing window: "${window.title}" (PID: ${window.processId})`,
-    );
-
-    // Utiliser ShowWindow via API Windows (3 = SW_MAXIMIZE)
-    // Encoder en Base64 pour éviter tous les problèmes d'échappement
     const psCommand = `$proc = Get-Process -Id ${window.processId} -ErrorAction Stop; if ($proc.MainWindowHandle -ne 0) { $signature = '[DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);'; $type = Add-Type -MemberDefinition $signature -Name Win32ShowWindowMax -Namespace User32Max -PassThru; $result = $type::ShowWindow($proc.MainWindowHandle, 3); Write-Output "Result: $result" } else { Write-Output "Error: No window handle" }`;
     const psCommandBase64 = Buffer.from(psCommand, "utf16le").toString(
       "base64",
     );
-
-    const { stdout, stderr } = await execAsync(
+    const { stdout } = await execAsync(
       `powershell.exe -ExecutionPolicy Bypass -NoProfile -NonInteractive -EncodedCommand ${psCommandBase64}`,
-      { encoding: "utf8", timeout: 5000 },
     );
-
-    console.log(`✅ PowerShell output: ${stdout.trim()}`);
-    if (stderr && stderr.trim())
-      console.error(`⚠️ PowerShell stderr: ${stderr.trim()}`);
-
     return stdout.includes("True") || stdout.includes("Result");
   } catch (error) {
     console.error("Error maximizing window:", error.message);

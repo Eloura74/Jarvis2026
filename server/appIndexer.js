@@ -99,42 +99,39 @@ export const NATIVE_APPS_ALIASES = {
  * @returns {string[]} Liste des répertoires à scanner
  */
 function getSearchDirectories() {
+  const IS_WINDOWS = process.platform === "win32";
+
+  if (!IS_WINDOWS) {
+    return [
+      "/usr/share/applications",
+      `${os.homedir()}/.local/share/applications`,
+      "/var/lib/snapd/desktop/applications",
+    ];
+  }
+
   const username = os.userInfo().username;
-
-  // NOUVEAUTÉ : Scanner TOUS les lecteurs disponibles (A: à Z:)
-  const drives = [];
-
-  // Lettres de lecteurs courants
   const driveLetters = ["A", "C", "D", "E", "F", "G", "H"];
+  const drives = [];
 
   for (const letter of driveLetters) {
     const drive = `${letter}:`;
-
-    // Répertoires standards à scanner sur chaque lecteur
-    const paths = [
+    drives.push(
       `${drive}\\Program Files`,
       `${drive}\\Program Files (x86)`,
-      `${drive}\\Logiciels`, // Répertoire personnalisé français
-      `${drive}\\Programs`, // Répertoire personnalisé anglais
-      `${drive}\\Apps`, // Apps génériques
-      `${drive}\\Games`, // Jeux
-    ];
-
-    drives.push(...paths);
+      `${drive}\\Logiciels`,
+      `${drive}\\Programs`,
+      `${drive}\\Apps`,
+      `${drive}\\Games`,
+    );
   }
 
-  // Ajouter les répertoires utilisateur (uniquement sur C:)
   drives.push(
     `C:\\Users\\${username}\\AppData\\Local\\Programs`,
     `C:\\Users\\${username}\\AppData\\Local`,
     `C:\\Users\\${username}\\AppData\\Roaming`,
-  );
-
-  // NOUVEAU : Ajouter répertoires Windows système pour apps natives
-  drives.push(
     "C:\\Windows\\System32",
     "C:\\Windows",
-    `C:\\Users\\${username}\\AppData\\Local\\Microsoft\\WindowsApps`, // Apps UWP (Microsoft Store)
+    `C:\\Users\\${username}\\AppData\\Local\\Microsoft\\WindowsApps`,
   );
 
   return drives;
@@ -196,82 +193,79 @@ function extractKeywords(filePath) {
  */
 async function scanDirectory(directory, maxDepth = 3) {
   const apps = [];
+  const IS_WINDOWS = process.platform === "win32";
+  const extension = IS_WINDOWS ? ".exe" : ".desktop";
 
   try {
-    // Vérifier si le répertoire existe avant de scanner
     await fs.access(directory);
   } catch {
-    // Répertoire n'existe pas (lecteur non monté ou absent), ignorer silencieusement
     return apps;
   }
 
   console.log(`📁 Scanning: ${directory}`);
 
   try {
-    // Utiliser glob pour trouver tous les .exe
-    const pattern = path.join(directory, "**/*.exe").replace(/\\/g, "/");
+    const pattern = path
+      .join(directory, `**/*${extension}`)
+      .replace(/\\/g, "/");
     const files = await glob(pattern, {
       windowsPathsNoEscape: true,
       maxDepth: maxDepth,
-      ignore: [
-        "**/unins*.exe",
-        "**/updater*.exe",
-        "**/crash*.exe",
-        "**/*uninstall*.exe",
-        "**/*setup*.exe", // Installateurs
-        "**/*install*.exe", // Installateurs
-        "**/*installer*.exe", // Installateurs
-        "**/setup.exe", // Setup générique
-        "**/*-setup.exe", // Pattern setup
-        "**/*_setup.exe", // Pattern setup
-        "**/node_modules/**",
-        "**/.git/**",
-      ],
+      ignore: IS_WINDOWS
+        ? [
+            "**/unins*.exe",
+            "**/updater*.exe",
+            "**/crash*.exe",
+            "**/*uninstall*.exe",
+            "**/*setup*.exe",
+            "**/*install*.exe",
+            "**/*installer*.exe",
+            "**/node_modules/**",
+            "**/.git/**",
+          ]
+        : ["**/node_modules/**", "**/.git/**"],
     });
 
-    // Traiter chaque fichier trouvé
     for (const filePath of files) {
       try {
         const stats = await fs.stat(filePath);
+        if (IS_WINDOWS && stats.size < 50 * 1024) continue;
 
-        // Ignorer les petits fichiers (< 50 KB)
-        if (stats.size < 50 * 1024) continue;
+        let fileName = path.basename(filePath, extension);
+        let launchPath = filePath;
 
-        const fileName = path.basename(filePath, ".exe");
-        const fileNameLower = fileName.toLowerCase();
+        // Parsing spécifique Linux pour les fichiers .desktop
+        if (!IS_WINDOWS) {
+          const content = await fs.readFile(filePath, "utf-8");
+          const nameMatch = content.match(/^Name=(.+)$/m);
+          const execMatch = content.match(/^Exec=(.+)$/m);
 
-        // NOUVEAU : Ignorer applications système critiques Windows
-        if (SYSTEM_CRITICAL_APPS.includes(fileNameLower)) {
-          continue; // Ne pas indexer (dangereux de lancer)
+          if (nameMatch) fileName = nameMatch[1];
+          if (execMatch) {
+            // Nettoyer les arguments spécifiques xdg (%u, %f, etc.)
+            launchPath = execMatch[1].split(/\s+/)[0].replace(/["']/g, "");
+          } else {
+            continue; // Pas de commande Exec, on ignore
+          }
+        } else if (SYSTEM_CRITICAL_APPS.includes(fileName.toLowerCase())) {
+          continue;
         }
-
-        // Filtres supplémentaires : ignorer les installateurs avec numéros de version
-        // Pattern: *-v1.2.3.4* ou *_win_v* ou *-win-v*
-        if (
-          /[-_]v\d+\.\d+/.test(fileNameLower) || // Contient -v1.2 ou _v1.2
-          /[-_]win[-_]/.test(fileNameLower) || // Contient -win- ou _win_
-          /\d{2,}\.\d{2,}\.\d{2,}/.test(fileNameLower) // Numéro version complet (ex: 02.05.00.66)
-        ) {
-          continue; // Ignorer ce fichier (probablement un installateur)
-        }
-
-        const directory = path.dirname(filePath);
 
         apps.push({
           name: fileName,
-          path: filePath,
+          path: launchPath,
           size: stats.size,
           modified: stats.mtime,
-          directory: directory,
+          directory: path.dirname(filePath),
           keywords: extractKeywords(filePath),
+          isDesktopFile: !IS_WINDOWS,
         });
       } catch (err) {
-        // Ignorer les fichiers inaccessibles
         continue;
       }
     }
   } catch (error) {
-    // Ignorer les erreurs de scan (permissions, etc.)
+    console.error(`Error scanning ${directory}:`, error);
   }
 
   return apps;

@@ -15,103 +15,64 @@ import path from "path";
 import os from "os";
 
 const execAsync = promisify(exec);
-
-/**
- * Crée un script VBS temporaire pour envoyer des touches clavier
- * VBScript SendKeys est natif Windows, pas de compilation requise
- *
- * @param {string} keys - Touches à envoyer (texte ou combinaisons)
- * @returns {Promise<string>} Chemin du script VBS créé
- */
-async function createVBScript(keys) {
-  const tempDir = os.tmpdir();
-  const scriptPath = path.join(tempDir, `jarvis-sendkeys-${Date.now()}.vbs`);
-
-  // Échapper les guillemets dans le texte
-  const escapedKeys = keys.replace(/"/g, '""');
-
-  const vbsContent = `
-Set WshShell = WScript.CreateObject("WScript.Shell")
-WScript.Sleep 100
-WshShell.SendKeys "${escapedKeys}"
-  `.trim();
-
-  await fs.writeFile(scriptPath, vbsContent, "utf-8");
-  return scriptPath;
-}
-
-/**
- * Nettoie un script VBS temporaire
- * @param {string} scriptPath - Chemin du script à supprimer
- */
-async function cleanupVBScript(scriptPath) {
-  try {
-    await fs.unlink(scriptPath);
-  } catch {
-    // Ignorer les erreurs de nettoyage
-  }
-}
+const IS_WINDOWS = process.platform === "win32";
 
 /**
  * Tape du texte dans la fenêtre active
- * Utilise VBScript SendKeys (natif Windows)
- *
- * @param {string} text - Texte à taper
- * @returns {Promise<boolean>} True si succès
- *
- * @example
- * await typeText('Bonjour JARVIS');
  */
 export async function typeText(text) {
+  if (!IS_WINDOWS) {
+    try {
+      await execAsync(`xdotool type "${text.replace(/"/g, '\\"')}"`);
+      return true;
+    } catch (e) {
+      console.warn("xdotool non trouvé ou erreur Linux:", e.message);
+      return false;
+    }
+  }
+
+  // Version Windows
   let scriptPath;
   try {
     scriptPath = await createVBScript(text);
     await execAsync(`cscript //nologo "${scriptPath}"`);
     return true;
   } catch (error) {
-    console.error("Erreur typeText:", error);
+    console.error("Erreur typeText Windows:", error);
     return false;
   } finally {
-    if (scriptPath) {
-      await cleanupVBScript(scriptPath);
-    }
+    if (scriptPath) await cleanupVBScript(scriptPath);
   }
 }
 
 /**
  * Envoie un raccourci clavier (Ctrl+C, Ctrl+V, etc.)
- * Utilise VBScript SendKeys avec syntaxe spéciale
- *
- * Syntaxe SendKeys :
- * - ^ = Ctrl
- * - + = Shift
- * - % = Alt
- * - {ENTER} = Entrée
- *
- * @param {string} shortcut - Raccourci (ex: "ctrl+c", "ctrl+shift+n")
- * @returns {Promise<boolean>} True si succès
- *
- * @example
- * await sendShortcut('ctrl+c'); // Copier
- * await sendShortcut('ctrl+v'); // Coller
- * await sendShortcut('ctrl+shift+n'); // Nouvelle fenêtre
  */
 export async function sendShortcut(shortcut) {
+  if (!IS_WINDOWS) {
+    try {
+      // Conversion standard -> xdotool (ctrl+c -> ctrl+c, mais formaté)
+      const xdoKey = shortcut.toLowerCase().replace(/\+/g, "+");
+      await execAsync(`xdotool key ${xdoKey}`);
+      return true;
+    } catch (e) {
+      console.warn("xdotool non trouvé ou erreur Linux:", e.message);
+      return false;
+    }
+  }
+
+  // Version Windows
   let scriptPath;
   try {
-    // Convertir notation standard vers notation VBScript
     const vbsKeys = convertToVBSKeys(shortcut);
-
     scriptPath = await createVBScript(vbsKeys);
     await execAsync(`cscript //nologo "${scriptPath}"`);
     return true;
   } catch (error) {
-    console.error("Erreur sendShortcut:", error);
+    console.error("Erreur sendShortcut Windows:", error);
     return false;
   } finally {
-    if (scriptPath) {
-      await cleanupVBScript(scriptPath);
-    }
+    if (scriptPath) await cleanupVBScript(scriptPath);
   }
 }
 
