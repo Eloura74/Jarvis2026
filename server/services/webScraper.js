@@ -126,7 +126,15 @@ class WebScraper {
    */
   async searchAndGetFirstUrl(query) {
     try {
-      const searchUrl = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`;
+      // Nettoyage phonétique basique côté serveur pour aider la recherche
+      let cleanQuery = query.replace(
+        /(Make Award|Michael World|Mec Award|Vainqueur World)/gi,
+        "MakerWorld",
+      );
+      cleanQuery = cleanQuery.replace(/(Bamboula|Bambo)/gi, "Bambu Lab");
+
+      console.log(`🔎 [WebScraper] Query finale envoyée : "${cleanQuery}"`);
+      const searchUrl = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(cleanQuery)}`;
 
       const response = await fetch(searchUrl, {
         headers: {
@@ -137,7 +145,23 @@ class WebScraper {
 
       const html = await response.text();
       const $ = cheerio.load(html);
-      const firstLink = $(".result__a").first().attr("href");
+
+      // Sélecteurs multiples pour plus de robustesse
+      const selectors = [
+        ".result__a",
+        "a.result__a",
+        ".result__url",
+        ".results .links_main a",
+      ];
+      let firstLink = null;
+
+      for (const selector of selectors) {
+        const link = $(selector).first().attr("href");
+        if (link && !link.includes("duckduckgo.com")) {
+          firstLink = link;
+          break;
+        }
+      }
 
       if (firstLink) {
         if (firstLink.startsWith("http")) return firstLink;
