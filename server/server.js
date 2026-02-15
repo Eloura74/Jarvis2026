@@ -32,6 +32,7 @@ import shortcutsRoutes from "./routes/shortcuts.js";
 import commandsRoutes from "./routes/commands.js";
 import googleRoutes from "./routes/google.js";
 import * as systemControl from "./systemControl.js";
+import localMemory from "./services/localMemory.js";
 
 const app = express();
 const PORT = 3001;
@@ -71,8 +72,12 @@ async function initializeIndex() {
   } else {
     // Pas de cache : indexer maintenant
     console.log("📁 No cache found, indexing system...\n");
+    console.log("📁 No cache found, indexing system...\n");
     await reindexApplications();
   }
+
+  // Initialisation de la mémoire locale (RAG)
+  await localMemory.initialize();
 }
 
 /**
@@ -842,6 +847,41 @@ process.on("unhandledRejection", (reason, promise) => {
     `\n⚠️  Server is still running, but this should be investigated!\n`,
   );
   // NE PAS terminer le process
+});
+
+// ============================================================================
+// ENDPOINTS MÉMOIRE LOCALE (RAG)
+// ============================================================================
+
+/**
+ * POST /api/memory/scan
+ * Lance l'indexation d'un dossier
+ * Body: { path: "C:\\..." }
+ */
+app.post("/api/memory/scan", async (req, res) => {
+  const { path } = req.body;
+
+  if (!path) return res.status(400).json({ error: "Path required" });
+
+  try {
+    const result = await localMemory.indexDirectory(path);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * GET /api/memory/search
+ * Recherche dans la mémoire locale
+ * Query: ?q=terme
+ */
+app.get("/api/memory/search", (req, res) => {
+  const query = req.query.q;
+  if (!query) return res.status(400).json({ error: "Query required" });
+
+  const results = localMemory.search(query);
+  res.json({ count: results.length, results });
 });
 
 // ============================================================================

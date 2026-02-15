@@ -13,6 +13,7 @@ import { checkBackendStatus } from "./services/backendApi";
 
 // Context
 import { KernelProvider, useKernel } from "./contexts/KernelContext";
+import { MemoryProvider } from "./contexts/MemoryContext"; // NOUVEAU
 
 // Composants UI
 import { PremiumLayout } from "./components/PremiumLayout";
@@ -285,21 +286,23 @@ const App: React.FC = () => {
 
   return (
     <KernelProvider>
-      <AnimatePresence>
-        {showStart && (
-          <StartOverlay onStart={handleStart} key="start-overlay" />
-        )}
+      <MemoryProvider>
+        <AnimatePresence>
+          {showStart && (
+            <StartOverlay onStart={handleStart} key="start-overlay" />
+          )}
 
-        {showIntro && (
-          <IntroSequence
-            onComplete={handleIntroComplete}
-            key="intro-sequence"
-          />
-        )}
-      </AnimatePresence>
+          {showIntro && (
+            <IntroSequence
+              onComplete={handleIntroComplete}
+              key="intro-sequence"
+            />
+          )}
+        </AnimatePresence>
 
-      {/* Le Shell est toujours là mais caché par les overlays z-index élevés */}
-      <JarvisShell shouldGreet={introFinished} />
+        {/* Le Shell est toujours là mais caché par les overlays z-index élevés */}
+        <JarvisShell shouldGreet={introFinished} />
+      </MemoryProvider>
     </KernelProvider>
   );
 };
