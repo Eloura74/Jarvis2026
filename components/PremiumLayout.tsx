@@ -204,14 +204,31 @@ export const PremiumLayout: React.FC<PremiumLayoutProps> = ({
           {/* DATA TRANSFER OVERLAY (Fils.png) */}
           <motion.div
             initial={{ opacity: 0 }}
-            animate={{ opacity: status === "speaking" ? 0.4 : 0 }}
-            transition={{ duration: 0.5 }}
+            animate={
+              status === "speaking"
+                ? {
+                    opacity: [0.2, 0.5, 0.3, 0.7, 0.2], // Flicker aléatoire
+                    filter: [
+                      "brightness(1.2) contrast(1.1)",
+                      "brightness(2.2) contrast(1.6)", // Flash intense
+                      "brightness(1.4) contrast(1.2)",
+                      "brightness(1.8) contrast(1.4)",
+                      "brightness(1.2) contrast(1.1)",
+                    ],
+                  }
+                : { opacity: 0 }
+            }
+            transition={{
+              duration: 2, // Cycle plus long pour effet "courant" qui passe
+              repeat: Infinity,
+              ease: "linear",
+              times: [0, 0.3, 0.4, 0.7, 1],
+            }}
             className="fixed inset-0 z-0 pointer-events-none mix-blend-screen"
             style={{
               backgroundImage: "url('/Fils.png')",
               backgroundSize: "cover",
               backgroundPosition: "center",
-              filter: "brightness(1.5) contrast(1.2)", // Gamma effect imitation
             }}
           />
 
