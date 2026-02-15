@@ -29,3 +29,6 @@ export * from "./haHandlers";
 
 // Google Services (Gmail, Calendar)
 export * from "./googleHandlers";
+
+// Memory (RAG)
+export * from "./memoryHandlers";

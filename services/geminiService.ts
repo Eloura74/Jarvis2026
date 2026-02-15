@@ -285,6 +285,18 @@ const toolDeclarations: FunctionDeclaration[] = [
       properties: {},
     },
   },
+  {
+    name: "consult_memory",
+    description:
+      "Search in your local knowledge base (files, notes, code) to answer questions.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        query: { type: Type.STRING, description: "Keywords to search for." },
+      },
+      required: ["query"],
+    },
+  },
 ];
 
 // ============================================================================

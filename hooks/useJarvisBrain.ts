@@ -163,6 +163,10 @@ export function useJarvisBrain({
           const { handleControlHomeAutomation } = await import("../handlers");
           return await handleControlHomeAutomation(toolArgs, ctx);
 
+        // === MEMORY (RAG) ===
+        case "consult_memory":
+          return await handlers.handleConsultMemory(toolArgs, ctx);
+
         // === CONVERSATION CONTROL ===
         case "stop_listening":
           if (ctx.stopConversation) {

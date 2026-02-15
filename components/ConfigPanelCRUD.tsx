@@ -28,9 +28,11 @@ import {
   Brain,
   Key,
   X,
+  FolderSearch, // FIX: Import manquant
 } from "lucide-react";
 
 import { VoiceSettingsTab } from "./VoiceSettingsTab";
+import { MemoryTab } from "./MemoryTab"; // NOUVEAU
 
 // Types
 interface AppData {
@@ -58,7 +60,8 @@ type TabType =
   | "commands"
   | "voice"
   | "google"
-  | "neural";
+  | "neural"
+  | "memory"; // NOUVEAU
 type ViewMode = "list" | "add" | "edit";
 
 export const ConfigPanelCRUD: React.FC<ConfigPanelCRUDProps> = ({
@@ -273,6 +276,12 @@ export const ConfigPanelCRUD: React.FC<ConfigPanelCRUDProps> = ({
               onClick={() => setActiveTab("neural")}
               icon={<Brain size={18} />}
               label="Neural Stats"
+            />
+            <TabButton
+              active={activeTab === "memory"}
+              onClick={() => setActiveTab("memory")}
+              icon={<FolderSearch size={18} />}
+              label="Mémoire (RAG)"
             />
           </div>
 
@@ -507,6 +516,7 @@ export const ConfigPanelCRUD: React.FC<ConfigPanelCRUDProps> = ({
             {activeTab === "voice" && <VoiceSettingsTab />}
             {activeTab === "google" && <GoogleTab />}
             {activeTab === "neural" && <NeuralTab tokenUsage={tokenUsage} />}
+            {activeTab === "memory" && <MemoryTab />}
           </div>
         </motion.div>
       </motion.div>
