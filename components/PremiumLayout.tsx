@@ -195,11 +195,25 @@ export const PremiumLayout: React.FC<PremiumLayoutProps> = ({
                     ? 450
                     : 600
               }
-              baseColor="#0099cc"
-              activeColor="#d32f2f"
-              listeningColor="#d32f2f"
+              baseColor="#006080" // Darker Cyan
+              activeColor="#8a0000" // Darker Red
+              listeningColor="#8a0000"
             />
           </div>
+
+          {/* DATA TRANSFER OVERLAY (Fils.png) */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: status === "speaking" ? 0.4 : 0 }}
+            transition={{ duration: 0.5 }}
+            className="fixed inset-0 z-0 pointer-events-none mix-blend-screen"
+            style={{
+              backgroundImage: "url('/Fils.png')",
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+              filter: "brightness(1.5) contrast(1.2)", // Gamma effect imitation
+            }}
+          />
 
           {/* LOGO - Responsive */}
           <motion.div

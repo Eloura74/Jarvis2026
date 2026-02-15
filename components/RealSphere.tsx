@@ -137,7 +137,7 @@ const fragmentShader = `
     float volumeShadow = smoothstep(0.2, 0.5, viewDot);
     finalColor *= (volumeShadow + 0.3); 
 
-    gl_FragColor = vec4(finalColor, opacity * 0.9);
+    gl_FragColor = vec4(finalColor, opacity * 0.85); // Slightly more transparent
   }
 `;
 
