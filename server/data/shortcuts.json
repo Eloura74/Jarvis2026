@@ -1,0 +1,42 @@
+{
+  "Copier": {
+    "keys": "ctrl+c",
+    "description": "Copie l'élément sélectionné"
+  },
+  "Coller": {
+    "keys": "ctrl+v",
+    "description": "Colle le contenu du presse-papier"
+  },
+  "Rechercher": {
+    "keys": "ctrl+f",
+    "description": "Ouvre la barre de recherche dans l'application"
+  },
+  "Sauvegarder": {
+    "keys": "ctrl+s",
+    "description": "Enregistre le document actuel"
+  },
+  "Annuler": {
+    "keys": "ctrl+z",
+    "description": "Annule la dernière action"
+  },
+  "Rétablir": {
+    "keys": "ctrl+y",
+    "description": "Rétablit l'action annulée"
+  },
+  "Nouvel Onglet": {
+    "keys": "ctrl+t",
+    "description": "Ouvre un nouvel onglet dans le navigateur"
+  },
+  "Fermer Fenêtre": {
+    "keys": "alt+f4",
+    "description": "Ferme l'application active"
+  },
+  "Explorateur": {
+    "keys": "win+e",
+    "description": "Ouvre l'explorateur de fichiers Windows"
+  },
+  "Verrouiller": {
+    "keys": "win+l",
+    "description": "Verrouille la session Windows"
+  }
+}

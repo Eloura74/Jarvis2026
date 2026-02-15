@@ -1,0 +1,72 @@
+{
+  "Capture d'écran": {
+    "triggers": [
+      "capture d'écran",
+      "prend une photo",
+      "fais un screenshot",
+      "capture l'écran"
+    ],
+    "action": "screenshot",
+    "description": "Prend une capture d'écran et l'enregistre sur le bureau"
+  },
+  "Augmenter Volume": {
+    "triggers": [
+      "monte le son",
+      "plus fort",
+      "augmente le volume",
+      "plus de volume"
+    ],
+    "action": "volume_increase",
+    "description": "Augmente le volume système de 10%"
+  },
+  "Diminuer Volume": {
+    "triggers": [
+      "baisse le son",
+      "moins fort",
+      "baisse le volume",
+      "diminue le volume"
+    ],
+    "action": "volume_decrease",
+    "description": "Diminue le volume système de 10%"
+  },
+  "Couper le son": {
+    "triggers": ["silence", "coupe le son", "mute", "plus de bruit"],
+    "action": "volume_mute",
+    "description": "Active/Désactive le mode muet"
+  },
+  "Musique Suivante": {
+    "triggers": [
+      "musique suivante",
+      "chanson suivante",
+      "piste suivante",
+      "skip"
+    ],
+    "action": "media_next",
+    "description": "Passe à la piste média suivante"
+  },
+  "Play/Pause": {
+    "triggers": [
+      "mets en pause",
+      "reprend la lecture",
+      "lance la musique",
+      "stop la musique"
+    ],
+    "action": "media_play_pause",
+    "description": "Lance ou met en pause la lecture média"
+  },
+  "Mise en veille": {
+    "triggers": ["veille", "bonne nuit", "dodo", "éteins l'écran"],
+    "action": "sleep",
+    "description": "Met l'ordinateur en veille"
+  },
+  "Verrouiller session": {
+    "triggers": [
+      "verrouille",
+      "bloque le pc",
+      "verrouille la session",
+      "sécurise le poste"
+    ],
+    "action": "lock",
+    "description": "Verrouille la session utilisateur immédiatement"
+  }
+}

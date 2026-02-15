@@ -28,6 +28,8 @@ import * as windowManager from "./windowManager.js";
 import * as automation from "./automation.js";
 import { getSystemStats, getLightStats } from "./systemStats.js";
 import appsRoutes from "./routes/apps.js";
+import shortcutsRoutes from "./routes/shortcuts.js";
+import commandsRoutes from "./routes/commands.js";
 import googleRoutes from "./routes/google.js";
 import * as systemControl from "./systemControl.js";
 
@@ -42,6 +44,12 @@ app.use("/api/google", googleRoutes);
 
 // Routes API - Gestion des applications (CRUD)
 app.use("/api/apps", appsRoutes);
+
+// Routes API - Gestion des raccourcis
+app.use("/api/shortcuts", shortcutsRoutes);
+
+// Routes API - Gestion des commandes
+app.use("/api/commands", commandsRoutes);
 
 // Index des applications (chargé en mémoire)
 let appsIndex = [];
@@ -106,16 +114,7 @@ app.get("/api/status", (req, res) => {
   });
 });
 
-/**
- * GET /api/apps
- * Retourne toutes les applications indexées
- */
-app.get("/api/apps", (req, res) => {
-  res.json({
-    count: appsIndex.length,
-    apps: appsIndex,
-  });
-});
+// Note: /api/apps est maintenant géré par appsRoutes dans ./routes/apps.js
 
 /**
  * GET /api/search?q=bambu

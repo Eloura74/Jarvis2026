@@ -515,20 +515,374 @@ const TabButton: React.FC<{
   </button>
 );
 
-// Placeholder onglets
-const ShortcutsTab = () => (
-  <div className="text-center py-12 text-gray-500">
-    <Keyboard size={48} className="mx-auto mb-4 opacity-50" />
-    <p>Gestion des raccourcis clavier (à venir)</p>
-  </div>
-);
+// ============================================================================
+// SHORTCUTS TAB
+// ============================================================================
 
-const CommandsTab = () => (
-  <div className="text-center py-12 text-gray-500">
-    <Zap size={48} className="mx-auto mb-4 opacity-50" />
-    <p>Gestion des commandes personnalisées (à venir)</p>
-  </div>
-);
+const ShortcutsTab: React.FC = () => {
+  const [shortcuts, setShortcuts] = useState<
+    Record<string, { keys: string; description: string }>
+  >({});
+  const [viewMode, setViewMode] = useState<ViewMode>("list");
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // Form state
+  const [formName, setFormName] = useState("");
+  const [formKeys, setFormKeys] = useState("");
+  const [formDescription, setFormDescription] = useState("");
+
+  const loadShortcuts = async () => {
+    try {
+      const res = await fetch("http://localhost:3001/api/shortcuts");
+      const data = await res.json();
+      setShortcuts(data);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  useEffect(() => {
+    loadShortcuts();
+  }, []);
+
+  const handleSave = async () => {
+    try {
+      await fetch("http://localhost:3001/api/shortcuts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: formName,
+          data: { keys: formKeys, description: formDescription },
+        }),
+      });
+      loadShortcuts();
+      setViewMode("list");
+      resetForm();
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleDelete = async (name: string) => {
+    if (!confirm(`Supprimer ${name} ?`)) return;
+    try {
+      await fetch(`http://localhost:3001/api/shortcuts/${name}`, {
+        method: "DELETE",
+      });
+      loadShortcuts();
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const resetForm = () => {
+    setFormName("");
+    setFormKeys("");
+    setFormDescription("");
+  };
+
+  const filtered = Object.entries(shortcuts).filter(([name]) =>
+    name.toLowerCase().includes(searchQuery.toLowerCase()),
+  );
+
+  return (
+    <div className="space-y-4">
+      {viewMode === "list" ? (
+        <>
+          <div className="flex gap-4 mb-6">
+            <div className="flex-1 relative">
+              <Search
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-cyan-400"
+                size={20}
+              />
+              <input
+                type="text"
+                placeholder="Rechercher un raccourci..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-12 pr-4 py-3 bg-slate-800/50 border border-cyan-400/30 rounded-lg text-white"
+              />
+            </div>
+            <button
+              onClick={() => setViewMode("add")}
+              className="px-6 py-3 bg-cyan-500/20 border border-cyan-400 rounded-lg text-cyan-300 flex items-center gap-2"
+            >
+              <Plus size={20} /> Ajouter
+            </button>
+          </div>
+          <div className="grid gap-3">
+            {filtered.map(([name, data]) => (
+              <div
+                key={name}
+                className="bg-slate-800/50 border border-cyan-400/20 rounded-lg p-4 flex justify-between items-center"
+              >
+                <div>
+                  <h3 className="text-cyan-300 font-bold">{name}</h3>
+                  <code className="text-xs text-cyan-500 bg-cyan-500/10 px-2 py-0.5 rounded mt-1 inline-block">
+                    {data.keys}
+                  </code>
+                  <p className="text-sm text-gray-400 mt-1">
+                    {data.description}
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      setFormName(name);
+                      setFormKeys(data.keys);
+                      setFormDescription(data.description);
+                      setViewMode("edit");
+                    }}
+                    className="p-2 text-blue-400 hover:bg-blue-500/10 rounded"
+                  >
+                    <Edit size={18} />
+                  </button>
+                  <button
+                    onClick={() => handleDelete(name)}
+                    className="p-2 text-red-400 hover:bg-red-500/10 rounded"
+                  >
+                    <Trash2 size={18} />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      ) : (
+        <div className="max-w-md mx-auto space-y-4">
+          <h3 className="text-xl font-bold text-cyan-300">
+            {viewMode === "add" ? "Ajouter" : "Modifier"} un raccourci
+          </h3>
+          <input
+            type="text"
+            placeholder="Nom (ex: Copier)"
+            value={formName}
+            onChange={(e) => setFormName(e.target.value)}
+            className="w-full p-3 bg-slate-800 border border-cyan-400/30 rounded text-white"
+          />
+          <input
+            type="text"
+            placeholder="Touches (ex: ctrl+c)"
+            value={formKeys}
+            onChange={(e) => setFormKeys(e.target.value)}
+            className="w-full p-3 bg-slate-800 border border-cyan-400/30 rounded text-white"
+          />
+          <input
+            type="text"
+            placeholder="Description"
+            value={formDescription}
+            onChange={(e) => setFormDescription(e.target.value)}
+            className="w-full p-3 bg-slate-800 border border-cyan-400/30 rounded text-white"
+          />
+          <div className="flex gap-4 pt-4">
+            <button
+              onClick={handleSave}
+              className="flex-1 py-3 bg-cyan-500 text-slate-900 font-bold rounded"
+            >
+              Sauvegarder
+            </button>
+            <button
+              onClick={() => {
+                setViewMode("list");
+                resetForm();
+              }}
+              className="px-6 py-3 border border-slate-600 rounded text-gray-400"
+            >
+              Annuler
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ============================================================================
+// COMMANDS TAB
+// ============================================================================
+
+const CommandsTab: React.FC = () => {
+  const [commands, setCommands] = useState<
+    Record<string, { triggers: string[]; action: string; description: string }>
+  >({});
+  const [viewMode, setViewMode] = useState<ViewMode>("list");
+
+  // Form state
+  const [formName, setFormName] = useState("");
+  const [formTriggers, setFormTriggers] = useState("");
+  const [formAction, setFormAction] = useState("");
+  const [formDescription, setFormDescription] = useState("");
+
+  const loadCommands = async () => {
+    try {
+      const res = await fetch("http://localhost:3001/api/commands");
+      const data = await res.json();
+      setCommands(data);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  useEffect(() => {
+    loadCommands();
+  }, []);
+
+  const handleSave = async () => {
+    try {
+      await fetch("http://localhost:3001/api/commands", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: formName,
+          data: {
+            triggers: formTriggers
+              .split(",")
+              .map((t) => t.trim())
+              .filter((t) => t),
+            action: formAction,
+            description: formDescription,
+          },
+        }),
+      });
+      loadCommands();
+      setViewMode("list");
+      resetForm();
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleDelete = async (name: string) => {
+    if (!confirm(`Supprimer ${name} ?`)) return;
+    try {
+      await fetch(`http://localhost:3001/api/commands/${name}`, {
+        method: "DELETE",
+      });
+      loadCommands();
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const resetForm = () => {
+    setFormName("");
+    setFormTriggers("");
+    setFormAction("");
+    setFormDescription("");
+  };
+
+  return (
+    <div className="space-y-4">
+      {viewMode === "list" ? (
+        <>
+          <div className="flex justify-end mb-6">
+            <button
+              onClick={() => setViewMode("add")}
+              className="px-6 py-3 bg-cyan-500/20 border border-cyan-400 rounded-lg text-cyan-300 flex items-center gap-2"
+            >
+              <Plus size={20} /> Ajouter une commande
+            </button>
+          </div>
+          <div className="grid gap-3">
+            {Object.entries(commands).map(([name, data]) => (
+              <div
+                key={name}
+                className="bg-slate-800/50 border border-cyan-400/20 rounded-lg p-4 flex justify-between items-center"
+              >
+                <div>
+                  <h3 className="text-cyan-300 font-bold">{name}</h3>
+                  <div className="flex gap-1 flex-wrap mt-1">
+                    {data.triggers.map((t) => (
+                      <span
+                        key={t}
+                        className="text-[10px] bg-slate-700 text-cyan-400 px-1.5 py-0.5 rounded border border-cyan-500/20 italic"
+                      >
+                        "{t}"
+                      </span>
+                    ))}
+                  </div>
+                  <p className="text-sm text-gray-400 mt-2">
+                    {data.description}
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      setFormName(name);
+                      setFormTriggers(data.triggers.join(", "));
+                      setFormAction(data.action);
+                      setFormDescription(data.description);
+                      setViewMode("edit");
+                    }}
+                    className="p-2 text-blue-400 hover:bg-blue-500/10 rounded"
+                  >
+                    <Edit size={18} />
+                  </button>
+                  <button
+                    onClick={() => handleDelete(name)}
+                    className="p-2 text-red-400 hover:bg-red-500/10 rounded"
+                  >
+                    <Trash2 size={18} />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      ) : (
+        <div className="max-w-md mx-auto space-y-4">
+          <h3 className="text-xl font-bold text-cyan-300">
+            {viewMode === "add" ? "Nouvelle" : "Modifier la"} commande
+          </h3>
+          <input
+            type="text"
+            placeholder="Nom technique (ex: screenshot)"
+            value={formName}
+            onChange={(e) => setFormName(e.target.value)}
+            className="w-full p-3 bg-slate-800 border border-cyan-400/30 rounded text-white"
+          />
+          <input
+            type="text"
+            placeholder="Phrases d'activation (ex: capture d'écran, fait un screen)"
+            value={formTriggers}
+            onChange={(e) => setFormTriggers(e.target.value)}
+            className="w-full p-3 bg-slate-800 border border-cyan-400/30 rounded text-white"
+          />
+          <textarea
+            placeholder="Action (JSON ou code)"
+            value={formAction}
+            onChange={(e) => setFormAction(e.target.value)}
+            className="w-full p-3 bg-slate-800 border border-cyan-400/30 rounded text-white h-24"
+          />
+          <input
+            type="text"
+            placeholder="Description"
+            value={formDescription}
+            onChange={(e) => setFormDescription(e.target.value)}
+            className="w-full p-3 bg-slate-800 border border-cyan-400/30 rounded text-white"
+          />
+          <div className="flex gap-4 pt-4">
+            <button
+              onClick={handleSave}
+              className="flex-1 py-3 bg-cyan-500 text-slate-900 font-bold rounded"
+            >
+              Sauvegarder
+            </button>
+            <button
+              onClick={() => {
+                setViewMode("list");
+                resetForm();
+              }}
+              className="px-6 py-3 border border-slate-600 rounded text-gray-400"
+            >
+              Annuler
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
 
 // ============================================================================
 // GOOGLE TAB (Gmail & Calendrier)
