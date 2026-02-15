@@ -101,6 +101,55 @@ export const handleShowImages = async (
 };
 
 /**
+ * Générer une image via Web (Bing/DALL-E)
+ */
+export const handleGenerateImage = async (
+  args: {
+    prompt: string;
+    provider?: "bing" | "openai" | "craiyon";
+  },
+  ctx: HandlerContext,
+) => {
+  const { prompt, provider = "bing" } = args;
+  const { addLog, setStatus } = ctx;
+
+  addLog(`Generating image with ${provider}: "${prompt}"`, "OMNI", "info");
+  setStatus(SystemStatus.NETWORKING);
+
+  let url = "";
+  switch (provider) {
+    case "bing":
+      url = `https://www.bing.com/images/create?q=${encodeURIComponent(prompt)}`;
+      break;
+    case "openai":
+      url =
+        "https://chatgpt.com/?q=Génère une image de : " +
+        encodeURIComponent(prompt);
+      break;
+    case "craiyon":
+      url = `https://www.craiyon.com/?prompt=${encodeURIComponent(prompt)}`;
+      break;
+  }
+
+  // Ouverture avec focus automatique pour Bing
+  const success = webNav.openUrl(url);
+
+  if (success) {
+    addLog(`Generator opened: ${provider}`, "SYSTEM", "success");
+    // Tentative de focus/validation automatique
+    setTimeout(() => {
+      sendShortcut("enter").catch((e) => console.error(e));
+    }, 5000);
+    return {
+      status: "success",
+      message: `Générateur ${provider} ouvert pour "${prompt}"`,
+    };
+  } else {
+    return { status: "error", message: "Impossible d'ouvrir le générateur" };
+  }
+};
+
+/**
  * Gérer les favoris (add, open, list, delete)
  */
 export const handleManageBookmarks = async (

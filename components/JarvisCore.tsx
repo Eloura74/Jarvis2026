@@ -21,6 +21,7 @@
  */
 
 import React from "react";
+import { RealSphere } from "./RealSphere";
 import { motion } from "framer-motion";
 
 /**
@@ -212,32 +213,18 @@ const JarvisCore: React.FC<JarvisCoreProps> = ({ status }) => {
           />
         </motion.g>
 
-        {/* CENTRAL REACTOR */}
-        <motion.circle
-          cx="200"
-          cy="200"
-          r="60"
-          fill={isListening ? colors.primary : "none"}
-          stroke={colors.primary}
-          strokeWidth="3"
-          opacity="0.9"
-          animate={{
-            fillOpacity: isListening ? [0.2, 0.5, 0.2] : 0.1,
-            strokeWidth: isProcessing ? [3, 8, 3] : 3,
-          }}
-          transition={{ duration: isProcessing ? 1 : 2, repeat: Infinity }}
-          filter="url(#glow)"
-        />
-
-        {/* Noyau Blanc Pur */}
-        <circle
-          cx="200"
-          cy="200"
-          r="40"
-          fill="white"
-          fillOpacity="0.8"
-          filter="url(#glow)"
-        />
+        {/* CENTRAL SPHERE (THREE.JS) */}
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-auto">
+          <RealSphere
+            isActive={isProcessing || (status as string) === "SPEAKING"}
+            isListening={isListening}
+            audioLevel={isListening ? 0.8 : 0.2} // Simulation niveau audio
+            size={300}
+            baseColor={colors.primary}
+            activeColor={colors.secondary}
+            listeningColor={colors.primary}
+          />
+        </div>
       </svg>
 
       {/* Lignes de connexion HUD (HTML/CSS pour faciliter le layout textuel si besoin) */}

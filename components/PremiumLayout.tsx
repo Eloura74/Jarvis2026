@@ -10,7 +10,7 @@ import { JarvisCinematicBackground } from "./JarvisCinematicBackground";
 import { LoadingOverlay } from "./LoadingOverlay";
 import { SuccessRipple } from "./SuccessRipple";
 import { ConfigPanelCRUD } from "./ConfigPanelCRUD";
-import { ParticleSphere } from "./ParticleSphere";
+import { RealSphere } from "./RealSphere"; // REMPLACEMENT
 import { FingerprintScanner } from "./FingerprintScanner";
 import { NeuralFeed } from "./NeuralFeed";
 import { MediaWidget } from "./MediaWidget";
@@ -37,6 +37,11 @@ interface PremiumLayoutProps {
   isProcessing: boolean;
   processingMessage?: string;
   successTrigger: number;
+  tokenUsage?: {
+    totalTokens: number;
+    promptTokens: number;
+    candidatesTokens: number;
+  };
 }
 
 export const PremiumLayout: React.FC<PremiumLayoutProps> = ({
@@ -50,6 +55,7 @@ export const PremiumLayout: React.FC<PremiumLayoutProps> = ({
   isProcessing,
   processingMessage,
   successTrigger,
+  tokenUsage,
 }) => {
   const [isAppPathsOpen, setIsAppPathsOpen] = useState(false);
   const [isFileExplorerOpen, setIsFileExplorerOpen] = useState(false);
@@ -176,21 +182,22 @@ export const PremiumLayout: React.FC<PremiumLayoutProps> = ({
             />
           </div>
 
-          {/* PARTICLE SPHERE OVERLAY - Responsive */}
-          <div className="absolute inset-0 flex items-center justify-center z-10 mix-blend-screen pointer-events-none filter brightness-125 contrast-125 -translate-y-8 md:-translate-y-16">
-            <ParticleSphere
-              isActive={status === "speaking"}
+          {/* REAL SPHERE OVERLAY - Responsive */}
+          <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none -translate-y-16">
+            <RealSphere
+              isActive={status === "speaking" || status === "processing"}
               isListening={isListening || status === "listening"}
-              audioLevel={status === "speaking" ? 80 : 0}
+              audioLevel={status === "speaking" ? 0.8 : 0}
               size={
                 typeof window !== "undefined" && window.innerWidth < 768
-                  ? 500
+                  ? 320
                   : window.innerWidth < 1280
-                    ? 650
-                    : 850
+                    ? 450
+                    : 600
               }
               baseColor="#00e5ff"
-              activeColor="#00e5ff"
+              activeColor="#ef4444"
+              listeningColor="#ef4444"
             />
           </div>
 
@@ -410,6 +417,7 @@ export const PremiumLayout: React.FC<PremiumLayoutProps> = ({
       <ConfigPanelCRUD
         isOpen={isAppPathsOpen}
         onClose={() => setIsAppPathsOpen(false)}
+        tokenUsage={tokenUsage} // PASSER LES DATA
       />
       <FileExplorer
         isOpen={isFileExplorerOpen}

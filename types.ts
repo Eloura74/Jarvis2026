@@ -131,6 +131,12 @@ export interface OmniDecision {
   text?: string;
 
   confidence: number;
+  // Métriques d'utilisation
+  tokenUsage?: {
+    totalTokens: number;
+    promptTokens: number;
+    candidatesTokens: number;
+  };
 }
 
 // ============================================================================

@@ -161,6 +161,22 @@ const toolDeclarations: FunctionDeclaration[] = [
     },
   },
   {
+    name: "generate_image",
+    description: "Generate an image using a web provider (Bing/DALL-E).",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        prompt: { type: Type.STRING },
+        provider: {
+          type: Type.STRING,
+          enum: ["bing", "openai", "craiyon"],
+          description: "Default is bing (free & fast).",
+        },
+      },
+      required: ["prompt"],
+    },
+  },
+  {
     name: "analyze_screen",
     description: "Capture and analyze screen content.",
     parameters: {
@@ -341,6 +357,14 @@ export const parseCommand = async (
         toolCalls: validCalls,
         text: textResponse,
         confidence: 0.99,
+        tokenUsage: response.usageMetadata
+          ? {
+              totalTokens: response.usageMetadata.totalTokenCount || 0,
+              promptTokens: response.usageMetadata.promptTokenCount || 0,
+              candidatesTokens:
+                response.usageMetadata.candidatesTokenCount || 0,
+            }
+          : undefined,
       };
     }
     // CAS 2 : OUTILS SEULEMENT
@@ -349,6 +373,14 @@ export const parseCommand = async (
         type: "TOOL_CALL",
         toolCalls: validCalls,
         confidence: 0.99,
+        tokenUsage: response.usageMetadata
+          ? {
+              totalTokens: response.usageMetadata.totalTokenCount || 0,
+              promptTokens: response.usageMetadata.promptTokenCount || 0,
+              candidatesTokens:
+                response.usageMetadata.candidatesTokenCount || 0,
+            }
+          : undefined,
       };
     }
     // CAS 3 : TEXTE SEULEMENT
@@ -357,6 +389,14 @@ export const parseCommand = async (
         type: "TEXT_RESPONSE",
         text: textResponse || "Standing by.",
         confidence: 0.8,
+        tokenUsage: response.usageMetadata
+          ? {
+              totalTokens: response.usageMetadata.totalTokenCount || 0,
+              promptTokens: response.usageMetadata.promptTokenCount || 0,
+              candidatesTokens:
+                response.usageMetadata.candidatesTokenCount || 0,
+            }
+          : undefined,
       };
     }
 

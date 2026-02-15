@@ -218,6 +218,7 @@ const JarvisShell: React.FC<JarvisShellProps> = ({ shouldGreet }) => {
         // Données Cerveau (Commande & Historique)
         successTrigger={brain.successTrigger}
         onCommand={brain.processCommand}
+        tokenUsage={brain.lastTokenUsage} // NOUVEAU
         // Données Interaction (Micro)
         isListening={interaction.isListening}
         onMicrophoneClick={interaction.handleMicrophoneClick}

@@ -12,7 +12,7 @@ import { parseCommand } from "../services/geminiService";
 import { trackCommand } from "../services/predictionEngine";
 import * as handlers from "../handlers";
 import { CommandInfo, HandlerContext } from "../types/app.types";
-import { LogEntry, SystemStatus, AppMemory } from "../types";
+import { LogEntry, SystemStatus, AppMemory, OmniDecision } from "../types";
 import { AppPath } from "./useAppPaths";
 
 interface UseJarvisBrainProps {
@@ -51,6 +51,8 @@ export function useJarvisBrain({
 }: UseJarvisBrainProps) {
   const [commandHistory, setCommandHistory] = useState<CommandInfo[]>([]);
   const [successTrigger, setSuccessTrigger] = useState(0);
+  const [lastTokenUsage, setLastTokenUsage] =
+    useState<OmniDecision["tokenUsage"]>();
 
   // ========================================
   // EXÉCUTION DES OUTILS
@@ -130,6 +132,8 @@ export function useJarvisBrain({
           return await handlers.handleManageBookmarks(toolArgs, ctx);
         case "show_images": // NOUVEAU
           return await handlers.handleShowImages(toolArgs, ctx);
+        case "generate_image": // NOUVEAU
+          return await handlers.handleGenerateImage(toolArgs, ctx);
 
         // === PRODUCTIVITY ===
         case "set_timer":
@@ -219,6 +223,10 @@ export function useJarvisBrain({
 
         // 3. Envoyer à Gemini
         const result = await parseCommand(text, appMemory, conversationContext);
+
+        if (result.tokenUsage) {
+          setLastTokenUsage(result.tokenUsage);
+        }
 
         // CAS 1 : APPEL D'OUTIL (Un ou plusieurs outils)
         if (
@@ -474,5 +482,6 @@ export function useJarvisBrain({
     commandHistory,
     successTrigger,
     processCommand,
+    lastTokenUsage,
   };
 }
