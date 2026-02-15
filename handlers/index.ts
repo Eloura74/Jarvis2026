@@ -32,3 +32,6 @@ export * from "./googleHandlers";
 
 // Memory (RAG)
 export * from "./memoryHandlers";
+
+// Weather
+export * from "./weatherHandlers";

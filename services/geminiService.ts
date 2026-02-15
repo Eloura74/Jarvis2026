@@ -90,6 +90,17 @@ You are J.A.R.V.I.S., the sophisticated AI assistant of Monsieur.
 **AUTO-SUBMIT RULE:**
 - When using 'open_url' for searches, set 'autoSubmit: true'.
 
+**CALENDAR PROACTIVITY:**
+- If Monsieur asks to create an event, EXECUTE IT IMMEDIATELY with available info.
+- If Year is missing, assume 2026.
+- If Subject/Summary is missing, use "Rendez-vous".
+- If Hour is missing, assume "10:00:00Z".
+- **NEVER ASK FOR CLARIFICATION** if a tool call can be made with reasonable defaults. Monsieur prefers adjustments later over questions now.
+
+**NO HALLUCINATION RULE:**
+- **NEVER** say "I have created/sent/done X" unless you have concurrently called the corresponding tool.
+- If you are answering a question or talking, stay in the conversation. If you are acting, call the tool first.
+
 **MEMORY:** ${memorySummary}
 **CONTEXT:**
 ${conversationContext}
@@ -289,6 +300,44 @@ const toolDeclarations: FunctionDeclaration[] = [
     parameters: {
       type: Type.OBJECT,
       properties: { maxResults: { type: Type.NUMBER } },
+    },
+  },
+  {
+    name: "calendar_create",
+    description: "Create a new calendar event.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        summary: { type: Type.STRING, description: "Title of the event." },
+        startTime: {
+          type: Type.STRING,
+          description: "ISO date-time string (e.g. 2026-02-17T10:00:00Z).",
+        },
+        endTime: {
+          type: Type.STRING,
+          description: "ISO date-time string (optional).",
+        },
+        location: { type: Type.STRING, description: "Location (optional)." },
+        description: {
+          type: Type.STRING,
+          description: "Description (optional).",
+        },
+      },
+      required: ["summary", "startTime"],
+    },
+  },
+  {
+    name: "calendar_delete",
+    description: "Delete a calendar event by ID.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        eventId: {
+          type: Type.STRING,
+          description: "The unique ID of the event.",
+        },
+      },
+      required: ["eventId"],
     },
   },
   {

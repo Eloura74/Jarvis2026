@@ -19,20 +19,22 @@ import path from "path";
 dotenv.config({ path: "./.env.local" });
 import { spawn } from "child_process";
 import {
+  windowManager,
+  automation,
+  systemControl,
+} from "./platform/dispatcher.js";
+import {
   indexApplications,
   searchApplications,
   saveIndexToFile,
   loadIndexFromFile,
 } from "./appIndexer.js";
-import * as windowManager from "./windowManager.js";
-import * as automation from "./automation.js";
 import { getSystemStats, getLightStats } from "./systemStats.js";
 import appsRoutes from "./routes/apps.js";
 import shortcutsRoutes from "./routes/shortcuts.js";
 import commandsRoutes from "./routes/commands.js";
 import googleRoutes from "./routes/google.js";
 import * as googleService from "./googleService.js";
-import * as systemControl from "./systemControl.js";
 import localMemory from "./services/localMemory.js";
 import secureFileManager from "./services/secureFileManager.js"; // NOUVEAU
 import webScraper from "./services/webScraper.js"; // NOUVEAU

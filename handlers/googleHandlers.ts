@@ -127,3 +127,92 @@ export async function handleCalendarList(
     throw error;
   }
 }
+
+/**
+ * Crée un évènement dans le calendrier
+ */
+export async function handleCalendarCreate(
+  args: {
+    summary: string;
+    startTime: string;
+    endTime?: string;
+    location?: string;
+    description?: string;
+  },
+  ctx: HandlerContext,
+) {
+  const { addLog } = ctx;
+  const { summary, startTime, endTime, location, description } = args;
+
+  try {
+    addLog(`Création du rendez-vous: ${summary}...`, "OMNI", "info");
+
+    // Si pas de end, on met +1h par défaut
+    const start = new Date(startTime);
+    const end = endTime
+      ? new Date(endTime)
+      : new Date(start.getTime() + 60 * 60 * 1000);
+
+    const response = await fetch(
+      `http://localhost:3001/api/google/calendar/events`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          summary,
+          startTime: start.toISOString(),
+          endTime: end.toISOString(),
+          location,
+          description,
+        }),
+      },
+    );
+    const data = await response.json();
+
+    if (data.error) throw new Error(data.error);
+
+    addLog(`✅ Rendez-vous créé: ${summary}`, "CALENDAR", "success");
+    return { status: "success", message: "Évènement créé", data };
+  } catch (error: any) {
+    addLog(
+      `Erreur création calendrier: ${error.message || String(error)}`,
+      "SYSTEM",
+      "error",
+    );
+    throw error;
+  }
+}
+
+/**
+ * Supprime un évènement du calendrier
+ */
+export async function handleCalendarDelete(
+  args: { eventId: string },
+  ctx: HandlerContext,
+) {
+  const { addLog } = ctx;
+  const { eventId } = args;
+
+  try {
+    addLog(`Suppression de l'évènement ${eventId}...`, "OMNI", "info");
+    const response = await fetch(
+      `http://localhost:3001/api/google/calendar/events/${eventId}`,
+      {
+        method: "DELETE",
+      },
+    );
+    const data = await response.json();
+
+    if (data.error) throw new Error(data.error);
+
+    addLog(`✅ Évènement supprimé`, "CALENDAR", "success");
+    return { status: "success", message: "Évènement supprimé" };
+  } catch (error: any) {
+    addLog(
+      `Erreur suppression calendrier: ${error.message || String(error)}`,
+      "SYSTEM",
+      "error",
+    );
+    throw error;
+  }
+}

@@ -162,6 +162,10 @@ export function useJarvisBrain({
           return await handlers.handleGmailSend(toolArgs, ctx);
         case "calendar_list":
           return await handlers.handleCalendarList(toolArgs, ctx);
+        case "calendar_create":
+          return await handlers.handleCalendarCreate(toolArgs, ctx);
+        case "calendar_delete":
+          return await handlers.handleCalendarDelete(toolArgs, ctx);
 
         // === HOME ASSISTANT (NOUVEAU) ===
         case "control_home_automation":
@@ -169,9 +173,9 @@ export function useJarvisBrain({
           const { handleControlHomeAutomation } = await import("../handlers");
           return await handleControlHomeAutomation(toolArgs, ctx);
 
-        // === MEMORY (RAG) ===
-        case "consult_memory":
-          return await handlers.handleConsultMemory(toolArgs, ctx);
+        // === WEATHER (NOUVEAU) ===
+        case "get_weather":
+          return await handlers.handleGetWeather(toolArgs, ctx);
 
         // === CONVERSATION CONTROL ===
         case "stop_listening":
@@ -332,7 +336,8 @@ export function useJarvisBrain({
               // NOUVEAU : Synthèse intelligente pour les outils riches si pas chaînés
               const isRichTool =
                 toolCall.name.startsWith("gmail") ||
-                toolCall.name.startsWith("calendar");
+                toolCall.name.startsWith("calendar") ||
+                toolCall.name === "get_weather";
               if (
                 toolResult &&
                 typeof toolResult === "object" &&
@@ -426,7 +431,8 @@ export function useJarvisBrain({
               // NOUVEAU : Synthèse intelligente pour les réponses mixtes aussi
               const isRichTool =
                 toolCall.name.startsWith("gmail") ||
-                toolCall.name.startsWith("calendar");
+                toolCall.name.startsWith("calendar") ||
+                toolCall.name === "get_weather";
               if (
                 toolResult &&
                 typeof toolResult === "object" &&
