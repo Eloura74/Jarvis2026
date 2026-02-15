@@ -24,6 +24,7 @@
     "glob": "^10.3.10",
     "googleapis": "^171.4.0",
     "puppeteer-core": "^24.37.3",
+    "screenshot-desktop": "^1.15.0",
     "systeminformation": "^5.22.0"
   },
   "devDependencies": {

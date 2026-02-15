@@ -3,25 +3,25 @@ import fs from "fs/promises";
 import screenshot from "screenshot-desktop";
 
 /**
- * Contrôle le volume audio sous Linux (ALSA/amixer)
+ * Contrôle le volume audio sous Linux (PulseAudio/pactl)
  */
 export async function controlVolume({ action, value = 0 }) {
   let command = "";
   switch (action) {
     case "set":
-      command = `amixer sset 'Master' ${value}%`;
+      command = `pactl set-sink-volume @DEFAULT_SINK@ ${value}%`;
       break;
     case "increase":
-      command = "amixer sset 'Master' 5%+";
+      command = "pactl set-sink-volume @DEFAULT_SINK@ +5%";
       break;
     case "decrease":
-      command = "amixer sset 'Master' 5%-";
+      command = "pactl set-sink-volume @DEFAULT_SINK@ -5%";
       break;
     case "mute":
-      command = "amixer sset 'Master' mute";
+      command = "pactl set-sink-mute @DEFAULT_SINK@ 1";
       break;
     case "unmute":
-      command = "amixer sset 'Master' unmute";
+      command = "pactl set-sink-mute @DEFAULT_SINK@ 0";
       break;
   }
   return new Promise((resolve) => {

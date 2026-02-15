@@ -14,12 +14,19 @@ export function typeText(text) {
 }
 
 /**
- * Envoi de raccourcis clavier sous Linux
+ * Envoi de raccourcis clavier sous Linux via xdotool
  */
 export function sendShortcut(keys) {
   return new Promise((resolve) => {
-    // Conversion simple format 'ctrl+c' -> 'ctrl+c' (xdotool compatible en général)
-    const xKey = keys.replace(/\+/g, "+");
+    // Conversion format 'ctrl+c' -> 'ctrl+c' (xdotool)
+    // xdotool utilise des noms comme 'Control_L', 'Alt_L', etc. mais supporte souvent les raccourcis directs
+    const xKey = keys
+      .toLowerCase()
+      .replace(/ctrl/g, "ctrl")
+      .replace(/alt/g, "alt")
+      .replace(/shift/g, "shift")
+      .replace(/\+/g, "+");
+
     exec(`xdotool key ${xKey}`, (error) => {
       resolve(!error);
     });
