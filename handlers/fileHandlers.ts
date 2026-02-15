@@ -3,7 +3,6 @@
  */
 
 import { HandlerContext } from "../types/app.types";
-import { SystemStatus } from "../types";
 
 // ============================================================================
 // AGENT DE CODE (Windsurf Mode)
@@ -107,12 +106,33 @@ export const handleDeleteFile = async (
   ctx: HandlerContext,
 ) => {
   const { path } = args;
-  ctx.addLog(`Deleting: ${path}`, "SYSTEM", "warning");
-  // TODO: Connecter à une route secure-delete si nécessaire
-  return {
-    status: "warning",
-    message: "Suppression non implémentée via Agent sécurisé pour l'instant.",
-  };
+  const { addLog } = ctx;
+  addLog(`🗑️ Deleting file: ${path}`, "KERNEL", "warning");
+
+  try {
+    const response = await fetch("http://localhost:3001/api/files/action", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "delete", path }),
+    });
+
+    const data = await response.json();
+
+    if (data.success) {
+      return {
+        status: "success",
+        message: "Fichier supprimé avec succès.",
+      };
+    } else {
+      throw new Error(data.error || "Erreur lors de la suppression");
+    }
+  } catch (error) {
+    addLog(`❌ Delete error: ${error}`, "KERNEL", "error");
+    return {
+      status: "error",
+      message: `Impossible de supprimer le fichier : ${error}`,
+    };
+  }
 };
 
 export const handleMoveFile = async (_args: any, _ctx: HandlerContext) => {

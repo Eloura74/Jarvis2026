@@ -376,9 +376,27 @@ const toolDeclarations: FunctionDeclaration[] = [
     },
   },
   {
-    name: "write_file_content",
-    description:
-      "Write or overwrite a file with new content. CAUTION: Overwrites existing content.",
+    name: "take_screenshot",
+    description: "Capture a screenshot of the current screen.",
+    parameters: { type: Type.OBJECT, properties: {} },
+  },
+  {
+    name: "control_session",
+    description: "System session control: lock, shutdown, restart, sleep.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        action: {
+          type: Type.STRING,
+          enum: ["lock", "shutdown", "restart", "sleep"],
+        },
+      },
+      required: ["action"],
+    },
+  },
+  {
+    name: "create_file",
+    description: "Create a new file with content.",
     parameters: {
       type: Type.OBJECT,
       properties: {
@@ -386,6 +404,124 @@ const toolDeclarations: FunctionDeclaration[] = [
         content: { type: Type.STRING },
       },
       required: ["path", "content"],
+    },
+  },
+  {
+    name: "read_file_content",
+    description: "Read the content of a local file.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: { path: { type: Type.STRING } },
+      required: ["path"],
+    },
+  },
+  {
+    name: "write_file_content",
+    description: "Write or overwrite a file with content.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        path: { type: Type.STRING },
+        content: { type: Type.STRING },
+      },
+      required: ["path", "content"],
+    },
+  },
+  {
+    name: "delete_file",
+    description: "Delete a file from the system.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: { path: { type: Type.STRING } },
+      required: ["path"],
+    },
+  },
+  {
+    name: "search_files",
+    description: "Search for files on the system.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: { query: { type: Type.STRING } },
+      required: ["query"],
+    },
+  },
+  {
+    name: "manage_notes",
+    description: "Create, read, or delete personal notes.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        action: { type: Type.STRING, enum: ["create", "list", "delete"] },
+        title: { type: Type.STRING },
+        content: { type: Type.STRING },
+      },
+      required: ["action"],
+    },
+  },
+  {
+    name: "manage_todos",
+    description: "Add, list, or check items in the todo list.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        action: { type: Type.STRING, enum: ["add", "list", "toggle", "clear"] },
+        text: { type: Type.STRING },
+      },
+      required: ["action"],
+    },
+  },
+  {
+    name: "set_timer",
+    description: "Set a countdown timer.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        durationSeconds: { type: Type.NUMBER },
+        label: { type: Type.STRING },
+      },
+      required: ["durationSeconds"],
+    },
+  },
+  {
+    name: "manage_bookmarks",
+    description: "Save or list web bookmarks.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        action: { type: Type.STRING, enum: ["add", "list", "delete"] },
+        url: { type: Type.STRING },
+        title: { type: Type.STRING },
+      },
+      required: ["action"],
+    },
+  },
+  {
+    name: "show_images",
+    description: "Show a gallery of images (local or remote).",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        images: {
+          type: Type.ARRAY,
+          items: { type: Type.STRING },
+          description: "List of URLs or paths.",
+        },
+      },
+      required: ["images"],
+    },
+  },
+  {
+    name: "get_weather",
+    description: "Get real-time weather info for a city or current location.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        city: { type: Type.STRING, description: "City name (optional)." },
+        needsForecast: {
+          type: Type.BOOLEAN,
+          description: "Whether to include forecast.",
+        },
+      },
     },
   },
 ];

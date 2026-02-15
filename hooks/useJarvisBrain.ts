@@ -337,7 +337,9 @@ export function useJarvisBrain({
               const isRichTool =
                 toolCall.name.startsWith("gmail") ||
                 toolCall.name.startsWith("calendar") ||
-                toolCall.name === "get_weather";
+                toolCall.name === "get_weather" ||
+                toolCall.name === "set_timer" ||
+                toolCall.name === "consult_memory";
               if (
                 toolResult &&
                 typeof toolResult === "object" &&
@@ -432,7 +434,9 @@ export function useJarvisBrain({
               const isRichTool =
                 toolCall.name.startsWith("gmail") ||
                 toolCall.name.startsWith("calendar") ||
-                toolCall.name === "get_weather";
+                toolCall.name === "get_weather" ||
+                toolCall.name === "set_timer" ||
+                toolCall.name === "consult_memory";
               if (
                 toolResult &&
                 typeof toolResult === "object" &&

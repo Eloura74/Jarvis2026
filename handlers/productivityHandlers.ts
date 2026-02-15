@@ -52,6 +52,7 @@ export const handleManageNotes = async (
   try {
     switch (action) {
       case "add":
+      case "create":
         if (content) {
           productivity.addNote(content, tags);
           addLog("Note added", "SYSTEM", "success");
@@ -105,6 +106,7 @@ export const handleManageTodos = async (
   try {
     switch (action) {
       case "add":
+      case "create":
         if (text) {
           productivity.addTodo(text, priority);
           addLog(`Todo added: ${text}`, "SYSTEM", "success");
@@ -112,10 +114,16 @@ export const handleManageTodos = async (
         break;
 
       case "complete":
+      case "toggle":
         if (id) {
           productivity.completeTodo(id);
           addLog("Todo marked complete", "SYSTEM", "success");
         }
+        break;
+
+      case "clear":
+        // Si on n'a pas de clear total, on pourrait vider l'index ou ne rien faire
+        addLog("Todo clear requested", "SYSTEM", "info");
         break;
 
       case "list":
