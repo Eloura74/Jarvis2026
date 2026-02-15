@@ -76,6 +76,57 @@ export const handleOpenUrl = async (
 };
 
 /**
+ * Lire le contenu d'une page web (Deep Research)
+ */
+export const handleReadWebPage = async (
+  args: { url: string },
+  ctx: HandlerContext,
+) => {
+  const { url } = args;
+  const { addLog, setStatus } = ctx;
+
+  addLog(`📖 Reading web page: ${url}`, "NETWORKING", "info");
+  setStatus(SystemStatus.NETWORKING);
+
+  try {
+    const response = await fetch("http://localhost:3001/api/web/scrape", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url }),
+    });
+
+    const data = await response.json();
+
+    if (data.success && data.data) {
+      addLog(
+        `✅ Page read: ${data.data.title} (${data.data.content.length} chars)`,
+        "NETWORKING",
+        "success",
+      );
+      setStatus(SystemStatus.IDLE);
+      return {
+        status: "success",
+        data: {
+          title: data.data.title,
+          content: data.data.content,
+          url: data.data.url,
+        },
+        message: `Page lue : ${data.data.title}`,
+      };
+    } else {
+      throw new Error(data.error || "Erreur inconnue");
+    }
+  } catch (error) {
+    addLog(`❌ Read error: ${error}`, "NETWORKING", "error");
+    setStatus(SystemStatus.ERROR);
+    return {
+      status: "error",
+      message: `Impossible de lire la page web : ${error}`,
+    };
+  }
+};
+
+/**
  * Afficher l'overlay d'images
  */
 export const handleShowImages = async (

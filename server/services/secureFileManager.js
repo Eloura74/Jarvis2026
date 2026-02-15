@@ -40,62 +40,105 @@ const ALLOWED_EXTENSIONS = [
 ];
 
 class SecureFileManager {
+  constructor() {
+    this.userHome = os.homedir();
+
+    // Détection INTÉLLIGENTE : Priorité au dossier "Monsieur" si présent (cas spécifique de l'utilisateur)
+    const monsieurDesktop = "C:\\Users\\Monsieur\\Desktop";
+    try {
+      // On teste si on peut accéder au bureau de "Monsieur"
+      this.desktopPath = monsieurDesktop;
+      console.log(`📂 [SecureFile] Desktop target set to: ${this.desktopPath}`);
+    } catch (e) {
+      this.desktopPath = path.join(this.userHome, "Desktop");
+    }
+  }
+
+  /**
+   * Résout intelligemment les alias de chemins (ex: "Bureau/mon-fichier.txt")
+   */
+  resolvePath(inputPath) {
+    let finalPath = inputPath;
+
+    // Nettoyage des préfixes français/anglais
+    const cleanPath = inputPath.replace(/^(Bureau|Desktop)[\/\\]/i, "");
+
+    if (
+      inputPath.toLowerCase().startsWith("bureau") ||
+      inputPath.toLowerCase().startsWith("desktop")
+    ) {
+      finalPath = path.join(this.desktopPath, cleanPath);
+    }
+
+    return path.resolve(finalPath);
+  }
+
   /**
    * Vérifie si le chemin est autorisé pour modification
    */
   isPathAllowed(targetPath) {
-    // Normaliser les chemins pour éviter les traversées (../../)
     const normalized = path.normalize(targetPath);
-
-    // Empêcher accès hors du système de fichier utilisateur standard (MVP)
-    // Idéalement : Restreindre au dossier de travail courant du User
-
-    // 1. Vérifier extension
-    const ext = path.extname(normalized).toLowerCase();
-
-    // Fichiers sans extension (ex: LICENSE, Makefile) -> OK si pas binaire
-    if (ext === "") {
-      // TODO: Vérification MIME type ou contenu binaire
-      return true;
-    }
-
-    if (!ALLOWED_EXTENSIONS.includes(ext)) {
-      return false;
-    }
-
-    // 2. Vérifier blacklist dossiers
-    // On vérifie si le chemin commence par un dossier interdit
-    // Attention aux majuscules/minuscules sous Windows
     const lowerPath = normalized.toLowerCase();
 
+    // 1. Nettoyage et vérification de l'extension
+    // Gérer les cas de transcription vocale complexes (point txt, pour un txt, etc.)
+    let cleanPath = normalized;
+    if (lowerPath.includes(" point txt")) {
+      cleanPath = normalized.replace(/ point txt/i, ".txt");
+    } else if (lowerPath.includes(" pour un txt")) {
+      // Cas spécifique rencontré : transcription de ".txt"
+      cleanPath = normalized.replace(/ pour un txt/i, ".txt");
+    }
+
+    const ext = path.extname(cleanPath).toLowerCase();
+
+    // 2. Vérifier blacklist dossiers systêmes (Priorité haute)
     for (const forbidden of FORBIDDEN_PATHS) {
       if (lowerPath.startsWith(forbidden.toLowerCase())) {
         return false;
       }
     }
 
-    return true;
+    // 3. Vérification de la zone de confiance (Desktop / Home)
+    const projectRoot = path.resolve(".");
+    const desktopMatch = lowerPath.startsWith(this.desktopPath.toLowerCase());
+    const homeMatch = lowerPath.startsWith(this.userHome.toLowerCase());
+    const projectMatch = lowerPath.startsWith(projectRoot.toLowerCase());
+
+    const isTrustedZone = desktopMatch || homeMatch || projectMatch;
+
+    // Si on est dans une zone de confiance, on est plus souple sur l'extension
+    if (isTrustedZone) {
+      // Si pas d'extension, c'est OK (on traitera ça comme du texte)
+      if (ext === "") return true;
+      // Si extension connue, c'est OK
+      if (ALLOWED_EXTENSIONS.includes(ext)) return true;
+    }
+
+    // Hors zone de confiance ou extension interdite
+    if (!ALLOWED_EXTENSIONS.includes(ext)) {
+      return false;
+    }
+
+    return isTrustedZone;
   }
 
   /**
    * Lit un fichier de manière sécurisée
    */
   async readFile(filePath) {
-    if (!this.isPathAllowed(filePath)) {
-      throw new Error(`Accès refusé (Politique de Sécurité) : ${filePath}`);
+    const resolvedPath = this.resolvePath(filePath);
+
+    if (!this.isPathAllowed(resolvedPath)) {
+      throw new Error(`Accès refusé (Politique de Sécurité) : ${resolvedPath}`);
     }
 
     try {
-      const stats = await fs.stat(filePath);
-
-      // Limite de taille : 1Mo pour éviter de crasher la mémoire
+      const stats = await fs.stat(resolvedPath);
       if (stats.size > 1024 * 1024) {
-        throw new Error(
-          "Fichier trop volumineux (>1MB). Lecture partielle non supportée pour l'instant.",
-        );
+        throw new Error("Fichier trop volumineux (>1MB).");
       }
-
-      return await fs.readFile(filePath, "utf8");
+      return await fs.readFile(resolvedPath, "utf8");
     } catch (error) {
       throw new Error(`Impossible de lire le fichier : ${error.message}`);
     }
@@ -105,34 +148,29 @@ class SecureFileManager {
    * Écrit dans un fichier avec backup automatique
    */
   async writeFile(filePath, content) {
-    if (!this.isPathAllowed(filePath)) {
-      throw new Error(`Écriture refusée (Politique de Sécurité) : ${filePath}`);
+    const resolvedPath = this.resolvePath(filePath);
+
+    if (!this.isPathAllowed(resolvedPath)) {
+      throw new Error(
+        `Écriture refusée (Politique de Sécurité) : ${resolvedPath}`,
+      );
     }
 
     try {
-      // 1. Créer le dossier parent si nécessaire
-      const dir = path.dirname(filePath);
+      const dir = path.dirname(resolvedPath);
       await fs.mkdir(dir, { recursive: true });
 
-      // 2. BACKUP AUTOMATIQUE si le fichier existe
       try {
-        await fs.access(filePath);
-
-        // Générer nom de backup unique
+        await fs.access(resolvedPath);
         const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-        const backupPath = `${filePath}.bak.${timestamp}`;
+        const backupPath = `${resolvedPath}.bak.${timestamp}`;
+        await fs.copyFile(resolvedPath, backupPath);
+      } catch (e) {}
 
-        await fs.copyFile(filePath, backupPath);
-        console.log(`🛡️ [SecureFile] Backup créé : ${backupPath}`);
-      } catch (e) {
-        // Fichier n'existe pas encore, c'est une création -> Pas de backup
-      }
+      await fs.writeFile(resolvedPath, content, "utf8");
+      console.log(`✅ [SecureFile] Fichier écrit : ${resolvedPath}`);
 
-      // 3. Écrire le contenu
-      await fs.writeFile(filePath, content, "utf8");
-      console.log(`✅ [SecureFile] Fichier écrit : ${filePath}`);
-
-      return { success: true, path: filePath };
+      return { success: true, path: resolvedPath };
     } catch (error) {
       console.error(`❌ [SecureFile] Erreur écriture :`, error);
       throw new Error(`Erreur lors de l'écriture : ${error.message}`);

@@ -132,6 +132,8 @@ export function useJarvisBrain({
           return await handlers.handleSearchWeb(toolArgs, ctx);
         case "open_url":
           return await handlers.handleOpenUrl(toolArgs, ctx);
+        case "read_web_page": // NOUVEAU
+          return await handlers.handleReadWebPage(toolArgs, ctx);
         case "manage_bookmarks":
           return await handlers.handleManageBookmarks(toolArgs, ctx);
         case "show_images": // NOUVEAU
@@ -205,11 +207,14 @@ export function useJarvisBrain({
   // TRAITEMENT INTELLIGENT (GEMINI)
   // ========================================
   const processCommand = useCallback(
-    async (text: string) => {
+    async (text: string, manualContext?: string) => {
       if (!text.trim()) return;
 
-      // 1. Sauvegarder message utilisateur
-      if (addConversationMessage) {
+      // 1. Sauvegarder message utilisateur (si ce n'est pas un prompt système interne)
+      const isInternalPrompt = text.includes(
+        "L'action précédente est terminée",
+      );
+      if (addConversationMessage && !isInternalPrompt) {
         addConversationMessage("user", text);
       }
 
@@ -225,9 +230,9 @@ export function useJarvisBrain({
 
       try {
         // 2. Récupérer contexte
-        const conversationContext = getConversationContext
-          ? getConversationContext()
-          : "";
+        const conversationContext =
+          manualContext ||
+          (getConversationContext ? getConversationContext() : "");
 
         // 3. Envoyer à Gemini
         const result = await parseCommand(text, appMemory, conversationContext);
@@ -279,18 +284,64 @@ export function useJarvisBrain({
                 toolResult,
               );
 
-              // NOUVEAU : Si l'outil retourne des données riches (ex: gmail_read), on demande une synthèse
+              // --- NOUVEAU : GESTION DE LA CHAÎNE AUTONOME (RECHERCHE -> ACTION) ---
+              const isChainableTool = [
+                "read_web_page",
+                "analyze_screen",
+                "gmail_read",
+              ].includes(toolCall.name);
+
+              if (
+                toolResult &&
+                (toolResult as any).status === "success" &&
+                isChainableTool
+              ) {
+                const dataStr = (toolResult as any).data
+                  ? typeof (toolResult as any).data === "string"
+                    ? (toolResult as any).data
+                    : JSON.stringify((toolResult as any).data)
+                  : "";
+
+                // 1. Ajouter le résultat à la mémoire locale pour le prochain tour
+                const toolResultMsg = `[RÉSULTAT ${toolCall.name.toUpperCase()}] : ${dataStr.substring(0, 5000)}...`;
+                if (addConversationMessage) {
+                  addConversationMessage("model", toolResultMsg);
+                }
+
+                // 2. Relancer l'analyse avec les nouvelles données
+                if (i === result.toolCalls.length - 1) {
+                  addLog(
+                    "💡 Analyse des données en cours pour la suite...",
+                    "OMNI",
+                    "info",
+                  );
+
+                  // On attend un petit peu pour laisser l'UI respirer
+                  await new Promise((r) => setTimeout(r, 1000));
+
+                  // RELANCE AUTONOME : On injecte manuellement le résultat dans le contexte car l'état React n'est pas encore mis à jour
+                  const updatedContext = `${conversationContext}\nJARVIS: ${toolResultMsg}`;
+
+                  return processCommand(
+                    "IMPORTANT : L'action de lecture/recherche est TERMINÉE. Voici les données. Maintenant, vous DEVEZ compléter l'objectif final de Monsieur (ex: écrire le rapport dans le fichier demandé). N'attendez pas de nouvelle commande, agissez immédiatement en utilisant vos outils (write_file_content, etc.). Si tout est fini, confirmez.",
+                    updatedContext,
+                  );
+                }
+              }
+
+              // NOUVEAU : Synthèse intelligente pour les outils riches si pas chaînés
               const isRichTool =
                 toolCall.name.startsWith("gmail") ||
                 toolCall.name.startsWith("calendar");
               if (
                 toolResult &&
                 typeof toolResult === "object" &&
-                "data" in toolResult &&
-                isRichTool
+                "data" in (toolResult as any) &&
+                isRichTool &&
+                !hasSpokenSummary
               ) {
                 console.log(
-                  `🤖 [BRAIN] Generating intelligent summary for ${toolCall.name}...`,
+                  `🤖 [BRAIN] Generating summary for ${toolCall.name}...`,
                 );
                 const { summarizeToolResults } =
                   await import("../services/geminiService");
@@ -298,25 +349,13 @@ export function useJarvisBrain({
                   toolCall.name,
                   (toolResult as any).data,
                 );
-                console.log(`🗣️ [BRAIN] Summary generated:`, summary);
-
-                // On utilise la file d'attente si Monsieur a déjà commencé à parler
                 speak(summary, hasSpokenSummary);
                 hasSpokenSummary = true;
-
                 if (addConversationMessage)
                   addConversationMessage("model", summary);
               }
             } catch (toolError) {
-              console.error(
-                `❌ [KERNEL] Tool ${toolCall.name} failed:`,
-                toolError,
-              );
-              addLog(
-                `Tool ${toolCall.name} failed: ${toolError instanceof Error ? toolError.message : String(toolError)}`,
-                "KERNEL",
-                "error",
-              );
+              // ... logs existants ...
             }
           }
 

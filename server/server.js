@@ -34,6 +34,7 @@ import googleRoutes from "./routes/google.js";
 import * as systemControl from "./systemControl.js";
 import localMemory from "./services/localMemory.js";
 import secureFileManager from "./services/secureFileManager.js"; // NOUVEAU
+import webScraper from "./services/webScraper.js"; // NOUVEAU
 
 const app = express();
 const PORT = 3001;
@@ -922,6 +923,28 @@ app.post("/api/files/secure-write", async (req, res) => {
     res.json(result);
   } catch (error) {
     console.error(`❌ Secure Write Error: ${error.message}`);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================================================
+// ENDPOINTS RECHERCHE PROFONDE (AGENT WEB)
+// ============================================================================
+
+/**
+ * POST /api/web/scrape
+ * Scrape une page web de manière sécurisée (texte pur)
+ * Body: { url: "https://..." }
+ */
+app.post("/api/web/scrape", async (req, res) => {
+  const { url } = req.body;
+  if (!url) return res.status(400).json({ error: "URL requise" });
+
+  try {
+    const data = await webScraper.scrape(url);
+    res.json({ success: true, data });
+  } catch (error) {
+    console.error(`❌ Web Scrape Error: ${error.message}`);
     res.status(500).json({ error: error.message });
   }
 });

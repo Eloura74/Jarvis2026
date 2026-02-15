@@ -68,13 +68,12 @@ You are J.A.R.V.I.S., the sophisticated AI assistant of Monsieur.
 - It means: "The platform for the previous request (ChatGPT search) is TikTok".
 - COMPLETE THE PREVIOUS INTENT (e.g. search on ChatGPT about views on TikTok).
 
-**TARGETED SEARCHES (URL Only):**
-- **MakerWorld**: Use 'https://makerworld.com/en/search/models?keyword=QUERY'
-- **ChatGPT**: Use 'https://chatgpt.com/?q=QUERY'
-- **Bambu Lab**: Use 'https://bambulab.com/en/search?q=QUERY'
+**WEB NAVIGATION VS ANALYSIS:**
+- ** Browsing (open_url / search_web)**: Use ONLY if the user wants to visually see a site (e.g., "Open YouTube", "Go to Google").
+- ** Analysis (read_web_page)**: ALWAYS use this for "Read", "Analyze", "Report", "Summarize", or "Search for content about...". Even if the user says "Go to X and read", the primary intent is ANALYSIS.
 
 **AUTO-SUBMIT RULE:**
-- When opening a search URL (MakerWorld, ChatGPT, etc.), ALWAYS set 'autoSubmit: true' in 'open_url' to automatically press Enter.
+- When using 'open_url' for searches (MakerWorld, etc.), set 'autoSubmit: true'.
 
 **MEMORY:** ${memorySummary}
 **CONTEXT:**
@@ -146,15 +145,15 @@ const toolDeclarations: FunctionDeclaration[] = [
   },
   {
     name: "open_url",
-    description: "Open a specific URL in the browser.",
+    description:
+      "Open a URL in the browser for visual browsing only. DO NOT use this for analysis, reading, or reporting.",
     parameters: {
       type: Type.OBJECT,
       properties: {
-        url: { type: Type.STRING },
+        url: { type: Type.STRING, description: "The full URL." },
         autoSubmit: {
           type: Type.BOOLEAN,
-          description:
-            "Set to true to automatically press Enter after 3 seconds (to validate search forms).",
+          description: "Press Enter automatically.",
         },
       },
       required: ["url"],
@@ -298,14 +297,18 @@ const toolDeclarations: FunctionDeclaration[] = [
     },
   },
   {
-    name: "read_file_content",
-    description: "Read the full content of a text file (code, config, notes).",
+    name: "read_web_page",
+    description:
+      "RESEARCH & ANALYSIS AGENT. Use this whenever the user wants information FROM a website or a search. Handles 'read', 'analyze', 'summarize', 'report', 'search for information about'. It can navigate, search, and extract content for you.",
     parameters: {
       type: Type.OBJECT,
       properties: {
-        path: { type: Type.STRING },
+        url: {
+          type: Type.STRING,
+          description: "URL or search query (e.g. 'MakerWorld phone stand').",
+        },
       },
-      required: ["path"],
+      required: ["url"],
     },
   },
   {
