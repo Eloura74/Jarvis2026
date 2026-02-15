@@ -22,6 +22,7 @@ const vertexShader = `
   varying vec3 vNormal;
   varying vec3 vPosition;
   varying float vNoise;
+  varying vec2 vUv;
 
   // Simplex Noise (simplified)
   vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
@@ -77,17 +78,27 @@ const vertexShader = `
   void main() {
     vNormal = normalize(normalMatrix * normal);
     vPosition = position;
+    vUv = uv;
     
-    // Noise pour la déformation
-    float noiseFreq = 2.0;
-    float noiseAmp = 0.5 * audioLevel; 
-    vec3 noisePos = vec3(position.x * noiseFreq + time, position.y * noiseFreq + time, position.z * noiseFreq);
-    float n = snoise(noisePos);
-    vNoise = n;
+    // VORTEX EFFECT: Rotation based on height (y) using noise
+    float swirl = position.y * 2.0 + time * 0.5;
+    float c = cos(swirl * 0.5);
+    float s = sin(swirl * 0.5);
+    mat2 rot = mat2(c, -s, s, c);
+    
+    vec3 twistedPos = position;
+    twistedPos.xz = rot * twistedPos.xz;
 
-    vec3 newPos = position + normal * (n * noiseAmp * amplitude);
-    
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(newPos, 1.0);
+    // Turbulence / Grain
+    float noiseFreq = 3.0; // Higher frequency for texture
+    float noiseAmp = 0.3 * (0.8 + audioLevel); 
+    vec3 noisePos = vec3(twistedPos.x * noiseFreq + time, twistedPos.y * noiseFreq, twistedPos.z * noiseFreq);
+    float n = snoise(noisePos);
+    vNoise = n; 
+
+    // Displace
+    vec3 finalPos = position + normal * (n * noiseAmp * amplitude * 0.5);
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(finalPos, 1.0);
   }
 `;
 
@@ -99,18 +110,34 @@ const fragmentShader = `
   varying vec3 vNormal;
   varying vec3 vPosition;
   varying float vNoise;
+  varying vec2 vUv;
 
   void main() {
-    float intensity = pow(0.7 - dot(vNormal, vec3(0, 0, 1.0)), 2.0);
-    vec3 glow = color * intensity;
-    
-    // Scanlines holographiques
-    float scanline = sin(vPosition.y * 20.0 - time * 5.0) * 0.1;
-    
-    // Coeur brillant
-    float core = 0.2 + (vNoise * 0.2); 
+    // 1. Shadowed Edge (Reverse Fresnel for 3D volume feel)
+    float viewDot = dot(vNormal, vec3(0.0, 0.0, 1.0));
+    float fresnel = pow(1.0 - abs(viewDot), 2.0); // Bright rim
+    float shadow = smoothstep(0.0, 0.6, viewDot); // Darker towards edge before rim
 
-    gl_FragColor = vec4(glow + color * core + scanline, opacity * (intensity + 0.3));
+    // 2. Vortex Core & Texture
+    float texture = smoothstep(0.2, 0.8, vNoise);
+    
+    // 3. Scan/Grid Hologram lines
+    float yScan = sin(vPosition.y * 30.0 + time * 2.0);
+    float grid = step(0.9, sin(vPosition.x * 40.0) * sin(vPosition.y * 40.0 + time));
+    
+    // Composition
+    vec3 baseColor = color * 0.6; // Darker core
+    vec3 highlight = color * 1.5; // Bright energy
+    
+    vec3 finalColor = mix(baseColor, highlight, texture * shadow);
+    finalColor += highlight * fresnel * 0.8; // Rim light
+    finalColor += vec3(1.0) * grid * 0.3; // Tech sparkles
+    
+    // Deep volume shadow on edges to make it look round/touchable
+    float volumeShadow = smoothstep(0.2, 0.5, viewDot);
+    finalColor *= (volumeShadow + 0.3); 
+
+    gl_FragColor = vec4(finalColor, opacity * 0.9);
   }
 `;
 
@@ -157,7 +184,7 @@ export const RealSphere: React.FC<RealSphereProps> = ({
     mountRef.current.appendChild(renderer.domElement);
 
     // 2. MESH PRINCIPAL (Sphère Holographique)
-    const geometry = new THREE.IcosahedronGeometry(1.5, 30); // High poly pour smooth wave
+    const geometry = new THREE.IcosahedronGeometry(1.5, 60); // High poly pour smooth wave (augmenté pour look 3D)
     const material = new THREE.ShaderMaterial({
       uniforms: {
         time: { value: 0 },
