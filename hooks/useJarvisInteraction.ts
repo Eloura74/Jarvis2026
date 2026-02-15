@@ -237,6 +237,31 @@ export function useJarvisInteraction({
     );
 
   // ========================================
+  // WATCHDOG DE SÉCURITÉ (Fix status bloqué)
+  // ========================================
+  useEffect(() => {
+    const interval = setInterval(() => {
+      // Si le système pense qu'il parle, mais que le navigateur ne parle plus
+      if (
+        status === SystemStatus.SPEAKING &&
+        !window.speechSynthesis.speaking
+      ) {
+        console.warn("⚠️ Watchdog: Statut bloqué sur SPEAKING corrigé -> IDLE");
+        setStatus(SystemStatus.IDLE);
+        isSpeakingRef.current = false;
+        lastSpeechEndTime.current = Date.now();
+
+        // Relance écoute si mode conversation
+        if (conversationModeRef.current && !isExitingRef.current) {
+          startListening();
+        }
+      }
+    }, 500); // Vérification toutes les 500ms
+
+    return () => clearInterval(interval);
+  }, [status, setStatus, conversationModeRef, startListening]);
+
+  // ========================================
   // WAKE WORD
   // ========================================
   const {

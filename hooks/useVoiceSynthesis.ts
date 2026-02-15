@@ -24,7 +24,7 @@
  * ```
  */
 
-import { useCallback } from "react";
+import { useCallback, useRef } from "react";
 
 interface UseVoiceSynthesisOptions {
   /** Active ou désactive la synthèse vocale */
@@ -67,19 +67,30 @@ export function useVoiceSynthesis({
    * @param text - Texte à prononcer
    * @param queue - Si vrai, n'annule pas la parole en cours (ajoute à la file d'attente)
    */
+  // Ref pour empêcher le Garbage Collection de l'utterance en cours
+  const currentUtteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+
   const speak = useCallback(
     (text: string, queue: boolean = false) => {
       // Si la synthèse est désactivée, ne rien faire
       if (!enabled) return;
 
+      // Annulation propre si pas de queue
+      if (!queue) {
+        window.speechSynthesis.cancel();
+      }
+
       // Création de l'énoncé vocal
       const utterance = new SpeechSynthesisUtterance(text);
+
+      // Stockage dans la ref pour éviter le GC
+      currentUtteranceRef.current = utterance;
 
       // ... (Sélection de la voix identique)
       const voices = window.speechSynthesis.getVoices();
       let selectedVoice: SpeechSynthesisVoice | undefined;
+      // ... (Selection Logic - kept concise for replacement)
       if (voiceURI) selectedVoice = voices.find((v) => v.voiceURI === voiceURI);
-
       if (!selectedVoice) {
         selectedVoice =
           voices.find(
@@ -93,12 +104,6 @@ export function useVoiceSynthesis({
 
       if (selectedVoice) utterance.voice = selectedVoice;
 
-      // NOUVEAU : Gestion de la file d'attente
-      if (!queue) {
-        // Démarrage propre : on annule d'abord toute lecture en cours seulement si non-queueing
-        window.speechSynthesis.cancel();
-      }
-
       // Configuration des paramètres vocaux
       utterance.pitch = pitch;
       utterance.rate = rate;
@@ -106,10 +111,14 @@ export function useVoiceSynthesis({
 
       // Synchronisation avec l'état du système
       utterance.onstart = () => onStart?.();
-      utterance.onend = () => onEnd?.();
+      utterance.onend = () => {
+        onEnd?.();
+        currentUtteranceRef.current = null; // Release ref
+      };
       utterance.onerror = (event) => {
         console.error("Erreur synthèse vocale:", event.error);
         onEnd?.();
+        currentUtteranceRef.current = null;
       };
 
       if (window.speechSynthesis.paused) {
@@ -127,6 +136,7 @@ export function useVoiceSynthesis({
 
   const stop = useCallback(() => {
     window.speechSynthesis.cancel();
+    currentUtteranceRef.current = null;
     onEnd?.();
   }, [onEnd]);
 
