@@ -31,7 +31,7 @@ router.post("/config", async (req, res) => {
 router.get("/auth-url", async (req, res) => {
   try {
     const url = await googleService.getAuthUrl();
-    res.json({ url });
+    res.redirect(url);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -48,16 +48,16 @@ router.get("/callback", async (req, res) => {
 
     await googleService.setTokenFromCode(code);
 
-    // Redirige vers le frontend (on suppose localhost:5173 pour Vite)
+    // Redirige vers le frontend (port 3000)
     res.send(`
       <div style="background: #0f172a; color: #22d3ee; height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; font-family: sans-serif;">
         <h1 style="border: 1px solid #22d3ee; padding: 20px; border-radius: 10px; box-shadow: 0 0 20px rgba(34, 211, 238, 0.3);">
           Authentification Réussie
         </h1>
-        <p style="margin-top: 20px; opacity: 0.8;">Vous pouvez fermer cette fenêtre, J.A.R.V.I.S. est prêt.</p>
+        <p style="margin-top: 20px; opacity: 0.8;">J.A.R.V.I.S. dispose désormais des accès CRUD pour votre calendrier.</p>
         <script>
           setTimeout(() => {
-            window.location.href = 'http://localhost:5173';
+            window.location.href = 'http://localhost:3000';
           }, 2000);
         </script>
       </div>
@@ -69,7 +69,6 @@ router.get("/callback", async (req, res) => {
 
 /**
  * GET /api/google/gmail/list
- * Liste les derniers mails
  */
 router.get("/gmail/list", async (req, res) => {
   try {
@@ -83,7 +82,6 @@ router.get("/gmail/list", async (req, res) => {
 
 /**
  * POST /api/google/gmail/send
- * Envoie un mail
  */
 router.post("/gmail/send", async (req, res) => {
   try {
@@ -97,12 +95,50 @@ router.post("/gmail/send", async (req, res) => {
 
 /**
  * GET /api/google/calendar/events
- * Liste calendrier
  */
 router.get("/calendar/events", async (req, res) => {
   try {
     const events = await googleService.listEvents(req.query.max || 10);
     res.json({ events });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * POST /api/google/calendar/events
+ * Crée un événement
+ */
+router.post("/calendar/events", async (req, res) => {
+  try {
+    const event = await googleService.createEvent(req.body);
+    res.json({ success: true, event });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * DELETE /api/google/calendar/events/:id
+ * Supprime un événement
+ */
+router.delete("/calendar/events/:id", async (req, res) => {
+  try {
+    const result = await googleService.deleteEvent(req.params.id);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * PUT /api/google/calendar/events/:id
+ * Met à jour un événement
+ */
+router.put("/calendar/events/:id", async (req, res) => {
+  try {
+    const event = await googleService.updateEvent(req.params.id, req.body);
+    res.json({ success: true, event });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

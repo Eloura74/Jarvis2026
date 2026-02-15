@@ -75,10 +75,11 @@ export async function getAuthUrl() {
 
   return oAuth2Client.generateAuthUrl({
     access_type: "offline",
+    prompt: "select_account", // Force le choix du compte pour rafraîchir les scopes
     scope: [
       "https://www.googleapis.com/auth/gmail.readonly",
       "https://www.googleapis.com/auth/gmail.send",
-      "https://www.googleapis.com/auth/calendar.readonly",
+      "https://www.googleapis.com/auth/calendar", // Accès complet (lecture/écriture)
     ],
   });
 }
@@ -198,4 +199,74 @@ export async function listEvents(maxResults = 10) {
     end: event.end.dateTime || event.end.date,
     location: event.location,
   }));
+}
+
+/**
+ * CALENDAR : Crée un évènement
+ */
+export async function createEvent(eventDetails) {
+  const auth = await getAuthorizedClient();
+  const calendar = google.calendar({ version: "v3", auth });
+
+  const event = {
+    summary: eventDetails.summary,
+    location: eventDetails.location || "",
+    description: eventDetails.description || "Ajouté par J.A.R.V.I.S.",
+    start: {
+      dateTime: eventDetails.startTime, // Format ISO : 2026-02-16T10:00:00Z
+      timeZone: "Europe/Paris",
+    },
+    end: {
+      dateTime: eventDetails.endTime,
+      timeZone: "Europe/Paris",
+    },
+  };
+
+  const res = await calendar.events.insert({
+    calendarId: "primary",
+    resource: event,
+  });
+
+  return res.data;
+}
+
+/**
+ * CALENDAR : Supprime un évènement
+ */
+export async function deleteEvent(eventId) {
+  const auth = await getAuthorizedClient();
+  const calendar = google.calendar({ version: "v3", auth });
+
+  await calendar.events.delete({
+    calendarId: "primary",
+    eventId: eventId,
+  });
+
+  return { success: true, message: "Événement supprimé" };
+}
+
+/**
+ * CALENDAR : Met à jour un évènement (partiel)
+ */
+export async function updateEvent(eventId, eventDetails) {
+  const auth = await getAuthorizedClient();
+  const calendar = google.calendar({ version: "v3", auth });
+
+  const event = {};
+  if (eventDetails.summary) event.summary = eventDetails.summary;
+  if (eventDetails.startTime)
+    event.start = {
+      dateTime: eventDetails.startTime,
+      timeZone: "Europe/Paris",
+    };
+  if (eventDetails.endTime)
+    event.end = { dateTime: eventDetails.endTime, timeZone: "Europe/Paris" };
+
+  const res = await calendar.events.patch({
+    calendarId: "primary",
+    eventId: eventId,
+    resource: event,
+  });
+
+  return res.data;
 }

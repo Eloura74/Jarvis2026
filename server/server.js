@@ -31,6 +31,7 @@ import appsRoutes from "./routes/apps.js";
 import shortcutsRoutes from "./routes/shortcuts.js";
 import commandsRoutes from "./routes/commands.js";
 import googleRoutes from "./routes/google.js";
+import * as googleService from "./googleService.js";
 import * as systemControl from "./systemControl.js";
 import localMemory from "./services/localMemory.js";
 import secureFileManager from "./services/secureFileManager.js"; // NOUVEAU
@@ -43,6 +44,7 @@ app.use(cors());
 app.use(express.json());
 
 // Routes API - Gestion Google
+console.log("🛠️  Debug: googleService keys:", Object.keys(googleService));
 app.use("/api/google", googleRoutes);
 
 // Routes API - Gestion des applications (CRUD)
@@ -969,10 +971,18 @@ initializeIndex().then(() => {
     console.log(`   POST /api/windows/maximize    - Maximize window`);
     console.log(`   POST /api/automation/type     - Type text`);
     console.log(`   POST /api/automation/shortcut - Send shortcut`);
-    console.log(`   GET  /api/google/auth-url     - Get Google Auth URL`);
-    console.log(`   GET  /api/google/callback     - Google OAuth callback`);
-    console.log(`   GET  /api/google/gmail/list   - List recent emails`);
-    console.log(`   GET  /api/google/calendar/events - List calendar events`);
+    console.log(`   GET  /api/google/auth-url         - Get Google Auth URL`);
+    console.log(`   GET  /api/google/callback         - Google OAuth callback`);
+    console.log(`   GET  /api/google/gmail/list       - List recent emails`);
+    console.log(`   POST /api/google/gmail/send       - Send email`);
+    console.log(`   GET  /api/google/calendar/events  - List calendar events`);
+    console.log(`   POST /api/google/calendar/events  - Create calendar event`);
+    console.log(
+      `   PUT  /api/google/calendar/events/:id - Update calendar event`,
+    );
+    console.log(
+      `   DELETE /api/google/calendar/events/:id - Delete calendar event`,
+    );
     console.log(`\n🎯 Ready to serve requests!`);
     console.log(
       `🛡️  Global error handlers active - server crash protection enabled\n`,
