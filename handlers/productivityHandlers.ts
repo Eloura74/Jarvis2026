@@ -23,7 +23,7 @@ export const handleSetTimer = async (
   );
   setStatus(SystemStatus.EXECUTING);
 
-  productivity.startTimer(duration, label, () => {
+  productivity.startTimer(label || "Timer", duration, () => {
     addLog(`Timer completed: ${label || "Timer"}`, "SYSTEM", "success");
   });
 

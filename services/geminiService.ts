@@ -297,6 +297,30 @@ const toolDeclarations: FunctionDeclaration[] = [
       required: ["query"],
     },
   },
+  {
+    name: "read_file_content",
+    description: "Read the full content of a text file (code, config, notes).",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        path: { type: Type.STRING },
+      },
+      required: ["path"],
+    },
+  },
+  {
+    name: "write_file_content",
+    description:
+      "Write or overwrite a file with new content. CAUTION: Overwrites existing content.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        path: { type: Type.STRING },
+        content: { type: Type.STRING },
+      },
+      required: ["path", "content"],
+    },
+  },
 ];
 
 // ============================================================================

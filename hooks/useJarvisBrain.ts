@@ -122,6 +122,10 @@ export function useJarvisBrain({
           return await handlers.handleSearchFiles(toolArgs, ctx);
         case "organize_files":
           return await handlers.handleOrganizeFiles(toolArgs, ctx);
+        case "read_file_content":
+          return await handlers.handleReadFile(toolArgs, ctx);
+        case "write_file_content":
+          return await handlers.handleWriteFile(toolArgs, ctx);
 
         // === WEB ===
         case "search_web":

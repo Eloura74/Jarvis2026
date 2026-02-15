@@ -33,6 +33,7 @@ import commandsRoutes from "./routes/commands.js";
 import googleRoutes from "./routes/google.js";
 import * as systemControl from "./systemControl.js";
 import localMemory from "./services/localMemory.js";
+import secureFileManager from "./services/secureFileManager.js"; // NOUVEAU
 
 const app = express();
 const PORT = 3001;
@@ -882,6 +883,47 @@ app.get("/api/memory/search", (req, res) => {
 
   const results = localMemory.search(query);
   res.json({ count: results.length, results });
+});
+
+// ============================================================================
+// ENDPOINTS GESTION FICHIERS SÉCURISÉE (AGENT DE CODE)
+// ============================================================================
+
+/**
+ * POST /api/files/secure-read
+ * Lecture sécurisée avec validation
+ * Body: { path: "C:\\..." }
+ */
+app.post("/api/files/secure-read", async (req, res) => {
+  const { path } = req.body;
+  if (!path) return res.status(400).json({ error: "Path requis" });
+
+  try {
+    const content = await secureFileManager.readFile(path);
+    res.json({ success: true, content });
+  } catch (error) {
+    console.error(`❌ Secure Read Error: ${error.message}`);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * POST /api/files/secure-write
+ * Écriture sécurisée avec backup
+ * Body: { path: "C:\\...", content: "..." }
+ */
+app.post("/api/files/secure-write", async (req, res) => {
+  const { path, content } = req.body;
+  if (!path || content === undefined)
+    return res.status(400).json({ error: "Path et content requis" });
+
+  try {
+    const result = await secureFileManager.writeFile(path, content);
+    res.json(result);
+  } catch (error) {
+    console.error(`❌ Secure Write Error: ${error.message}`);
+    res.status(500).json({ error: error.message });
+  }
 });
 
 // ============================================================================

@@ -1,6 +1,10 @@
-const fs = require("fs").promises;
-const path = require("path");
-const crypto = require("crypto");
+import fs from "fs/promises";
+import path from "path";
+import crypto from "crypto";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Configuration
 const CONFIG = {
@@ -255,4 +259,4 @@ class LocalMemoryService {
   }
 }
 
-module.exports = new LocalMemoryService();
+export default new LocalMemoryService();
