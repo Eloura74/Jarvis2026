@@ -44,12 +44,27 @@ export interface StatusStat {
 export interface StatusOverlayData {
   id: string;
   title: string;
-  type: "printer" | "sensor" | "door" | "general";
-  image?: string;
-  stats: StatusStat[];
+  type: "printer" | "system" | "custom";
   lastUpdate: string;
-  ip?: string;
-  webcamUrl?: string;
+  image?: string;
+  stats: Array<{
+    label: string;
+    value: string | number;
+    unit?: string;
+    progress?: number;
+    status?: "normal" | "warning" | "error";
+  }>;
+  // Nouveaux - Données enrichies (optionnelles)
+  thumbnail?: string | null;
+  nozzleTemp?: number;
+  nozzleTarget?: number;
+  bedTemp?: number;
+  bedTarget?: number;
+  currentLayer?: number;
+  totalLayers?: number;
+  speed?: number;
+  printDuration?: number;
+  eta?: number;
 }
 
 export interface HandlerContext {

@@ -93,33 +93,39 @@ export function usePrinterFleet(
   useEffect(() => {
     if (vz330.isConnected && vz330.data) {
       const klipperData = vz330.data;
+      const isPrinting = !klipperData.title.includes("IDLE");
 
       // Mapper les données Klipper vers PrinterStatus
       updatePrinterStatus("vz330", {
-        status: klipperData.title.includes("IDLE") ? "idle" : "printing",
+        status: isPrinting ? "printing" : "idle",
         temps: {
-          nozzle: parseFloat(
-            klipperData.stats.find((s) => s.label.includes("Nozzle"))?.value ||
-              "0",
-          ),
-          bed: parseFloat(
-            klipperData.stats.find((s) => s.label.includes("Bed"))?.value ||
-              "0",
-          ),
+          nozzle: klipperData.nozzleTemp || 0,
+          nozzleTarget: klipperData.nozzleTarget || 0,
+          bed: klipperData.bedTemp || 0,
+          bedTarget: klipperData.bedTarget || 0,
         },
-        currentJob:
-          klipperData.title !== "IDLE - READY"
-            ? {
-                fileName: klipperData.title,
-                progress: parseFloat(
+        currentJob: isPrinting
+          ? {
+              fileName: klipperData.title,
+              progress: parseFloat(
+                String(
                   klipperData.stats.find((s) => s.label.includes("Progress"))
                     ?.value || "0",
                 ),
-                eta: 0, // TODO: calculer depuis durée restante
-                startTime: Date.now(),
-                filamentUsed: 0,
-              }
-            : undefined,
+              ),
+              eta: klipperData.eta || 0,
+              startTime: Date.now(),
+              filamentUsed: 0,
+              // Nouvelles données enrichies
+              thumbnail: klipperData.thumbnail || undefined,
+              printDuration: klipperData.printDuration || 0,
+              totalDuration:
+                (klipperData.printDuration || 0) + (klipperData.eta || 0),
+              currentLayer: klipperData.currentLayer || 0,
+              totalLayers: klipperData.totalLayers || 0,
+              speed: klipperData.speed || 0,
+            }
+          : undefined,
       });
     } else if (!vz330.isConnected && !vz330.isRetrying) {
       // Si déconnecté et pas en retry, marquer offline
@@ -144,7 +150,9 @@ export function usePrinterFleet(
         status: bambuStatus.printing ? "printing" : "idle",
         temps: {
           nozzle: bambuStatus.temps.nozzle,
+          nozzleTarget: 0, // Bambu n'expose pas toujours target via MQTT
           bed: bambuStatus.temps.bed,
+          bedTarget: 0,
         },
         currentJob: bambuStatus.printing
           ? {
@@ -153,6 +161,23 @@ export function usePrinterFleet(
               eta: bambuStatus.eta,
               startTime: Date.now(),
               filamentUsed: 0,
+              // Nouvelles données enrichies Bambu
+              thumbnail: undefined, // TODO: Parser thumbnail MQTT si disponible
+              printDuration:
+                bambuStatus.eta > 0
+                  ? Math.max(
+                      0,
+                      bambuStatus.layer.total > 0
+                        ? (bambuStatus.layer.current /
+                            bambuStatus.layer.total) *
+                            100
+                        : 0,
+                    )
+                  : 0,
+              totalDuration: bambuStatus.eta,
+              currentLayer: bambuStatus.layer.current,
+              totalLayers: bambuStatus.layer.total,
+              speed: bambuStatus.speed,
             }
           : undefined,
       });
@@ -163,7 +188,24 @@ export function usePrinterFleet(
     if (initialStatus.connected) {
       updatePrinterStatus("bambu_a1mini", {
         status: initialStatus.printing ? "printing" : "idle",
-        temps: initialStatus.temps,
+        temps: {
+          nozzle: initialStatus.temps.nozzle,
+          nozzleTarget: 0,
+          bed: initialStatus.temps.bed,
+          bedTarget: 0,
+        },
+        currentJob: initialStatus.printing
+          ? {
+              fileName: initialStatus.fileName,
+              progress: initialStatus.progress,
+              eta: initialStatus.eta,
+              startTime: Date.now(),
+              filamentUsed: 0,
+              currentLayer: initialStatus.layer.current,
+              totalLayers: initialStatus.layer.total,
+              speed: initialStatus.speed,
+            }
+          : undefined,
       });
     }
 

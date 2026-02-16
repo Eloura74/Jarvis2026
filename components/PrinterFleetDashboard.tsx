@@ -1,50 +1,50 @@
 /**
- * PrinterFleetDashboard Component
- *
- * Vue unifiée du parc d'imprimantes 3D
- * Status live + queue + alertes filament
+ * Dashboard Fleet Manager - Vue enrichie
+ * Affichage premium des 3 imprimantes avec thumbnails et stats détaillées
  */
-
-import { motion, AnimatePresence } from "framer-motion";
-import { Printer, AlertTriangle, Clock } from "lucide-react";
-import { usePrinterFleet } from "../hooks/usePrinterFleet";
 import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Printer, X, Clock, Layers, Zap, Thermometer } from "lucide-react";
+import { usePrinterFleet } from "../hooks/usePrinterFleet";
 
 export default function PrinterFleetDashboard() {
-  const { printers, summary, queue, filament, filamentAlert } =
-    usePrinterFleet(1000);
-  const [isOpen, setIsOpen] = useState(false); // Masqué par défaut
+  const { printers, summary } = usePrinterFleet();
+  const [isOpen, setIsOpen] = useState(false);
 
-  // Si aucune imprimante, pas d'affichage
-  if (printers.length === 0) return null;
+  // Formatage temps (secondes → HH:MM:SS ou MM:SS)
+  const formatDuration = (seconds: number): string => {
+    if (!seconds) return "--:--";
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = seconds % 60;
+    return h > 0
+      ? `${h}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`
+      : `${m}:${s.toString().padStart(2, "0")}`;
+  };
 
+  // Couleur border selon type imprimante
+  const getBorderColor = (type: "mainsail" | "bambu") => {
+    return type === "bambu" ? "border-green-500" : "border-cyan-500";
+  };
+
+  // Couleur gradient selon type
+  const getGradientColor = (type: "mainsail" | "bambu") => {
+    return type === "bambu" ? "from-green-900/20" : "from-cyan-900/20";
+  };
+
+  // Status badge color
   const getStatusColor = (status: string) => {
     switch (status) {
       case "idle":
-        return "text-green-400 border-green-500";
+        return "bg-green-500/20 text-green-400 border-green-500";
       case "printing":
-        return "text-cyan-400 border-cyan-500";
+        return "bg-cyan-500/20 text-cyan-400 border-cyan-500";
       case "offline":
-        return "text-gray-500 border-gray-600";
+        return "bg-gray-500/20 text-gray-400 border-gray-600";
       case "error":
-        return "text-red-400 border-red-500";
+        return "bg-red-500/20 text-red-400 border-red-500";
       default:
-        return "text-gray-400 border-gray-500";
-    }
-  };
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case "idle":
-        return "🟢";
-      case "printing":
-        return "🔵";
-      case "offline":
-        return "⚫";
-      case "error":
-        return "🔴";
-      default:
-        return "⚪";
+        return "bg-gray-500/20 text-gray-400 border-gray-500";
     }
   };
 
@@ -71,164 +71,199 @@ export default function PrinterFleetDashboard() {
             initial={{ opacity: 0, y: 50 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 50 }}
-            className="fixed bottom-20 right-4 w-[500px] bg-black/90 backdrop-blur-md border border-cyan-500/50 rounded-lg overflow-hidden z-30"
+            className="fixed bottom-20 right-4 w-[900px] max-h-[600px] bg-black/90 backdrop-blur-md border border-cyan-500/50 rounded-lg overflow-hidden z-30"
           >
             {/* Header */}
-            <div className="bg-gradient-to-r from-cyan-500/20 to-transparent p-3 border-b border-cyan-500/30">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Printer className="w-5 h-5 text-cyan-400" />
-                  <span className="font-bold text-cyan-400">PRINTER FLEET</span>
-                </div>
-                <div className="flex items-center gap-4 text-xs">
-                  <span className="text-green-400">{summary.idle} idle</span>
-                  <span className="text-cyan-400">
-                    {summary.printing} active
-                  </span>
-                  <span className="text-gray-500">
-                    {summary.offline} offline
-                  </span>
-                  <button
-                    onClick={() => setIsOpen(false)}
-                    className="text-gray-400 hover:text-white ml-2"
-                  >
-                    ✕
-                  </button>
-                </div>
+            <div className="bg-gradient-to-r from-cyan-500/20 to-transparent p-3 border-b border-cyan-500/30 flex justify-between items-center">
+              <div className="flex items-center gap-2">
+                <Printer className="w-5 h-5 text-cyan-400" />
+                <h2 className="text-white font-bold">
+                  Printer Fleet ({summary.total})
+                </h2>
               </div>
+              <button
+                onClick={() => setIsOpen(false)}
+                className="text-gray-400 hover:text-white transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
 
-            {/* Printers Grid */}
-            {printers.length === 0 ? (
-              <div className="p-8 text-center text-gray-500">
-                Aucune imprimante configurée
-              </div>
-            ) : (
-              <>
-                <div className="p-3 grid grid-cols-2 gap-3">
-                  {printers.map((printer) => (
-                    <div
-                      key={printer.config.id}
-                      className={`p-3 rounded-lg border ${getStatusColor(printer.status)} bg-black/40`}
-                    >
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="font-bold text-white">
+            {/* Printer Cards Grid */}
+            <div className="p-4 overflow-y-auto max-h-[520px]">
+              <div className="grid grid-cols-3 gap-4">
+                {printers.map((printer) => (
+                  <motion.div
+                    key={printer.config.id}
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className={`border-2 ${getBorderColor(printer.printerType)} rounded-lg p-3 bg-gradient-to-br ${getGradientColor(printer.printerType)} to-transparent`}
+                  >
+                    {/* Card Header */}
+                    <div className="flex justify-between items-start mb-2">
+                      <div className="flex items-center gap-2">
+                        <Printer
+                          className={`w-4 h-4 ${printer.printerType === "bambu" ? "text-green-400" : "text-cyan-400"}`}
+                        />
+                        <h3 className="text-white font-bold text-sm">
                           {printer.config.name}
-                        </span>
-                        <span className="text-2xl">
-                          {getStatusIcon(printer.status)}
-                        </span>
+                        </h3>
                       </div>
+                      <span
+                        className={`px-2 py-0.5 rounded text-[10px] font-bold border ${getStatusColor(printer.status)}`}
+                      >
+                        {printer.status.toUpperCase()}
+                      </span>
+                    </div>
 
-                      <div className="text-xs space-y-1">
-                        <div className="flex justify-between">
-                          <span className="text-gray-400">Status:</span>
-                          <span
-                            className={
-                              getStatusColor(printer.status).split(" ")[0]
-                            }
-                          >
-                            {printer.status.toUpperCase()}
-                          </span>
+                    {/* Thumbnail */}
+                    {printer.currentJob?.thumbnail && (
+                      <img
+                        src={printer.currentJob.thumbnail}
+                        alt={printer.currentJob.fileName}
+                        className="w-full h-24 object-cover rounded mb-2"
+                      />
+                    )}
+
+                    {/* Printing Info */}
+                    {printer.status === "printing" && printer.currentJob ? (
+                      <div>
+                        {/* File Name */}
+                        <div
+                          className="text-white text-xs truncate mb-1"
+                          title={printer.currentJob.fileName}
+                        >
+                          {printer.currentJob.fileName}
                         </div>
 
-                        {printer.currentJob ? (
-                          <>
-                            <div className="flex justify-between">
-                              <span className="text-gray-400">Job:</span>
-                              <span className="text-cyan-400 truncate max-w-[100px]">
-                                {printer.currentJob.fileName}
-                              </span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-gray-400">Progress:</span>
-                              <span className="text-green-400">
-                                {printer.currentJob.progress}%
-                              </span>
-                            </div>
-                            {printer.currentJob.eta && (
-                              <div className="flex justify-between">
-                                <span className="text-gray-400">ETA:</span>
-                                <span className="text-yellow-400">
-                                  {Math.floor(printer.currentJob.eta / 60)}min
+                        {/* Progress Bar */}
+                        <div className="mb-2">
+                          <div className="flex justify-between text-[10px] mb-1">
+                            <span className="text-gray-400">Progress</span>
+                            <span
+                              className={
+                                printer.printerType === "bambu"
+                                  ? "text-green-400"
+                                  : "text-cyan-400"
+                              }
+                            >
+                              {printer.currentJob.progress.toFixed(1)}%
+                            </span>
+                          </div>
+                          <div className="h-1.5 bg-gray-700 rounded-full overflow-hidden">
+                            <div
+                              className={`h-full ${printer.printerType === "bambu" ? "bg-gradient-to-r from-green-500 to-emerald-500" : "bg-gradient-to-r from-cyan-500 to-blue-500"}`}
+                              style={{
+                                width: `${printer.currentJob.progress}%`,
+                              }}
+                            />
+                          </div>
+                        </div>
+
+                        {/* Stats Grid */}
+                        <div className="grid grid-cols-2 gap-1.5 text-[10px]">
+                          {/* Nozzle Temp */}
+                          <div className="flex items-center gap-1 bg-black/30 rounded p-1.5">
+                            <Thermometer className="w-3 h-3 text-red-400" />
+                            <span className="text-gray-400">Nozzle:</span>
+                            <span className="text-white font-bold">
+                              {printer.temps.nozzle.toFixed(0)}
+                              {printer.temps.nozzleTarget &&
+                                `/${printer.temps.nozzleTarget.toFixed(0)}`}
+                              °C
+                            </span>
+                          </div>
+
+                          {/* Bed Temp */}
+                          <div className="flex items-center gap-1 bg-black/30 rounded p-1.5">
+                            <Thermometer className="w-3 h-3 text-orange-400" />
+                            <span className="text-gray-400">Bed:</span>
+                            <span className="text-white font-bold">
+                              {printer.temps.bed.toFixed(0)}
+                              {printer.temps.bedTarget &&
+                                `/${printer.temps.bedTarget.toFixed(0)}`}
+                              °C
+                            </span>
+                          </div>
+
+                          {/* Time Elapsed */}
+                          <div className="flex items-center gap-1 bg-black/30 rounded p-1.5">
+                            <Clock className="w-3 h-3 text-blue-400" />
+                            <span className="text-gray-400">Elapsed:</span>
+                            <span className="text-white font-bold">
+                              {formatDuration(
+                                printer.currentJob.printDuration || 0,
+                              )}
+                            </span>
+                          </div>
+
+                          {/* Time Remaining */}
+                          <div className="flex items-center gap-1 bg-black/30 rounded p-1.5">
+                            <Clock className="w-3 h-3 text-purple-400" />
+                            <span className="text-gray-400">ETA:</span>
+                            <span className="text-white font-bold">
+                              {formatDuration(printer.currentJob.eta || 0)}
+                            </span>
+                          </div>
+
+                          {/* Layers */}
+                          {printer.currentJob.currentLayer &&
+                            printer.currentJob.totalLayers && (
+                              <div className="flex items-center gap-1 bg-black/30 rounded p-1.5">
+                                <Layers className="w-3 h-3 text-yellow-400" />
+                                <span className="text-gray-400">Layer:</span>
+                                <span className="text-white font-bold">
+                                  {printer.currentJob.currentLayer}/
+                                  {printer.currentJob.totalLayers}
                                 </span>
                               </div>
                             )}
-                          </>
-                        ) : (
-                          <div className="text-gray-500 text-center py-2">
-                            {printer.status === "offline"
-                              ? "Hors ligne"
-                              : "Prête"}
-                          </div>
-                        )}
+
+                          {/* Speed */}
+                          {printer.currentJob.speed && (
+                            <div className="flex items-center gap-1 bg-black/30 rounded p-1.5">
+                              <Zap className="w-3 h-3 text-green-400" />
+                              <span className="text-gray-400">Speed:</span>
+                              <span className="text-white font-bold">
+                                {printer.currentJob.speed}mm/s
+                              </span>
+                            </div>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
+                    ) : (
+                      // Idle State
+                      <div className="text-center py-6">
+                        <div className="text-gray-500 text-sm mb-1">
+                          Ready to print
+                        </div>
+                        <div className="text-gray-600 text-xs">
+                          No active job
+                        </div>
+                      </div>
+                    )}
 
-                {/* Queue */}
-                {queue.length > 0 && (
-                  <div className="border-t border-cyan-500/30 p-3">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Clock className="w-4 h-4 text-yellow-400" />
-                      <span className="text-yellow-400 font-bold text-sm">
-                        QUEUE ({queue.length})
-                      </span>
-                    </div>
-                    <div className="space-y-1 max-h-32 overflow-y-auto">
-                      {queue.slice(0, 3).map((job) => (
-                        <div
-                          key={job.id}
-                          className="flex items-center justify-between p-2 rounded bg-yellow-500/10 border border-yellow-500/30 text-xs"
+                    {/* Footer */}
+                    {printer.config.ip && (
+                      <div className="mt-2 pt-2 border-t border-gray-700">
+                        <a
+                          href={`http://${printer.config.ip}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className={`text-[10px] ${printer.printerType === "bambu" ? "text-green-400 hover:text-green-300" : "text-cyan-400 hover:text-cyan-300"} transition-colors`}
                         >
-                          <span className="text-white truncate flex-1">
-                            {job.fileName}
-                          </span>
-                          <div className="flex items-center gap-2 ml-2">
-                            <span className="text-yellow-400 font-bold">
-                              [P{job.priority}]
-                            </span>
-                            <span className="text-gray-400">
-                              {job.estimatedFilament}g
-                            </span>
-                          </div>
-                        </div>
-                      ))}
-                      {queue.length > 3 && (
-                        <div className="text-gray-500 text-center text-xs">
-                          +{queue.length - 3} autres jobs
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* Filament Alert */}
-                {filamentAlert.alert && (
-                  <div className="border-t border-red-500/30 p-3 bg-red-500/10">
-                    <div className="flex items-center gap-2">
-                      <AlertTriangle className="w-4 h-4 text-red-400" />
-                      <span className="text-red-400 font-bold text-sm">
-                        {filamentAlert.message || "Stock filament faible"}
-                      </span>
-                    </div>
-                  </div>
-                )}
-
-                {/* Total Filament Used */}
-                <div className="border-t border-cyan-500/30 p-3 bg-cyan-500/5">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-gray-400">
-                      Filament total utilisé:
-                    </span>
-                    <span className="text-cyan-400 font-bold">
-                      {filament.totalUsed.toFixed(1)}g
-                    </span>
-                  </div>
-                </div>
-              </>
-            )}
+                          Open{" "}
+                          {printer.printerType === "bambu"
+                            ? "Bambu"
+                            : "Mainsail"}{" "}
+                          →
+                        </a>
+                      </div>
+                    )}
+                  </motion.div>
+                ))}
+              </div>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>

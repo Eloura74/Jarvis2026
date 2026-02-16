@@ -35,6 +35,8 @@ export interface PrinterStatus {
   config: PrinterConfig;
   /** État actuel */
   status: "idle" | "printing" | "paused" | "error" | "offline";
+  /** Type imprimante */
+  printerType: "mainsail" | "bambu";
   /** Job en cours (si printing) */
   currentJob?: {
     fileName: string;
@@ -42,12 +44,23 @@ export interface PrinterStatus {
     eta: number; // Secondes restantes
     startTime: number; // Timestamp
     filamentUsed: number; // Grammes
+    // Nouveau - Détails enrichis
+    thumbnail?: string; // URL ou base64
+    printDuration?: number; // Temps écoulé (secondes)
+    totalDuration?: number; // Durée totale estimée (secondes)
+    currentLayer?: number;
+    totalLayers?: number;
+    speed?: number; // mm/s
   };
   /** Températures */
   temps: {
     nozzle: number;
+    nozzleTarget?: number; // Nouveau
     bed: number;
+    bedTarget?: number; // Nouveau
   };
+  /** Uptime imprimante (secondes) */
+  uptime?: number;
   /** Dernière mise à jour */
   lastUpdate: number;
 }
@@ -133,9 +146,14 @@ const filamentHistory: FilamentStats = {
  */
 export function initFleet(): void {
   for (const config of printerConfigs) {
+    // Déterminer le type selon l'ID
+    const printerType: "mainsail" | "bambu" =
+      config.id === "bambu_a1mini" ? "bambu" : "mainsail";
+
     fleetStatus.set(config.id, {
       config,
       status: "offline",
+      printerType,
       temps: { nozzle: 0, bed: 0 },
       lastUpdate: 0,
     });

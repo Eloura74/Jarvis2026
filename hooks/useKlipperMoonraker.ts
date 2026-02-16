@@ -56,6 +56,17 @@ export const useKlipperMoonraker = (printerIp?: string, webcamUrl?: string) => {
         type: "printer",
         lastUpdate: new Date().toLocaleTimeString(),
         image: webcamUrl || "/vzbot_330_render.png",
+        // Nouveau - Données enrichies
+        thumbnail: displayStatus.thumbnails?.[0]?.relative_path || null,
+        nozzleTemp: extruder.temperature || 0,
+        nozzleTarget: extruder.target || 0,
+        bedTemp: heaterBed.temperature || 0,
+        bedTarget: heaterBed.target || 0,
+        currentLayer: displayStatus.layer_num || 0,
+        totalLayers: displayStatus.total_layer_num || 0,
+        speed: printStats.speed || 0,
+        printDuration: printStats.print_duration || 0,
+        eta: printStats.print_time_left || 0,
         stats: [
           {
             label: "Buse (Nozzle)",
