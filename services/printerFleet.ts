@@ -99,6 +99,13 @@ const printerConfigs: PrinterConfig[] = [
     buildVolume: { x: 250, y: 210, z: 200 },
     maxSpeed: 300,
   },
+  {
+    id: "bambu_a1mini",
+    name: "Bambulab A1 mini",
+    ip: "", // Pas de Moonraker, utilise Bambu Connect
+    buildVolume: { x: 180, y: 180, z: 180 },
+    maxSpeed: 500,
+  },
 ];
 
 // ============================================================================

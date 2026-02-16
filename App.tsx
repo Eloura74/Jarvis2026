@@ -24,6 +24,12 @@ import HolographicHUD from "./components/HolographicHUD";
 import { toasterConfig } from "./utils/toasterConfig";
 import { SystemStatus } from "./types";
 
+// Nouveaux composants UI MK-85
+import MoodIndicator from "./components/MoodIndicator";
+import CacheStatsWidget from "./components/CacheStatsWidget";
+import WorkflowPanel from "./components/WorkflowPanel";
+import PrinterFleetDashboard from "./components/PrinterFleetDashboard";
+
 // Hooks Spécialisés
 import { useJarvisInteraction } from "./hooks/useJarvisInteraction";
 import { useJarvisBrain } from "./hooks/useJarvisBrain";
@@ -308,6 +314,12 @@ const JarvisShell: React.FC<JarvisShellProps> = ({ shouldGreet }) => {
 
       {/* HUD Holographique pour les suggestions magiques */}
       <HolographicHUD notifications={brain.hudNotifications} />
+
+      {/* 🆕 Nouveaux composants UI MK-85 */}
+      <MoodIndicator />
+      <CacheStatsWidget />
+      <WorkflowPanel />
+      <PrinterFleetDashboard />
     </>
   );
 };

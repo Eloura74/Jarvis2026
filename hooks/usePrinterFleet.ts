@@ -13,10 +13,16 @@ import {
   removeFromQueue,
   getFilamentStats,
   checkFilamentAlert,
+  updatePrinterStatus,
   type PrinterStatus,
   type PrintJob,
   type FilamentStats,
 } from "../services/printerFleet";
+import { useKlipperMoonraker } from "./useKlipperMoonraker";
+import {
+  subscribeBambuStatus,
+  getBambuStatus,
+} from "../services/bambulabsMqtt";
 
 interface FleetHookReturn {
   /** Status de toutes les imprimantes */
@@ -64,6 +70,9 @@ export function usePrinterFleet(
     alert: false,
   });
 
+  // 🔌 Connexion Moonraker VZ330
+  const vz330 = useKlipperMoonraker("192.168.1.130");
+
   // Rafraîchir toutes les 2 secondes
   useEffect(() => {
     const refresh = () => {
@@ -79,6 +88,87 @@ export function usePrinterFleet(
 
     return () => clearInterval(interval);
   }, [totalFilamentStock]);
+
+  // ⚡ Mettre à jour le status VZ330 depuis Moonraker
+  useEffect(() => {
+    if (vz330.isConnected && vz330.data) {
+      const klipperData = vz330.data;
+
+      // Mapper les données Klipper vers PrinterStatus
+      updatePrinterStatus("vz330", {
+        status: klipperData.title.includes("IDLE") ? "idle" : "printing",
+        temps: {
+          nozzle: parseFloat(
+            klipperData.stats.find((s) => s.label.includes("Nozzle"))?.value ||
+              "0",
+          ),
+          bed: parseFloat(
+            klipperData.stats.find((s) => s.label.includes("Bed"))?.value ||
+              "0",
+          ),
+        },
+        currentJob:
+          klipperData.title !== "IDLE - READY"
+            ? {
+                fileName: klipperData.title,
+                progress: parseFloat(
+                  klipperData.stats.find((s) => s.label.includes("Progress"))
+                    ?.value || "0",
+                ),
+                eta: 0, // TODO: calculer depuis durée restante
+                startTime: Date.now(),
+                filamentUsed: 0,
+              }
+            : undefined,
+      });
+    } else if (!vz330.isConnected && !vz330.isRetrying) {
+      // Si déconnecté et pas en retry, marquer offline
+      updatePrinterStatus("vz330", {
+        status: "offline",
+      });
+    }
+  }, [vz330.isConnected, vz330.data, vz330.isRetrying]);
+
+  // 🔌 Subscription MQTT Bambu A1 mini (temps réel)
+  useEffect(() => {
+    // Subscribe aux changements de status Bambu
+    const unsubscribe = subscribeBambuStatus((bambuStatus) => {
+      if (!bambuStatus.connected) {
+        updatePrinterStatus("bambu_a1mini", {
+          status: "offline",
+        });
+        return;
+      }
+
+      updatePrinterStatus("bambu_a1mini", {
+        status: bambuStatus.printing ? "printing" : "idle",
+        temps: {
+          nozzle: bambuStatus.temps.nozzle,
+          bed: bambuStatus.temps.bed,
+        },
+        currentJob: bambuStatus.printing
+          ? {
+              fileName: bambuStatus.fileName || "Job A1 mini",
+              progress: bambuStatus.progress,
+              eta: bambuStatus.eta,
+              startTime: Date.now(),
+              filamentUsed: 0,
+            }
+          : undefined,
+      });
+    });
+
+    // Init status immédiat
+    const initialStatus = getBambuStatus();
+    if (initialStatus.connected) {
+      updatePrinterStatus("bambu_a1mini", {
+        status: initialStatus.printing ? "printing" : "idle",
+        temps: initialStatus.temps,
+      });
+    }
+
+    return () => unsubscribe();
+  }, []);
 
   const addJob = (job: Omit<PrintJob, "id" | "submittedAt">) => {
     const id = addToQueue(job);
