@@ -320,19 +320,22 @@ const cleanupOldShield = () => {
 
 let last429Time = cleanupOldShield();
 let lastRequestTime = 0;
-const BREAKER_COOLDOWN = 30000; // 30 secondes (réduit de 2min pour usage normal)
-const AUTO_RESET_THRESHOLD = 600000; // 10 minutes : auto-expiration du shield
-const MIN_REQUEST_GAP = 10; // 10ms (quasi instantané, réduit de 50ms)
+const BREAKER_COOLDOWN = 10000; // 10 secondes (réduit pour éviter blocage long)
+const AUTO_RESET_THRESHOLD = 60000; // 1 minute : auto-expiration du shield
+const MIN_REQUEST_GAP = 10; // 10ms
 
 const record429 = () => {
   last429Time = Date.now();
-  localStorage.setItem("jarvis_last_429", last429Time.toString());
-  console.warn("🔻 Neural Core Saturated. Emergency Shield Engaged.");
+  // localStorage.setItem("jarvis_last_429", last429Time.toString());
+  console.warn("🔻 Neural Core Saturated. (Logging only - Shield Disabled)");
 };
 
 const checkShield = (): boolean => {
+  // EMERGENCY: PROTECTION DÉSACTIVÉE (Demande Utilisateur)
+  return false;
+
+  /*
   const timeSince = Date.now() - last429Time;
-  // Auto-reset si le shield est trop vieux (plus de 10 minutes)
   if (timeSince > AUTO_RESET_THRESHOLD && last429Time > 0) {
     console.log("🔓 Shield auto-expired after 10 minutes. Resetting.");
     last429Time = 0;
@@ -340,6 +343,7 @@ const checkShield = (): boolean => {
     return false;
   }
   return timeSince < BREAKER_COOLDOWN;
+  */
 };
 
 export const resetNeuralShield = () => {
@@ -450,6 +454,15 @@ export const parseCommand = async (
     return decision;
   } catch (error: any) {
     console.error("OMNI Core Error:", error);
+
+    // MODIFICATION D'URGENCE : Affichage de l'erreur réelle au lieu du message "Saturé"
+    // Cela permet de confirmer si c'est bien une 429 ou un autre problème de clé
+    return {
+      type: "TEXT_RESPONSE", // CHANGÉ DE ERROR À TEXT_RESPONSE POUR ÊTRE SÛR QUE JARVIS LE DISE
+      text: `⚠️ ALERTE SYSTÈME : ${error.message || "Erreur inconnue"}. (Code: ERR_CORE_FAIL)`,
+      confidence: 1.0,
+    };
+    /*
     if (error.message?.includes("429")) {
       record429();
       return {
@@ -463,6 +476,7 @@ export const parseCommand = async (
       text: "Désolé Monsieur une erreur interne perturbe mon jugement.",
       confidence: 0,
     };
+    */
   }
 };
 

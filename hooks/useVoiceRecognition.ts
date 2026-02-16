@@ -57,6 +57,9 @@ export function useVoiceRecognition(
   // Ref synchrone pour isListening (résout problème state asynchrone React)
   const isListeningRef = useRef(false);
 
+  // Timer custom pour détection de silence (plus rapide que le natif)
+  const silenceTimerRef = useRef<NodeJS.Timeout | null>(null);
+
   const onTranscriptRef = useRef(onTranscript);
   const onStatusChangeRef = useRef(onStatusChange);
 
@@ -147,6 +150,16 @@ export function useVoiceRecognition(
             // CAS 2 : Résultat INTERIM → preview et commandes rapides
             else {
               const confidence = lastResult[0].confidence || 0;
+
+              // RESET TIMER SILENCE (car on entend quelque chose)
+              if (silenceTimerRef.current)
+                clearTimeout(silenceTimerRef.current);
+
+              // Nouveau timer : Si plus rien ne change pendant 1.5s, on considère que c'est fini
+              silenceTimerRef.current = setTimeout(() => {
+                console.log("🤫 Silence détecté (1.5s) -> Arrêt forcé");
+                recognition.stop();
+              }, 1500);
 
               // Éviter log spam (seulement si changement significatif)
               if (transcript !== lastInterimTranscript) {

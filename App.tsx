@@ -74,7 +74,10 @@ const JarvisShell: React.FC<JarvisShellProps> = ({ shouldGreet }) => {
     import("./services/geminiService").then((m) => {
       if (m.clearDecisionCache) {
         m.clearDecisionCache();
-        console.log("🧠 JARVIS: Core and Brain cache cleared.");
+      }
+      if (m.resetNeuralShield) {
+        m.resetNeuralShield(); // 🛑 FORCE LE RESET DU SHIELD AU DÉMARRAGE
+        console.log("🧠 JARVIS: Neural Shield reset for fresh session.");
       }
     });
   }, []);
