@@ -39,41 +39,34 @@ export const WeatherWidget: React.FC = () => {
    * Récupère les données météo au montage du composant
    * et les rafraîchit toutes les 10 minutes
    */
+  /**
+   * Récupère les données météo au montage du composant
+   * et les rafraîchit toutes les 10 minutes
+   */
   useEffect(() => {
-    const fetchWeather = async () => {
+    const fetchWeather = async (useGps: boolean = false) => {
       try {
         setLoading(true);
         setError(null);
 
-        // Tentative de géolocalisation
-        const data = await getCurrentWeather();
+        let data: WeatherData;
+        if (useGps) {
+          data = await getCurrentWeather();
+        } else {
+          const defaultCity =
+            import.meta.env.VITE_DEFAULT_WEATHER_CITY || "Paris";
+          data = await getWeatherByCity(defaultCity);
+        }
         setWeather(data);
       } catch (err) {
-        // Géolocalisation refusée ou indisponible - utiliser ville par défaut
-        const defaultCity =
-          import.meta.env.VITE_DEFAULT_WEATHER_CITY || "Paris";
-
-        try {
-          const data = await getWeatherByCity(defaultCity);
-          setWeather(data);
-          setError(null);
-        } catch (fallbackErr) {
-          setError(
-            fallbackErr instanceof Error
-              ? fallbackErr.message
-              : "Météo indisponible",
-          );
-        } finally {
-          setLoading(false);
-        }
-        return;
+        setError(err instanceof Error ? err.message : "Météo indisponible");
       } finally {
         setLoading(false);
       }
     };
 
-    fetchWeather();
-    const interval = setInterval(fetchWeather, 10 * 60 * 1000);
+    fetchWeather(false); // Démarrage sans GPS pour éviter la violation
+    const interval = setInterval(() => fetchWeather(false), 10 * 60 * 1000);
     return () => clearInterval(interval);
   }, []);
 

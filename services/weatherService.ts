@@ -1,13 +1,13 @@
 /**
  * Service Météo - Intégration OpenWeatherMap API
- * 
+ *
  * Fournit les données météorologiques en temps réel :
  * - Température actuelle
  * - Conditions météo (ensoleillé, nuageux, pluvieux)
  * - Vitesse du vent
  * - Humidité
  * - Localisation automatique via Geolocation API
- * 
+ *
  * @module weatherService
  */
 
@@ -55,7 +55,7 @@ const API_BASE_URL = "https://api.openweathermap.org/data/2.5";
 
 /**
  * Traduit les conditions météo d'anglais vers français
- * 
+ *
  * @param condition - Description en anglais (ex: "Clear")
  * @returns Description en français (ex: "Ensoleillé")
  */
@@ -77,7 +77,7 @@ const translateCondition = (condition: string): string => {
 
 /**
  * Convertit la vitesse du vent de m/s vers km/h
- * 
+ *
  * @param metersPerSecond - Vitesse en m/s
  * @returns Vitesse en km/h arrondie
  */
@@ -91,10 +91,10 @@ const convertWindSpeed = (metersPerSecond: number): number => {
 
 /**
  * Récupère la position GPS de l'utilisateur
- * 
+ *
  * Utilise l'API Geolocation du navigateur pour obtenir la latitude et longitude.
  * Nécessite l'autorisation de l'utilisateur.
- * 
+ *
  * @returns Promise avec latitude et longitude
  * @throws Error si la géolocalisation échoue ou est refusée
  */
@@ -113,26 +113,15 @@ export const getUserPosition = (): Promise<GeoPosition> => {
         });
       },
       (error) => {
-        // Gestion des différents types d'erreurs
-        switch (error.code) {
-          case error.PERMISSION_DENIED:
-            reject(new Error("Permission de géolocalisation refusée"));
-            break;
-          case error.POSITION_UNAVAILABLE:
-            reject(new Error("Position indisponible"));
-            break;
-          case error.TIMEOUT:
-            reject(new Error("Timeout de géolocalisation"));
-            break;
-          default:
-            reject(new Error("Erreur de géolocalisation inconnue"));
-        }
+        // Silencing the gesture warning by providing a clear fallback
+        console.warn("Geolocation fallback triggered or permission denied.");
+        reject(error);
       },
       {
         enableHighAccuracy: false, // Économise la batterie
         timeout: 10000, // 10 secondes max
         maximumAge: 300000, // Cache de 5 minutes
-      }
+      },
     );
   });
 };
@@ -143,10 +132,10 @@ export const getUserPosition = (): Promise<GeoPosition> => {
 
 /**
  * Récupère les données météo pour une position donnée
- * 
+ *
  * Appelle l'API OpenWeatherMap avec les coordonnées GPS.
  * Les données sont en métrique (Celsius, km/h).
- * 
+ *
  * @param latitude - Latitude GPS
  * @param longitude - Longitude GPS
  * @returns Promise avec les données météo formatées
@@ -154,12 +143,12 @@ export const getUserPosition = (): Promise<GeoPosition> => {
  */
 export const fetchWeatherData = async (
   latitude: number,
-  longitude: number
+  longitude: number,
 ): Promise<WeatherData> => {
   // Vérification de la clé API
   if (!API_KEY) {
     throw new Error(
-      "Clé API OpenWeatherMap manquante. Ajoutez VITE_OPENWEATHER_API_KEY dans .env.local"
+      "Clé API OpenWeatherMap manquante. Ajoutez VITE_OPENWEATHER_API_KEY dans .env.local",
     );
   }
 
@@ -190,7 +179,8 @@ export const fetchWeatherData = async (
       // OpenWeatherMap ne fournit pas directement la probabilité de précipitations
       // dans l'endpoint /weather (uniquement dans /forecast)
       // On utilise l'humidité comme approximation (>80% = risque de pluie)
-      precipitation: data.main.humidity > 80 ? Math.round((data.main.humidity - 80) * 5) : 0,
+      precipitation:
+        data.main.humidity > 80 ? Math.round((data.main.humidity - 80) * 5) : 0,
     };
 
     return weatherData;
@@ -202,13 +192,13 @@ export const fetchWeatherData = async (
 
 /**
  * Récupère la météo pour la position actuelle de l'utilisateur
- * 
+ *
  * Combine la géolocalisation et l'appel API météo.
  * Fonction principale à utiliser dans les composants.
- * 
+ *
  * @returns Promise avec les données météo
  * @throws Error si la géolocalisation ou l'API échoue
- * 
+ *
  * @example
  * ```typescript
  * const weather = await getCurrentWeather();
@@ -216,29 +206,28 @@ export const fetchWeatherData = async (
  * ```
  */
 export const getCurrentWeather = async (): Promise<WeatherData> => {
-  // 1. Récupérer la position de l'utilisateur
-  const position = await getUserPosition();
-
-  // 2. Récupérer les données météo pour cette position
-  const weatherData = await fetchWeatherData(
-    position.latitude,
-    position.longitude
-  );
-
-  return weatherData;
+  try {
+    // 1. Tenter la géolocalisation
+    const position = await getUserPosition();
+    return await fetchWeatherData(position.latitude, position.longitude);
+  } catch (error) {
+    // 2. Fallback sur une ville par défaut (ou IP-based si on avait le service)
+    // On utilise Paris par défaut pour ne pas laisser le widget vide
+    return await getWeatherByCity("Paris");
+  }
 };
 
 /**
  * Récupère la météo pour une ville spécifique
- * 
+ *
  * Utile si l'utilisateur refuse la géolocalisation ou veut une autre ville.
- * 
+ *
  * @param cityName - Nom de la ville (ex: "Paris", "London")
  * @returns Promise avec les données météo
  * @throws Error si l'appel API échoue
  */
 export const getWeatherByCity = async (
-  cityName: string
+  cityName: string,
 ): Promise<WeatherData> => {
   if (!API_KEY) {
     throw new Error("Clé API OpenWeatherMap manquante");
@@ -265,7 +254,8 @@ export const getWeatherByCity = async (
       city: data.name,
       windSpeed: convertWindSpeed(data.wind.speed),
       humidity: data.main.humidity,
-      precipitation: data.main.humidity > 80 ? Math.round((data.main.humidity - 80) * 5) : 0,
+      precipitation:
+        data.main.humidity > 80 ? Math.round((data.main.humidity - 80) * 5) : 0,
     };
 
     return weatherData;
@@ -277,14 +267,14 @@ export const getWeatherByCity = async (
 
 /**
  * Retourne l'URL de l'icône météo OpenWeatherMap
- * 
+ *
  * @param iconCode - Code icône (ex: "01d", "10n")
  * @param size - Taille de l'icône ("2x" = 100px, "4x" = 200px)
  * @returns URL complète de l'icône
  */
 export const getWeatherIconUrl = (
   iconCode: string,
-  size: "2x" | "4x" = "2x"
+  size: "2x" | "4x" = "2x",
 ): string => {
   return `https://openweathermap.org/img/wn/${iconCode}@${size}.png`;
 };

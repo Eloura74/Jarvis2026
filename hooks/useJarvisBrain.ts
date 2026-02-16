@@ -2,7 +2,7 @@
  * useJarvisBrain - Le Cerveau de J.A.R.V.I.S. (MODULARISÉ)
  */
 
-import { useState, useCallback } from "react";
+import React, { useState, useCallback } from "react";
 import { parseCommand } from "../services/geminiService";
 import { trackCommand } from "../services/predictionEngine";
 import { CommandInfo } from "../types/app.types";
@@ -53,9 +53,20 @@ export function useJarvisBrain(props: UseJarvisBrainProps) {
   const [hudNotifications, setHudNotifications] = useState<any[]>([]);
 
   // 🌌 QUANTUM OBSERVER (Analyse proactive + Ghost Mode)
-  useQuantumObserver({
-    logs: commandHistory.map((c) => c.text),
-    currentTask: commandHistory[0]?.text || "Idle",
+  // On ne passe que les commandes réelles de l'utilisateur (pas les prompts internes de bouclage)
+  const realUserCommands = React.useMemo(() => {
+    return commandHistory
+      .filter(
+        (c) =>
+          !c.text.includes("L'action est TERMINÉE") &&
+          !c.text.includes("L'action précédente est terminée"),
+      )
+      .map((c) => c.text);
+  }, [commandHistory]);
+
+  const { resetInactivity } = useQuantumObserver({
+    logs: realUserCommands,
+    currentTask: realUserCommands[0] || "Idle",
     isEnabled: true,
     executeTool,
     onSuggestion: (result) => {
@@ -87,6 +98,7 @@ export function useJarvisBrain(props: UseJarvisBrainProps) {
       );
       if (addConversationMessage && !isInternalPrompt) {
         addConversationMessage("user", text);
+        resetInactivity(); // Monsieur est actif !
       }
 
       const newCommand: CommandInfo = {
@@ -167,12 +179,18 @@ export function useJarvisBrain(props: UseJarvisBrainProps) {
                 isRichTool(toolCall.name) &&
                 !hasSpokenSummary
               ) {
-                const { summarizeToolResults } =
-                  await import("../services/geminiService");
-                const summary = await summarizeToolResults(
-                  toolCall.name,
-                  (toolResult as any).data,
-                );
+                let summary: string;
+                if (toolCall.name === "show_status_overlay") {
+                  summary = `Affichage du rapport pour ${(toolResult as any).data.title || "le dispositif"}, Monsieur.`;
+                  console.log("🌌 BRAIN: Using static summary for overlay.");
+                } else {
+                  const { summarizeToolResults } =
+                    await import("../services/geminiService");
+                  summary = await summarizeToolResults(
+                    toolCall.name,
+                    (toolResult as any).data,
+                  );
+                }
                 speak(summary, result.type === "MIXED_RESPONSE");
                 hasSpokenSummary = true;
                 if (addConversationMessage)

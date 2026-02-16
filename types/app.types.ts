@@ -32,6 +32,26 @@ export interface CommandInfo {
 /**
  * Contexte passé aux handlers
  */
+export interface StatusStat {
+  label: string;
+  value: string | number;
+  unit?: string;
+  icon?: any; // Generic to avoid React dependency in shared types
+  progress?: number;
+  status?: "normal" | "warning" | "critical";
+}
+
+export interface StatusOverlayData {
+  id: string;
+  title: string;
+  type: "printer" | "sensor" | "door" | "general";
+  image?: string;
+  stats: StatusStat[];
+  lastUpdate: string;
+  ip?: string;
+  webcamUrl?: string;
+}
+
 export interface HandlerContext {
   addLog: (
     message: string,

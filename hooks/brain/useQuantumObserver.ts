@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { scanForQuantumLinks, QMSScanResult } from "../../services/qmsService";
+import { checkNeuralStatus } from "../../services/geminiService";
 
 interface QuantumObserverProps {
   logs: string[];
@@ -20,39 +21,73 @@ export function useQuantumObserver({
   isEnabled,
   executeTool,
 }: QuantumObserverProps) {
-  const lastScanTime = useRef(0);
+  // Utiliser le localStorage pour garder trace du dernier scan même après un refresh/HMR
+  const lastScanTime = useRef<number>(
+    parseInt(localStorage.getItem("jarvis_last_qms_scan") || "0"),
+  );
   const lastActionTime = useRef(Date.now());
-  const scanInterval = 60000; // 1 minute
-  const ghostModeIdleThreshold = 300000; // 5 minutes d'inactivité
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const scanInterval = 300000; // 5 minutes (Encore plus calme)
+  const ghostModeIdleThreshold = 900000; // 15 minutes d'inactivité
 
   useEffect(() => {
-    if (!isEnabled) return;
+    if (!isEnabled) {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+      return;
+    }
 
-    const timer = setInterval(async () => {
-      const now = Date.now();
+    // Délai initial pour laisser le système se stabiliser
+    const initialDelay = setTimeout(() => {
+      const timer = setInterval(async () => {
+        const now = Date.now();
 
-      // 1. Quantum Memory Stitching (Lien entre les logs)
-      if (now - lastScanTime.current >= scanInterval) {
-        console.log("🌌 [QMS] Neural Observation start...");
-        const result = await scanForQuantumLinks(logs.slice(-10), currentTask);
-        if (result.hasSuggestion) {
-          onSuggestion(result);
-          lastScanTime.current = now;
+        // Éviter de scanner si on a déjà fait une action récemment ou si le noyau est saturé
+        const { isOverloaded } = checkNeuralStatus();
+        if (isOverloaded || now - lastActionTime.current < 30000) return;
+
+        // 1. Quantum Memory Stitching
+        if (now - lastScanTime.current >= scanInterval) {
+          console.log("🌌 [QMS] Neural Observation heartbeat check...");
+          try {
+            const result = await scanForQuantumLinks(
+              logs.slice(-10),
+              currentTask,
+            );
+            if (result && result.hasSuggestion) {
+              onSuggestion(result);
+              lastScanTime.current = now;
+              localStorage.setItem("jarvis_last_qms_scan", now.toString());
+            }
+          } catch (e) {
+            console.warn("QMS Scan paused.");
+          }
         }
-      }
 
-      // 2. Ghost Mode (Analyse d'écran proactive si Monsieur est inactif)
-      if (now - lastActionTime.current >= ghostModeIdleThreshold) {
-        console.log("👻 [Ghost Mode] Vision proactive activée...");
-        await executeTool("analyze_screen", {
-          type: "general",
-          prompt: "Que fait Monsieur ? Propose une aide magique.",
-        });
-        lastActionTime.current = now; // Évite de boucler trop vite
-      }
-    }, 10000); // Check toutes les 10s
+        // 2. Ghost Mode
+        if (now - lastActionTime.current >= ghostModeIdleThreshold) {
+          console.log("👻 [Ghost Mode] Vision proactive activée...");
+          try {
+            await executeTool("analyze_screen", {
+              type: "general",
+              prompt: "Que fait Monsieur ? Propose une aide magique.",
+            });
+            lastActionTime.current = now;
+          } catch (e) {
+            console.warn("Ghost Mode failed.");
+          }
+        }
+      }, 60000); // Check toutes les 1 minute
 
-    return () => clearInterval(timer);
+      intervalRef.current = timer as any;
+    }, 30000); // 30s de pause au démarrage
+
+    return () => {
+      clearTimeout(initialDelay);
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
   }, [logs, currentTask, onSuggestion, isEnabled, executeTool]);
 
   // Exposer une méthode pour reset l'inactivité

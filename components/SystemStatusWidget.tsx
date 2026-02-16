@@ -152,13 +152,7 @@ export const SystemStatusWidget: React.FC<SystemStatusWidgetProps> = ({
 
           {/* Graphique CPU */}
           <div className="h-8 w-full bg-cyan-900/10 rounded overflow-hidden border border-cyan-500/10 relative">
-            <ResponsiveContainer
-              width="100%"
-              height="100%"
-              minWidth={100}
-              minHeight={32}
-              debounce={100}
-            >
+            <ResponsiveContainer width="100%" height={32} debounce={100}>
               <AreaChart
                 data={cpuData}
                 margin={{ top: 0, right: 0, left: 0, bottom: 0 }}
@@ -202,13 +196,7 @@ export const SystemStatusWidget: React.FC<SystemStatusWidgetProps> = ({
 
           {/* Graphique RAM */}
           <div className="h-8 w-full bg-cyan-900/10 rounded overflow-hidden border border-cyan-500/10 relative">
-            <ResponsiveContainer
-              width="100%"
-              height="100%"
-              minWidth={100}
-              minHeight={32}
-              debounce={100}
-            >
+            <ResponsiveContainer width="100%" height={32} debounce={100}>
               <AreaChart
                 data={memData}
                 margin={{ top: 0, right: 0, left: 0, bottom: 0 }}

@@ -1,3 +1,4 @@
+import { StatusOverlayData } from "../types/app.types";
 import { HandlerContext } from "../types/app.types";
 import {
   toggleEntity,
@@ -172,11 +173,16 @@ export const handleShowStatusOverlay = async (
       const progValue = states[printer.progress]?.state;
       const prog = progValue ? parseFloat(progValue) : 0;
 
-      const printerData = {
+      const printerData: StatusOverlayData & {
+        ip?: string;
+        webcamUrl?: string;
+      } = {
         id: `printer-${printer.name}-${Date.now()}`,
         title: printer.name,
         type: "printer" as const,
-        image: "/vzbot_330_render.png",
+        ip: printer.ip,
+        webcamUrl: printer.webcamUrl,
+        image: printer.webcamUrl || "/vzbot_330_render.png",
         stats: [
           {
             label: "PROGRESSION",

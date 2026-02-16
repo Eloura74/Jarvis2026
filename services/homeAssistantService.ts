@@ -15,6 +15,8 @@ export type HAPrinter = {
   bed: string;
   ext: string;
   progress: string;
+  ip?: string;
+  webcamUrl?: string;
 };
 
 // Base de données des entités (Centralisée ici)
@@ -75,12 +77,16 @@ export const HA_ENTITIES = {
       bed: "sensor.vz330_bed_temperature",
       ext: "sensor.vz330_extruder_temperature",
       progress: "sensor.vz330_progress",
+      ip: "192.168.1.130",
+      webcamUrl: "http://192.168.1.130/webcam/?action=stream",
     },
     {
-      name: "MAINSAIL",
+      name: "SWITCHWIRE",
       bed: "sensor.mainsail_bed_temperature",
       ext: "sensor.mainsail_extruder_temperature",
       progress: "sensor.mainsail_progress",
+      ip: "192.168.1.128",
+      webcamUrl: "http://192.168.1.128/webcam/?action=stream",
     },
     {
       name: "A1 MINI",

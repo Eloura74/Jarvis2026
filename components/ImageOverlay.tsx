@@ -21,7 +21,7 @@ export const ImageOverlay: React.FC<ImageOverlayProps> = ({
   const [images, setImages] = useState<ImageResult[]>([]);
   const [loading, setLoading] = useState(false);
 
-  console.log("ImageOverlay PROPS:", { query, isVisible }); // DEBUG ACTIVÉ
+  // ImageOverlay PROPS log removed
 
   useEffect(() => {
     if (isVisible && query) {

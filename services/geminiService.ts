@@ -295,13 +295,89 @@ const toolDeclarations: FunctionDeclaration[] = [
 // LOGIQUE DE PARSING
 // ============================================================================
 
-import { getHAContext } from "./homeAssistantService";
+import { getHAContext } from "./homeAssistantService"; // Circuit Breaker pour 429 (Rate Limiting)
+
+// Auto-cleanup au démarrage : supprime les vieux timestamps
+const cleanupOldShield = () => {
+  const stored = localStorage.getItem("jarvis_last_429");
+  if (stored) {
+    const timestamp = parseInt(stored);
+    const age = Date.now() - timestamp;
+    if (age > 600000) {
+      // Plus de 10 minutes
+      localStorage.removeItem("jarvis_last_429");
+      console.log(
+        "🧹 Old neural shield timestamp cleaned up (",
+        Math.round(age / 60000),
+        "minutes old)",
+      );
+      return 0;
+    }
+    return timestamp;
+  }
+  return 0;
+};
+
+let last429Time = cleanupOldShield();
+let lastRequestTime = 0;
+const BREAKER_COOLDOWN = 120000; // 2 minutes (réduit pour éviter le blocage prolongé)
+const AUTO_RESET_THRESHOLD = 600000; // 10 minutes : auto-expiration du shield
+const MIN_REQUEST_GAP = 50; // 50ms seulement (évite les bursts, mais reste ultra-rapide)
+
+const record429 = () => {
+  last429Time = Date.now();
+  localStorage.setItem("jarvis_last_429", last429Time.toString());
+  console.warn("🔻 Neural Core Saturated. Emergency Shield Engaged.");
+};
+
+const checkShield = (): boolean => {
+  const timeSince = Date.now() - last429Time;
+  // Auto-reset si le shield est trop vieux (plus de 10 minutes)
+  if (timeSince > AUTO_RESET_THRESHOLD && last429Time > 0) {
+    console.log("🔓 Shield auto-expired after 10 minutes. Resetting.");
+    last429Time = 0;
+    localStorage.removeItem("jarvis_last_429");
+    return false;
+  }
+  return timeSince < BREAKER_COOLDOWN;
+};
+
+export const resetNeuralShield = () => {
+  last429Time = 0;
+  localStorage.removeItem("jarvis_last_429");
+  console.log("🔓 Neural Shield manually reset by user.");
+};
+
+// Helper pour attendre le quota
+const waitIfNecessary = async () => {
+  const now = Date.now();
+  const timeSinceLast = now - lastRequestTime;
+  if (timeSinceLast < MIN_REQUEST_GAP) {
+    const delay = MIN_REQUEST_GAP - timeSinceLast;
+    await new Promise((r) => setTimeout(r, delay));
+  }
+  lastRequestTime = Date.now();
+};
 
 export const parseCommand = async (
   input: string,
   memories: AppMemory[],
   conversationContext: string = "",
 ): Promise<OmniDecision> => {
+  // Check Shield
+  if (checkShield()) {
+    const remaining = Math.ceil(
+      (BREAKER_COOLDOWN - (Date.now() - last429Time)) / 1000,
+    );
+    return {
+      type: "TEXT_RESPONSE",
+      text: `Monsieur, mon noyau neural est saturé. Protection active (${remaining}s).`,
+      confidence: 1.0,
+    };
+  }
+
+  await waitIfNecessary();
+
   try {
     console.log(`Appel Gemini pour "${input}"`);
 
@@ -375,9 +451,10 @@ export const parseCommand = async (
   } catch (error: any) {
     console.error("OMNI Core Error:", error);
     if (error.message?.includes("429")) {
+      record429();
       return {
         type: "TEXT_RESPONSE",
-        text: "Monsieur mon noyau neural est saturé par les requêtes. Veuillez patienter une minute.",
+        text: "Monsieur mon noyau neural est saturé. Mode sécurité activé.",
         confidence: 1.0,
       };
     }
@@ -393,6 +470,12 @@ export const summarizeToolResults = async (
   toolName: string,
   resultData: any,
 ): Promise<string> => {
+  if (checkShield()) {
+    return "Données reçues, Monsieur. Neural Core en refroidissement.";
+  }
+
+  await waitIfNecessary();
+
   try {
     const prompt =
       "Syntrétise ces résultats de l'outil '" +
@@ -414,7 +497,8 @@ export const summarizeToolResults = async (
     return (
       response.candidates?.[0].content?.parts?.[0].text || "Exécuté, Monsieur."
     );
-  } catch (err) {
+  } catch (err: any) {
+    if (err.message?.includes("429")) record429();
     return "J'ai les résultats, Monsieur.";
   }
 };
@@ -423,6 +507,8 @@ export const getQMSAnalysis = async (
   logs: string[],
   taskContext: string,
 ): Promise<any> => {
+  if (checkShield()) return { hasSuggestion: false };
+  await waitIfNecessary();
   try {
     const prompt =
       "Analyse ces logs système pour proposer une action proactive à Monsieur. \n" +
@@ -441,7 +527,21 @@ export const getQMSAnalysis = async (
     });
     const text = response.candidates?.[0].content?.parts?.[0].text;
     return text ? JSON.parse(text) : { hasSuggestion: false };
-  } catch (err) {
+  } catch (err: any) {
+    if (err.message?.includes("429")) record429();
     return { hasSuggestion: false };
   }
+};
+
+export const checkNeuralStatus = () => {
+  const now = Date.now();
+  const timeSince429 = now - last429Time;
+  return {
+    isOverloaded: timeSince429 < BREAKER_COOLDOWN,
+    remainingCooldown: Math.max(
+      0,
+      Math.ceil((BREAKER_COOLDOWN - timeSince429) / 1000),
+    ),
+    lastRequestGap: now - lastRequestTime,
+  };
 };

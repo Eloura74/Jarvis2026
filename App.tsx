@@ -18,10 +18,8 @@ import { MemoryProvider } from "./contexts/MemoryContext"; // NOUVEAU
 // Composants UI
 import { PremiumLayout } from "./components/PremiumLayout";
 import { ImageOverlay } from "./components/ImageOverlay";
-import {
-  HolographicStatusOverlay,
-  StatusOverlayData,
-} from "./components/HolographicStatusOverlay";
+import { HolographicStatusOverlay } from "./components/HolographicStatusOverlay";
+import { StatusOverlayData } from "./types/app.types";
 import HolographicHUD from "./components/HolographicHUD";
 import { toasterConfig } from "./utils/toasterConfig";
 import { SystemStatus } from "./types";
@@ -161,7 +159,14 @@ const JarvisShell: React.FC<JarvisShellProps> = ({ shouldGreet }) => {
     stopConversation: interaction.stopFullConversation, // NOUVEAU : Arrêt sécurisé de la boucle
     setStatusOverlay: (data) => {
       console.log("🔮 SHELL: setStatusOverlay called with:", data?.title);
-      setStatusOverlay(data);
+      // Fermer l'ancien overlay avant d'ouvrir le nouveau
+      if (statusOverlay && data && statusOverlay.id !== data.id) {
+        setStatusOverlay(null);
+        // Micro-délai pour permettre la fermeture propre
+        setTimeout(() => setStatusOverlay(data), 100);
+      } else {
+        setStatusOverlay(data);
+      }
     },
   });
 
