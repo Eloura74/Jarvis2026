@@ -20,6 +20,7 @@
  */
 
 import { OmniDecision } from "../types";
+import { semanticSimilarity } from "./geminiCacheSemantic";
 
 /**
  * Structure d'une entrée dans le cache
@@ -155,9 +156,10 @@ export function getCachedDecision(input: string): OmniDecision | null {
   const normalized = normalizeCommand(input);
   const cached = cache.get(normalized);
 
-  // Vérifier existence
+  // 🎯 Tentative 1: Match exact
   if (!cached) {
-    return null;
+    // 🎯 Tentative 2: Match sémantique (fuzzy)
+    return getCachedDecisionSemantic(normalized, input);
   }
 
   // Vérifier expiration (TTL 24h)
@@ -174,10 +176,59 @@ export function getCachedDecision(input: string): OmniDecision | null {
   cached.hitCount++;
 
   console.log(
-    `✅ CACHE HIT: "${input}" → "${cached.command}" (${cached.hitCount} réutilisations)`,
+    `✅ CACHE HIT (exact): "${input}" → "${cached.command}" (${cached.hitCount} réutilisations)`,
   );
 
   return cached.decision;
+}
+
+/**
+ * Recherche sémantique dans le cache avec seuil de similarité
+ * Utilisé en fallback si pas de match exact
+ *
+ * @param normalized - Commande normalisée (sans match exact)
+ * @param original - Commande originale (pour logging)
+ * @returns Décision similaire ou null
+ */
+function getCachedDecisionSemantic(
+  normalized: string,
+  original: string,
+): OmniDecision | null {
+  const SIMILARITY_THRESHOLD = 70; // 70% de similarité minimum
+
+  let bestMatch: { key: string; entry: CachedDecision; score: number } | null =
+    null;
+
+  // Parcourir toutes les entrées du cache
+  for (const [key, entry] of cache.entries()) {
+    // Vérifier expiration
+    const age = Date.now() - entry.timestamp;
+    if (age > CACHE_TTL) {
+      cache.delete(key);
+      continue;
+    }
+
+    // Calculer similarité sémantique
+    const score = semanticSimilarity(normalized, key);
+
+    // Garder le meilleur match
+    if (score >= SIMILARITY_THRESHOLD) {
+      if (!bestMatch || score > bestMatch.score) {
+        bestMatch = { key, entry, score };
+      }
+    }
+  }
+
+  if (bestMatch) {
+    bestMatch.entry.hitCount++;
+    console.log(
+      `✅ CACHE HIT (semantic ${bestMatch.score}%): "${original}" ≈ "${bestMatch.entry.command}"`,
+    );
+    return bestMatch.entry.decision;
+  }
+
+  console.log(`❌ CACHE MISS: "${original}"`);
+  return null;
 }
 
 /**

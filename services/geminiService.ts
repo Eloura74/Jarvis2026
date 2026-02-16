@@ -320,9 +320,9 @@ const cleanupOldShield = () => {
 
 let last429Time = cleanupOldShield();
 let lastRequestTime = 0;
-const BREAKER_COOLDOWN = 120000; // 2 minutes (réduit pour éviter le blocage prolongé)
+const BREAKER_COOLDOWN = 30000; // 30 secondes (réduit de 2min pour usage normal)
 const AUTO_RESET_THRESHOLD = 600000; // 10 minutes : auto-expiration du shield
-const MIN_REQUEST_GAP = 50; // 50ms seulement (évite les bursts, mais reste ultra-rapide)
+const MIN_REQUEST_GAP = 10; // 10ms (quasi instantané, réduit de 50ms)
 
 const record429 = () => {
   last429Time = Date.now();

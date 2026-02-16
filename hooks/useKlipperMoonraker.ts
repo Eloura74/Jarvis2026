@@ -3,11 +3,15 @@ import { StatusOverlayData } from "../types/app.types";
 
 // Configuration par défaut
 const RECONNECT_INTERVAL = 3000;
+const MAX_RETRY_ATTEMPTS = 3; // Maximum de tentatives de reconnexion
+const BACKOFF_MULTIPLIER = 2; // Multiplicateur pour exponential backoff
 
 interface KlipperState {
   isConnected: boolean;
   data: StatusOverlayData | null;
   error: string | null;
+  retryCount: number; // 🎯 Compteur de tentatives
+  isRetrying: boolean; // 🎯 État de reconnexion en cours
 }
 
 /**
@@ -19,6 +23,8 @@ export const useKlipperMoonraker = (printerIp?: string, webcamUrl?: string) => {
     isConnected: false,
     data: null,
     error: null,
+    retryCount: 0,
+    isRetrying: false,
   });
 
   const wsRef = useRef<WebSocket | null>(null);
@@ -102,7 +108,14 @@ export const useKlipperMoonraker = (printerIp?: string, webcamUrl?: string) => {
       wsRef.current = ws;
 
       ws.onopen = () => {
-        setStatus((prev) => ({ ...prev, isConnected: true, error: null }));
+        // 🎯 Reset retry counter on successful connection
+        setStatus((prev) => ({
+          ...prev,
+          isConnected: true,
+          error: null,
+          retryCount: 0,
+          isRetrying: false,
+        }));
 
         // Souscription aux objets Klipper via Moonraker JSON-RPC
         ws.send(
@@ -162,16 +175,45 @@ export const useKlipperMoonraker = (printerIp?: string, webcamUrl?: string) => {
 
       ws.onclose = () => {
         wsRef.current = null;
-        setStatus((prev) => ({ ...prev, isConnected: false }));
-        retryTimeoutRef.current = window.setTimeout(
-          connect,
-          RECONNECT_INTERVAL,
-        );
+
+        setStatus((prev) => {
+          const newRetryCount = prev.retryCount + 1;
+
+          // 🎯 Arrêter les tentatives après MAX_RETRY_ATTEMPTS
+          if (newRetryCount >= MAX_RETRY_ATTEMPTS) {
+            return {
+              ...prev,
+              isConnected: false,
+              isRetrying: false,
+              retryCount: newRetryCount,
+              error: `Impossible de se connecter après ${MAX_RETRY_ATTEMPTS} tentatives. Imprimante éteinte ou IP incorrecte.`,
+            };
+          }
+
+          // 🎯 Exponential backoff: 3s, 6s, 12s
+          const backoffDelay =
+            RECONNECT_INTERVAL *
+            Math.pow(BACKOFF_MULTIPLIER, newRetryCount - 1);
+
+          retryTimeoutRef.current = window.setTimeout(connect, backoffDelay);
+
+          return {
+            ...prev,
+            isConnected: false,
+            isRetrying: true,
+            retryCount: newRetryCount,
+            error: `Tentative ${newRetryCount}/${MAX_RETRY_ATTEMPTS}... (prochaine dans ${backoffDelay / 1000}s)`,
+          };
+        });
       };
 
       ws.onerror = () => ws.close();
     } catch (e) {
       console.error("Klipper WS Connection Error", e);
+      setStatus((prev) => ({
+        ...prev,
+        error: "Erreur de connexion WebSocket",
+      }));
     }
   }, [printerIp, mapKlipperToOverlay]);
 

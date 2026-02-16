@@ -70,15 +70,37 @@ export function useVoiceSynthesis({
   // Ref pour empêcher le Garbage Collection de l'utterance en cours
   const currentUtteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
 
-  const speak = useCallback(
-    (text: string, queue: boolean = false) => {
+  // 🎯 Queue de messages pour éviter les interruptions
+  const messageQueue = useRef<string[]>([]);
+  const isProcessingQueue = useRef(false);
+
+  /**
+   * Traite le prochain message de la queue
+   */
+  const processNextInQueue = useCallback(() => {
+    if (messageQueue.current.length === 0) {
+      isProcessingQueue.current = false;
+      return;
+    }
+
+    if (window.speechSynthesis.speaking) {
+      // Attendre que la synthèse actuelle se termine
+      return;
+    }
+
+    const nextMessage = messageQueue.current.shift();
+    if (nextMessage) {
+      speakImmediate(nextMessage);
+    }
+  }, []);
+
+  /**
+   * Prononciation immédiate sans queue
+   */
+  const speakImmediate = useCallback(
+    (text: string) => {
       // Si la synthèse est désactivée, ne rien faire
       if (!enabled) return;
-
-      // Annulation propre si pas de queue
-      if (!queue) {
-        window.speechSynthesis.cancel();
-      }
 
       // Création de l'énoncé vocal
       const utterance = new SpeechSynthesisUtterance(text);
@@ -86,10 +108,10 @@ export function useVoiceSynthesis({
       // Stockage dans la ref pour éviter le GC
       currentUtteranceRef.current = utterance;
 
-      // ... (Sélection de la voix identique)
+      // Sélection de la voix
       const voices = window.speechSynthesis.getVoices();
       let selectedVoice: SpeechSynthesisVoice | undefined;
-      // ... (Selection Logic - kept concise for replacement)
+
       if (voiceURI) selectedVoice = voices.find((v) => v.voiceURI === voiceURI);
       if (!selectedVoice) {
         selectedVoice =
@@ -113,12 +135,16 @@ export function useVoiceSynthesis({
       utterance.onstart = () => onStart?.();
       utterance.onend = () => {
         onEnd?.();
-        currentUtteranceRef.current = null; // Release ref
+        currentUtteranceRef.current = null;
+        // 🎯 Traiter le prochain message de la queue
+        processNextInQueue();
       };
       utterance.onerror = (event) => {
         console.error("Erreur synthèse vocale:", event.error);
         onEnd?.();
         currentUtteranceRef.current = null;
+        // 🎯 Traiter le prochain message même en cas d'erreur
+        processNextInQueue();
       };
 
       if (window.speechSynthesis.paused) {
@@ -129,13 +155,49 @@ export function useVoiceSynthesis({
         window.speechSynthesis.speak(utterance);
       } catch (e) {
         console.error("Exception synthèse vocale:", e);
+        processNextInQueue();
       }
     },
-    [enabled, onStart, onEnd, volume, pitch, rate, voiceURI],
+    [
+      enabled,
+      onStart,
+      onEnd,
+      volume,
+      pitch,
+      rate,
+      voiceURI,
+      processNextInQueue,
+    ],
+  );
+
+  const speak = useCallback(
+    (text: string, queue: boolean = false) => {
+      if (!enabled) return;
+
+      if (queue) {
+        // Ajouter à la file d'attente
+        messageQueue.current.push(text);
+
+        // Démarrer le traitement si pas déjà en cours
+        if (!isProcessingQueue.current) {
+          isProcessingQueue.current = true;
+          processNextInQueue();
+        }
+      } else {
+        // Annuler tout et parler immédiatement
+        window.speechSynthesis.cancel();
+        messageQueue.current = []; // Vider la queue
+        isProcessingQueue.current = false;
+        speakImmediate(text);
+      }
+    },
+    [enabled, speakImmediate, processNextInQueue],
   );
 
   const stop = useCallback(() => {
     window.speechSynthesis.cancel();
+    messageQueue.current = [];
+    isProcessingQueue.current = false;
     currentUtteranceRef.current = null;
     onEnd?.();
   }, [onEnd]);
