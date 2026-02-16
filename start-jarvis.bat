@@ -1,61 +1,49 @@
 @echo off
 REM ============================================================================
-REM Script de démarrage automatique de J.A.R.V.I.S.
-REM Lance le backend puis le frontend
+REM SCRIPT DE DÉMARRAGE SILENCIEUX J.A.R.V.I.S.
+REM Rôle : Lance le Backend et le Frontend en ARRIÈRE-PLAN
+REM        puis ouvre l'interface dans Google Chrome.
 REM ============================================================================
 
+setlocal
+set PROJECT_ROOT=%~dp0
+set SERVER_DIR=%PROJECT_ROOT%server
+set CHROME_EXE="C:\Users\faber\AppData\Local\Google\Chrome\Application\chrome.exe"
+
 echo.
-echo ========================================
-echo   J.A.R.V.I.S. - Démarrage Système
-echo ========================================
+echo ============================================================
+echo   INITIALISATION SILENCIEUSE DU SYSTÉME J.A.R.V.I.S.
+echo ============================================================
 echo.
 
-REM Vérifier si Node.js est installé
-where node >nul 2>nul
-if %ERRORLEVEL% neq 0 (
-    echo [ERREUR] Node.js n'est pas installé ou pas dans le PATH
-    pause
-    exit /b 1
-)
+REM --- ÉTAPE 1 : Lancement du Mainframe (Backend) en arrière-plan ---
+echo [1/3] Activation du Mainframe (Backend port 3001)...
+powershell -Command "Start-Process cmd -ArgumentList '/c node server.js' -WindowStyle Hidden -WorkingDirectory '%SERVER_DIR%'"
 
-echo [1/3] Démarrage du backend (port 3001)...
-cd /d "%~dp0server"
-
-REM Vérifier si node_modules existe dans server
-if not exist "node_modules" (
-    echo [INFO] Installation des dépendances backend...
-    call npm install
-)
-
-REM Démarrer le backend en arrière-plan
-start "JARVIS Backend" cmd /k "node server.js"
 timeout /t 3 /nobreak >nul
 
-echo.
-echo [2/3] Démarrage du frontend (port 5173)...
-cd /d "%~dp0"
+REM --- ÉTAPE 2 : Lancement de l'Interface (Frontend) en arrière-plan ---
+echo [2/3] Génération de l'Interface (Frontend port 3000)...
+powershell -Command "Start-Process cmd -ArgumentList '/c npm run dev' -WindowStyle Hidden -WorkingDirectory '%PROJECT_ROOT%'"
 
-REM Vérifier si node_modules existe dans le projet principal
-if not exist "node_modules" (
-    echo [INFO] Installation des dépendances frontend...
-    call npm install
-)
-
-REM Démarrer le frontend
-start "JARVIS Frontend" cmd /k "npm run dev"
-
-echo.
-echo [3/3] Attente de l'initialisation...
+echo [3/3] Synchronisation des flux de données...
 timeout /t 5 /nobreak >nul
 
+REM --- ÉTAPE 3 : Ouverture de Chrome ---
+echo [FINAL] Accès via Google Chrome...
+if exist %CHROME_EXE% (
+    start "" %CHROME_EXE% "http://localhost:3000"
+) else (
+    start chrome "http://localhost:3000"
+)
+
 echo.
-echo ========================================
-echo   ✅ J.A.R.V.I.S. est démarré !
-echo ========================================
+echo ============================================================
+echo   SYSTÈME OPÉRATIONNEL EN ARRIÈRE-PLAN.
+echo   Utilisez 'stop-jarvis.bat' pour arrêter les serveurs.
+echo ============================================================
 echo.
-echo   Backend:  http://localhost:3001
-echo   Frontend: http://localhost:5173
-echo.
-echo   Ouvrez votre navigateur sur localhost:5173
-echo.
-pause
+
+timeout /t 3 >nul
+endlocal
+exit

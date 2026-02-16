@@ -12,7 +12,8 @@ export const isRichTool = (toolName: string): boolean => {
     toolName.startsWith("calendar") ||
     toolName === "get_weather" ||
     toolName === "set_timer" ||
-    toolName === "consult_memory"
+    toolName === "consult_memory" ||
+    toolName === "show_status_overlay"
   );
 };
 

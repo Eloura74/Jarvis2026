@@ -18,6 +18,10 @@ import { MemoryProvider } from "./contexts/MemoryContext"; // NOUVEAU
 // Composants UI
 import { PremiumLayout } from "./components/PremiumLayout";
 import { ImageOverlay } from "./components/ImageOverlay";
+import {
+  HolographicStatusOverlay,
+  StatusOverlayData,
+} from "./components/HolographicStatusOverlay";
 import HolographicHUD from "./components/HolographicHUD";
 import { toasterConfig } from "./utils/toasterConfig";
 import { SystemStatus } from "./types";
@@ -56,8 +60,29 @@ const JarvisShell: React.FC<JarvisShellProps> = ({ shouldGreet }) => {
     getConversationContext,
   } = useKernel();
 
+  useEffect(() => {
+    import("./services/geminiService").then((m) => {
+      if (m.clearDecisionCache) {
+        m.clearDecisionCache();
+        console.log("🧠 JARVIS: Core and Brain cache cleared.");
+      }
+    });
+  }, []);
+
   // État local UI (non-partagé)
   const [activeOverlay, setActiveOverlay] = useState<string | null>(null);
+  const [statusOverlay, setStatusOverlay] = useState<StatusOverlayData | null>(
+    null,
+  );
+
+  useEffect(() => {
+    if (statusOverlay) {
+      console.log(
+        "🟢 APP: HolographicStatusOverlay update requested for:",
+        statusOverlay.title,
+      );
+    }
+  }, [statusOverlay]);
 
   // Système (Stats Dynamiques)
   const systemStats = useSystemStats();
@@ -134,6 +159,10 @@ const JarvisShell: React.FC<JarvisShellProps> = ({ shouldGreet }) => {
     addConversationMessage, // NOUVEAU
     getConversationContext, // NOUVEAU
     stopConversation: interaction.stopFullConversation, // NOUVEAU : Arrêt sécurisé de la boucle
+    setStatusOverlay: (data) => {
+      console.log("🔮 SHELL: setStatusOverlay called with:", data?.title);
+      setStatusOverlay(data);
+    },
   });
 
   brainRef.current = brain;
@@ -243,6 +272,32 @@ const JarvisShell: React.FC<JarvisShellProps> = ({ shouldGreet }) => {
         isVisible={visualMode.isVisible}
         onClose={() => setVisualMode(null, false)}
       />
+
+      {/* Pop-up de Statut Holographique (Imprimantes, Capteurs, etc.) */}
+      <HolographicStatusOverlay
+        data={statusOverlay}
+        isVisible={!!statusOverlay}
+        onClose={() => setStatusOverlay(null)}
+      />
+
+      {/* DEBUG BUTTON (ONLY IN DEV) */}
+      <div className="fixed bottom-4 left-4 z-[99999] opacity-0 hover:opacity-100 transition-opacity">
+        <button
+          onClick={() => {
+            console.log("🛠️ DEBUG: Forcing test overlay...");
+            setStatusOverlay({
+              id: "DEBUG-001",
+              title: "DEBUG_TEST",
+              type: "general",
+              stats: [{ label: "TEST_MODE", value: "ACTIVE", progress: 100 }],
+              lastUpdate: new Date().toLocaleTimeString(),
+            });
+          }}
+          className="bg-cyan-500/20 text-cyan-500 text-[10px] px-2 py-1 rounded border border-cyan-500/50"
+        >
+          DEBUG_UI
+        </button>
+      </div>
 
       <Toaster {...toasterConfig} />
 

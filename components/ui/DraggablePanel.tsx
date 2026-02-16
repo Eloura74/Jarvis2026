@@ -6,13 +6,15 @@ interface DraggablePanelProps {
   children: React.ReactNode;
   onClose: () => void;
   initialPosition?: { x: number; y: number };
+  className?: string;
 }
 
 export const DraggablePanel: React.FC<DraggablePanelProps> = ({
   title,
   children,
   onClose,
-  initialPosition = { x: 0, y: 0 },
+  initialPosition,
+  className,
 }) => {
   return (
     <motion.div
@@ -21,12 +23,12 @@ export const DraggablePanel: React.FC<DraggablePanelProps> = ({
       initial={{
         opacity: 0,
         scale: 0.8,
-        x: initialPosition.x,
-        y: initialPosition.y,
+        x: initialPosition?.x || 0,
+        y: initialPosition?.y || 0,
       }}
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.8, transition: { duration: 0.2 } }}
-      className="fixed z-[9999] flex flex-col overflow-hidden rounded-lg shadow-[0_0_30px_rgba(0,255,255,0.2)]"
+      className={`absolute z-[9999] flex flex-col overflow-hidden rounded-lg shadow-[0_0_30px_rgba(0,255,255,0.2)] ${className || ""}`}
       style={{
         width: "600px",
         height: "auto",

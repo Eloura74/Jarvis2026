@@ -134,3 +134,170 @@ export const handleControlHomeAutomation = async (
     return { status: "error", message: String(error) };
   }
 };
+
+/**
+ * Prépare les données pour l'overlay holographique de statut
+ */
+export const handleShowStatusOverlay = async (
+  args: { target: string },
+  context: HandlerContext,
+) => {
+  const { addLog } = context;
+  const { target } = args;
+  const query = target.toLowerCase();
+
+  addLog(`Status Overlay requested for: ${target}`, "SYSTEM", "info");
+
+  try {
+    const { fetchHAStates, HA_ENTITIES } =
+      await import("../services/homeAssistantService");
+    const states = await fetchHAStates();
+    const lastUpdate = new Date().toLocaleTimeString("fr-FR");
+
+    // 1. Détection du type de demande
+
+    // CAS A: Imprimantes 3D - Matching plus robuste (enlève espaces et tirets)
+    const normalizedQuery = query.replace(/[\s-]/g, "");
+    const printer = HA_ENTITIES.PRINTERS.find((p) => {
+      const normalizedName = p.name.toLowerCase().replace(/[\s-]/g, "");
+      return (
+        normalizedName.includes(normalizedQuery) ||
+        normalizedQuery.includes(normalizedName)
+      );
+    });
+
+    if (printer) {
+      const bed = states[printer.bed]?.state || "?";
+      const ext = states[printer.ext]?.state || "?";
+      const progValue = states[printer.progress]?.state;
+      const prog = progValue ? parseFloat(progValue) : 0;
+
+      const printerData = {
+        id: `printer-${printer.name}-${Date.now()}`,
+        title: printer.name,
+        type: "printer" as const,
+        image: "/vzbot_330_render.png",
+        stats: [
+          {
+            label: "PROGRESSION",
+            value: `${prog}%`,
+            progress: prog,
+            status: prog > 90 ? "normal" : "normal",
+          },
+          {
+            label: "TEMP. PLATEAU",
+            value: bed,
+            unit: "°C",
+            status: parseFloat(bed) > 90 ? "warning" : "normal",
+          },
+          {
+            label: "TEMP. BUSE",
+            value: ext,
+            unit: "°C",
+            status: parseFloat(ext) > 250 ? "warning" : "normal",
+          },
+          { label: "SYSTEM", value: "ONLINE", status: "normal" as const },
+        ],
+        lastUpdate,
+      };
+
+      console.log(
+        `[HA_HANDLER] Success: Prepared printer data for ${printer.name}`,
+      );
+      return {
+        status: "success",
+        data: printerData,
+      };
+    }
+
+    // CAS B: Capteurs de porte / Sécurité
+    if (
+      query.includes("porte") ||
+      query.includes("door") ||
+      query.includes("sécurité")
+    ) {
+      const doorStats = HA_ENTITIES.DOORS.map((d) => {
+        const state = states[d.id]?.state === "on" ? "OUVERT" : "FERMÉ";
+        return { label: d.label, value: state };
+      });
+
+      return {
+        status: "success",
+        data: {
+          id: `security-${Date.now()}`,
+          title: "Sécurité Périmètre",
+          type: "door",
+          image:
+            "https://images.unsplash.com/photo-1558002038-1a221295b214?auto=format&fit=crop&q=80&w=800",
+          stats: doorStats.map((s) => ({
+            ...s,
+            status: s.value === "OUVERT" ? "warning" : "normal",
+          })),
+          lastUpdate,
+        },
+      };
+    }
+
+    // CAS C: Température / Climat
+    if (
+      query.includes("temp") ||
+      query.includes("climat") ||
+      query.includes("humidité")
+    ) {
+      const tempStats = HA_ENTITIES.SENSORS.filter(
+        (s) => s.type === "sensor",
+      ).map((s) => {
+        const val = states[s.id]?.state || "?";
+        return { label: s.label, value: val, unit: s.unit };
+      });
+
+      return {
+        status: "success",
+        data: {
+          id: `climate-${Date.now()}`,
+          title: "Analyse Climatique",
+          type: "sensor",
+          image:
+            "https://images.unsplash.com/photo-1502472545331-5079a499312c?auto=format&fit=crop&q=80&w=800",
+          stats: tempStats.map((s) => ({ ...s, status: "normal" as const })),
+          lastUpdate,
+        },
+      };
+    }
+
+    // CAS D: Recherche générique d'une entité par label
+    const allEntities = [
+      ...HA_ENTITIES.LIGHTS,
+      ...HA_ENTITIES.SENSORS,
+      ...HA_ENTITIES.DOORS,
+    ];
+    const found = allEntities.find(
+      (e) =>
+        e.label.toLowerCase().includes(query) ||
+        query.includes(e.label.toLowerCase()),
+    );
+
+    if (found) {
+      const state = states[found.id];
+      return {
+        status: "success",
+        data: {
+          title: found.label,
+          type: found.type || "general",
+          image:
+            "https://images.unsplash.com/photo-1557683316-973673baf926?auto=format&fit=crop&q=80&w=800",
+          stats: [
+            { label: "ÉTAT ACTUEL", value: state?.state || "Unknown" },
+            { label: "ENTITÉ ID", value: found.id },
+          ],
+          lastUpdate,
+        },
+      };
+    }
+
+    return { status: "error", message: `Cible "${target}" non identifiée.` };
+  } catch (error) {
+    console.error("Status Overlay Handler Error:", error);
+    return { status: "error", message: String(error) };
+  }
+};

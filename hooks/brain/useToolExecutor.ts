@@ -18,6 +18,7 @@ interface ToolExecutorProps {
   setActiveOverlay: (overlay: string | null) => void;
   setVisualMode?: (query: string | null, isVisible: boolean) => void;
   stopConversation?: () => void;
+  setStatusOverlay?: (data: any) => void;
 }
 
 /**
@@ -34,16 +35,21 @@ export function useToolExecutor({
   setActiveOverlay,
   setVisualMode,
   stopConversation,
+  setStatusOverlay,
 }: ToolExecutorProps) {
   const executeTool = useCallback(
     async (toolName: string, toolArgs: any) => {
       // Contexte commun
-      const ctx: HandlerContext & { speak?: (text: string) => void } = {
+      const ctx: HandlerContext & {
+        speak?: (text: string) => void;
+        setStatusOverlay?: (data: any) => void;
+      } = {
         addLog,
         setStatus,
         setVisualMode,
         speak,
         stopConversation,
+        setStatusOverlay,
       };
 
       // Dépendances additionnelles
@@ -151,6 +157,31 @@ export function useToolExecutor({
               await import("../../handlers/haHandlers");
             return await handleControlHomeAutomation(toolArgs, ctx);
 
+          case "show_status_overlay":
+            console.log("🛠️ EXECUTOR: show_status_overlay started...");
+            const { handleShowStatusOverlay } =
+              await import("../../handlers/haHandlers");
+            const result = await handleShowStatusOverlay(toolArgs, ctx);
+            console.log(
+              "🛠️ EXECUTOR: handleShowStatusOverlay result:",
+              result.status,
+            );
+
+            if (result.status === "success" && ctx.setStatusOverlay) {
+              console.log(
+                "🛠️ EXECUTOR: Calling actual setStatusOverlay with data...",
+              );
+              ctx.setStatusOverlay(result.data);
+            } else {
+              console.error(
+                "🛠️ EXECUTOR: FAILED to call setStatusOverlay. Status:",
+                result.status,
+                "Setter exists:",
+                !!ctx.setStatusOverlay,
+              );
+            }
+            return result;
+
           // === WEATHER ===
           case "get_weather":
             return await handlers.handleGetWeather(toolArgs, ctx);
@@ -202,6 +233,7 @@ export function useToolExecutor({
       appMemory,
       updateMemory,
       findApp,
+      setStatusOverlay,
     ],
   );
 

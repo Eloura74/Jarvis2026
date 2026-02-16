@@ -30,6 +30,7 @@ interface UseJarvisBrainProps {
   getConversationContext?: () => string;
   setVisualMode?: (query: string | null, isVisible: boolean) => void;
   stopConversation?: () => void;
+  setStatusOverlay?: (data: any) => void;
 }
 
 export function useJarvisBrain(props: UseJarvisBrainProps) {
@@ -131,6 +132,13 @@ export function useJarvisBrain(props: UseJarvisBrainProps) {
                 toolCall.name,
                 toolCall.args,
               );
+
+              if (toolCall.name === "show_status_overlay") {
+                console.log(
+                  "🌌 BRAIN: toolResult for show_status_overlay:",
+                  toolResult,
+                );
+              }
 
               // Chainable tools (autonomous loop)
               if (
