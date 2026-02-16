@@ -29,6 +29,8 @@ import MoodIndicator from "./components/MoodIndicator";
 import CacheStatsWidget from "./components/CacheStatsWidget";
 import WorkflowPanel from "./components/WorkflowPanel";
 import PrinterFleetDashboard from "./components/PrinterFleetDashboard";
+import GhostModePanel from "./components/GhostModePanel"; // Phase 2
+import PsychProfileWidget from "./components/PsychProfileWidget"; // Phase 3
 
 // Hooks Spécialisés
 import { useJarvisInteraction } from "./hooks/useJarvisInteraction";
@@ -299,7 +301,7 @@ const JarvisShell: React.FC<JarvisShellProps> = ({ shouldGreet }) => {
             setStatusOverlay({
               id: "DEBUG-001",
               title: "DEBUG_TEST",
-              type: "general",
+              type: "custom",
               stats: [{ label: "TEST_MODE", value: "ACTIVE", progress: 100 }],
               lastUpdate: new Date().toLocaleTimeString(),
             });
@@ -320,6 +322,10 @@ const JarvisShell: React.FC<JarvisShellProps> = ({ shouldGreet }) => {
       <CacheStatsWidget />
       <WorkflowPanel />
       <PrinterFleetDashboard />
+
+      {/* 🧠 PHASE 2 & 3: Ghost Mode + Psychological Profile */}
+      <GhostModePanel />
+      <PsychProfileWidget />
     </>
   );
 };

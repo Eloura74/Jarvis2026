@@ -8,8 +8,8 @@ import cors from "cors";
 import dotenv from "dotenv";
 import { spawn } from "child_process";
 
-// Charger les variables d'environnement
-dotenv.config({ path: "./.env.local" });
+// Charger les variables d'environnement (depuis la racine)
+dotenv.config({ path: "../.env.local" });
 
 // DISPATCHER PLATEFORME
 import {
@@ -37,6 +37,8 @@ import windowsRoutes from "./routes/windows.js";
 import filesRoutes from "./routes/files.js";
 import memoryRoutes from "./routes/memory.js";
 import webRoutes from "./routes/web.js";
+import configRoutes from "./routes/config.js";
+import bambuRoutes from "./routes/bambu.js";
 
 const app = express();
 const PORT = 3001;
@@ -55,6 +57,8 @@ app.use("/api/automation", windowsRoutes); // Partagé avec windowsRoutes
 app.use("/api/files", filesRoutes);
 app.use("/api/memory", memoryRoutes);
 app.use("/api/web", webRoutes);
+app.use("/api/config", configRoutes); // Config persistante
+app.use("/api/bambu", bambuRoutes); // Bambu MQTT proxy
 
 // Index des applications (chargé en mémoire)
 let appsIndex = [];
@@ -146,8 +150,14 @@ process.on("unhandledRejection", (reason) => {
   console.error(`❌ UNHANDLED REJECTION: ${reason}`);
 });
 
+// Import Bambu MQTT service
+import { initBambuMqtt } from "./services/bambuMqtt.js";
+
 // START
 initializeIndex().then(() => {
+  // Init Bambu MQTT connection
+  initBambuMqtt();
+
   app.listen(PORT, () => {
     console.log(`✅ J.A.R.V.I.S. Core running on http://localhost:${PORT}`);
   });

@@ -19,10 +19,10 @@ import {
   type FilamentStats,
 } from "../services/printerFleet";
 import { useKlipperMoonraker } from "./useKlipperMoonraker";
-import {
-  subscribeBambuStatus,
-  getBambuStatus,
-} from "../services/bambulabsMqtt";
+// import {
+//   subscribeBambuStatus,
+//   getBambuStatus,
+// } from "../services/bambulabsMqtt";
 
 interface FleetHookReturn {
   /** Status de toutes les imprimantes */
@@ -136,80 +136,61 @@ export function usePrinterFleet(
   }, [vz330.isConnected, vz330.data, vz330.isRetrying]);
 
   // 🔌 Subscription MQTT Bambu A1 mini (temps réel)
+  // 🔌 Polling Bambu A1 mini (via Backend Proxy)
   useEffect(() => {
-    // Subscribe aux changements de status Bambu
-    const unsubscribe = subscribeBambuStatus((bambuStatus) => {
-      if (!bambuStatus.connected) {
-        updatePrinterStatus("bambu_a1mini", {
-          status: "offline",
-        });
-        return;
+    const fetchBambuStatus = async () => {
+      try {
+        // Direct call to backend to bypass Vite proxy (which points to HA)
+        const res = await fetch("http://localhost:3001/api/bambu/status");
+        if (!res.ok) return;
+
+        const json = await res.json();
+        if (json.success && json.data) {
+          const bambuStatus = json.data;
+
+          if (!bambuStatus.connected) {
+            updatePrinterStatus("bambu_a1mini", {
+              status: "offline",
+            });
+            return;
+          }
+
+          updatePrinterStatus("bambu_a1mini", {
+            status: bambuStatus.printing ? "printing" : "idle",
+            temps: {
+              nozzle: bambuStatus.temps.nozzle,
+              nozzleTarget: 0,
+              bed: bambuStatus.temps.bed,
+              bedTarget: 0,
+            },
+            currentJob: bambuStatus.printing
+              ? {
+                  fileName: bambuStatus.fileName || "Job A1 mini",
+                  progress: bambuStatus.progress,
+                  eta: bambuStatus.eta,
+                  startTime: Date.now(), // Approximation
+                  filamentUsed: 0,
+                  thumbnail: undefined,
+                  printDuration: 0, // Pas dispo via simple status
+                  totalDuration: bambuStatus.eta,
+                  currentLayer: bambuStatus.layer.current,
+                  totalLayers: bambuStatus.layer.total,
+                  speed: bambuStatus.speed,
+                }
+              : undefined,
+          });
+        }
+      } catch (error) {
+        // Silent fail (offline or backend down)
+        // console.debug("Bambu polling failed", error);
       }
+    };
 
-      updatePrinterStatus("bambu_a1mini", {
-        status: bambuStatus.printing ? "printing" : "idle",
-        temps: {
-          nozzle: bambuStatus.temps.nozzle,
-          nozzleTarget: 0, // Bambu n'expose pas toujours target via MQTT
-          bed: bambuStatus.temps.bed,
-          bedTarget: 0,
-        },
-        currentJob: bambuStatus.printing
-          ? {
-              fileName: bambuStatus.fileName || "Job A1 mini",
-              progress: bambuStatus.progress,
-              eta: bambuStatus.eta,
-              startTime: Date.now(),
-              filamentUsed: 0,
-              // Nouvelles données enrichies Bambu
-              thumbnail: undefined, // TODO: Parser thumbnail MQTT si disponible
-              printDuration:
-                bambuStatus.eta > 0
-                  ? Math.max(
-                      0,
-                      bambuStatus.layer.total > 0
-                        ? (bambuStatus.layer.current /
-                            bambuStatus.layer.total) *
-                            100
-                        : 0,
-                    )
-                  : 0,
-              totalDuration: bambuStatus.eta,
-              currentLayer: bambuStatus.layer.current,
-              totalLayers: bambuStatus.layer.total,
-              speed: bambuStatus.speed,
-            }
-          : undefined,
-      });
-    });
+    // Poll immédiat puis toutes les 3s
+    fetchBambuStatus();
+    const interval = setInterval(fetchBambuStatus, 3000);
 
-    // Init status immédiat
-    const initialStatus = getBambuStatus();
-    if (initialStatus.connected) {
-      updatePrinterStatus("bambu_a1mini", {
-        status: initialStatus.printing ? "printing" : "idle",
-        temps: {
-          nozzle: initialStatus.temps.nozzle,
-          nozzleTarget: 0,
-          bed: initialStatus.temps.bed,
-          bedTarget: 0,
-        },
-        currentJob: initialStatus.printing
-          ? {
-              fileName: initialStatus.fileName,
-              progress: initialStatus.progress,
-              eta: initialStatus.eta,
-              startTime: Date.now(),
-              filamentUsed: 0,
-              currentLayer: initialStatus.layer.current,
-              totalLayers: initialStatus.layer.total,
-              speed: initialStatus.speed,
-            }
-          : undefined,
-      });
-    }
-
-    return () => unsubscribe();
+    return () => clearInterval(interval);
   }, []);
 
   const addJob = (job: Omit<PrintJob, "id" | "submittedAt">) => {
