@@ -21,10 +21,13 @@ import { ImageOverlay } from "./components/ImageOverlay";
 import { HolographicStatusOverlay } from "./components/HolographicStatusOverlay";
 import { StatusOverlayData } from "./types/app.types";
 import HolographicHUD from "./components/HolographicHUD";
+import { HolographicModal } from "./components/ui/HolographicModal";
 import { toasterConfig } from "./utils/toasterConfig";
 import { SystemStatus } from "./types";
 
 // Nouveaux composants UI MK-85
+import { OrbitalMenu } from "./components/OrbitalMenu";
+import { HomeControlWidget } from "./components/HomeControlWidget"; // Correction import
 import MoodIndicator from "./components/MoodIndicator";
 import CacheStatsWidget from "./components/CacheStatsWidget";
 import WorkflowPanel from "./components/WorkflowPanel";
@@ -317,15 +320,84 @@ const JarvisShell: React.FC<JarvisShellProps> = ({ shouldGreet }) => {
       {/* HUD Holographique pour les suggestions magiques */}
       <HolographicHUD notifications={brain.hudNotifications} />
 
-      {/* 🆕 Nouveaux composants UI MK-85 */}
+      {/* 🆕 MENU ORBITAL MK-85 (Nouveau Système de Navigation) */}
+      <OrbitalMenu
+        onToggleHome={() =>
+          setActiveOverlay(activeOverlay === "HOME" ? null : "HOME")
+        }
+        onTogglePsych={() =>
+          setActiveOverlay(activeOverlay === "PSYCH" ? null : "PSYCH")
+        }
+        onToggleGhost={() =>
+          setActiveOverlay(activeOverlay === "GHOST" ? null : "GHOST")
+        }
+        onToggleWorkflow={() =>
+          setActiveOverlay(activeOverlay === "WORKFLOW" ? null : "WORKFLOW")
+        }
+        onTogglePrinter={() =>
+          setActiveOverlay(activeOverlay === "PRINTER" ? null : "PRINTER")
+        }
+        onToggleGemini={() => interaction.handleMicrophoneClick()} // Gemini = Micro pour l'instant
+      />
+
+      {/* 🆕 PANELS HOLOGRAPHIQUES CENTRALISÉS */}
+
+      {/* 1. Home Control (Domotique) */}
+      <HolographicModal
+        isOpen={activeOverlay === "HOME"}
+        onClose={() => setActiveOverlay(null)}
+        title="DOMOTIQUE & ACCÈS"
+        width="max-w-5xl"
+        height="h-[700px]"
+      >
+        <HomeControlWidget />
+      </HolographicModal>
+
+      {/* 2. Printer Fleet (Imprimantes 3D) */}
+      <HolographicModal
+        isOpen={activeOverlay === "PRINTER"}
+        onClose={() => setActiveOverlay(null)}
+        title="FLOTTE IMPRIMANTES"
+        width="max-w-6xl"
+        height="h-[700px]"
+      >
+        <PrinterFleetDashboard />
+      </HolographicModal>
+
+      {/* 3. Ghost Mode (Analyse Visuelle) */}
+      <HolographicModal
+        isOpen={activeOverlay === "GHOST"}
+        onClose={() => setActiveOverlay(null)}
+        title="GHOST VISION"
+        width="max-w-2xl"
+        height="max-h-[800px]"
+      >
+        <GhostModePanel />
+      </HolographicModal>
+
+      {/* 4. Workflow Automation */}
+      <HolographicModal
+        isOpen={activeOverlay === "WORKFLOW"}
+        onClose={() => setActiveOverlay(null)}
+        title="AUTOMATISATION"
+        width="max-w-4xl"
+        height="h-[600px]"
+      >
+        <WorkflowPanel />
+      </HolographicModal>
+
+      {/* 5. Profil Psychologique */}
+      <HolographicModal
+        isOpen={activeOverlay === "PSYCH"}
+        onClose={() => setActiveOverlay(null)}
+        title="PROFIL NEURAL"
+        width="max-w-3xl"
+      >
+        <PsychProfileWidget />
+      </HolographicModal>
+
       <MoodIndicator />
       <CacheStatsWidget />
-      <WorkflowPanel />
-      <PrinterFleetDashboard />
-
-      {/* 🧠 PHASE 2 & 3: Ghost Mode + Psychological Profile */}
-      <GhostModePanel />
-      <PsychProfileWidget />
     </>
   );
 };
