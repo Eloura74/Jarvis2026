@@ -10,6 +10,11 @@ import {
   Power,
   Droplets,
   Activity,
+  Zap,
+  Play,
+  Moon,
+  Briefcase,
+  Film,
 } from "lucide-react";
 
 import {
@@ -17,8 +22,9 @@ import {
   fetchHAStates,
   toggleEntity,
 } from "../services/homeAssistantService";
+import { EnergyWidget } from "./EnergyWidget";
 
-type Tab = "LIGHTS" | "SENSORS" | "PRINTERS" | "DOORS";
+type Tab = "LIGHTS" | "SENSORS" | "PRINTERS" | "DOORS" | "ENERGY";
 
 export const HomeControlWidget: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -50,6 +56,12 @@ export const HomeControlWidget: React.FC = () => {
     }));
   };
 
+  const runScene = (sceneName: string) => {
+    console.log(`🎬 Running scene: ${sceneName}`);
+    // TODO: Appeler API HA pour activer la scène
+    // fetch('/api/ha/scene/activate', ...)
+  };
+
   return (
     <motion.div
       initial={false}
@@ -67,7 +79,7 @@ export const HomeControlWidget: React.FC = () => {
       </div>
 
       {/* SIDEBAR TABS */}
-      <div className="w-[60px] flex flex-col items-center py-4 gap-6 bg-black/40 border-r border-cyan-400/20 z-10 shrink-0 backdrop-blur-sm">
+      <div className="w-[60px] flex flex-col items-center py-4 gap-4 bg-black/40 border-r border-cyan-400/20 z-10 shrink-0 backdrop-blur-sm">
         <button
           onClick={() => setIsOpen(!isOpen)}
           className="p-2 rounded-full hover:bg-cyan-500/20 text-cyan-300 transition-all mb-2 hover:shadow-[0_0_10px_#00e5ff]"
@@ -94,6 +106,15 @@ export const HomeControlWidget: React.FC = () => {
           label="SENSORS"
         />
         <TabButton
+          active={activeTab === "ENERGY"}
+          onClick={() => {
+            setActiveTab("ENERGY");
+            setIsOpen(true);
+          }}
+          icon={<Zap size={20} />}
+          label="ENERGY"
+        />
+        <TabButton
           active={activeTab === "PRINTERS"}
           onClick={() => {
             setActiveTab("PRINTERS");
@@ -118,39 +139,103 @@ export const HomeControlWidget: React.FC = () => {
         <div className="absolute inset-0 bg-gradient-to-br from-cyan-900/10 to-transparent pointer-events-none" />
 
         <AnimatePresence mode="wait">
-          {/* === LIGHTS === */}
+          {/* === LIGHTS & SCENES === */}
           {activeTab === "LIGHTS" && (
             <motion.div
               key="lights"
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
+              className="space-y-6"
+            >
+              <div className="space-y-3">
+                <Header title="QUICK SCENES" />
+                <div className="grid grid-cols-3 gap-2">
+                  <SceneButton
+                    icon={<Film size={16} />}
+                    label="CINEMA"
+                    color="text-purple-400"
+                    onClick={() => runScene("cinema")}
+                  />
+                  <SceneButton
+                    icon={<Briefcase size={16} />}
+                    label="WORK"
+                    color="text-blue-400"
+                    onClick={() => runScene("work")}
+                  />
+                  <SceneButton
+                    icon={<Moon size={16} />}
+                    label="SLEEP"
+                    color="text-indigo-400"
+                    onClick={() => runScene("sleep")}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <Header title="LIGHTS CONTROL" />
+                <div className="space-y-2">
+                  {HA_ENTITIES.LIGHTS.map((light) => {
+                    const state = states[light.id]?.state;
+                    const isOn = state === "on";
+                    return (
+                      <div
+                        key={light.id}
+                        className={`flex items-center justify-between p-3 rounded-lg border transition-all duration-300 group ${isOn ? "bg-cyan-900/20 border-cyan-400/50 shadow-[0_0_10px_rgba(0,229,255,0.2)]" : "bg-black/40 border-gray-800 hover:border-cyan-500/30"}`}
+                      >
+                        <span
+                          className={`text-xs font-bold tracking-wider ${isOn ? "text-cyan-100" : "text-gray-400 group-hover:text-cyan-200"}`}
+                        >
+                          {light.label}
+                        </span>
+                        <button
+                          onClick={() => handleToggle(light.id)}
+                          className={`p-2 rounded-full transition-all duration-300 ${isOn ? "bg-cyan-400 text-black shadow-[0_0_15px_#00e5ff] scale-110" : "bg-gray-800 text-gray-500 hover:text-cyan-400 hover:bg-gray-700"}`}
+                        >
+                          <Power size={16} />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {/* === ENERGY === */}
+          {activeTab === "ENERGY" && (
+            <motion.div
+              key="energy"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
               className="space-y-4"
             >
-              <Header title="LIGHTS CONTROL" />
-              <div className="space-y-3">
-                {HA_ENTITIES.LIGHTS.map((light) => {
-                  const state = states[light.id]?.state;
-                  const isOn = state === "on";
-                  return (
-                    <div
-                      key={light.id}
-                      className={`flex items-center justify-between p-3 rounded-lg border transition-all duration-300 group ${isOn ? "bg-cyan-900/20 border-cyan-400/50 shadow-[0_0_10px_rgba(0,229,255,0.2)]" : "bg-black/40 border-gray-800 hover:border-cyan-500/30"}`}
-                    >
-                      <span
-                        className={`text-xs font-bold tracking-wider ${isOn ? "text-cyan-100" : "text-gray-400 group-hover:text-cyan-200"}`}
-                      >
-                        {light.label}
-                      </span>
-                      <button
-                        onClick={() => handleToggle(light.id)}
-                        className={`p-2 rounded-full transition-all duration-300 ${isOn ? "bg-cyan-400 text-black shadow-[0_0_15px_#00e5ff] scale-110" : "bg-gray-800 text-gray-500 hover:text-cyan-400 hover:bg-gray-700"}`}
-                      >
-                        <Power size={16} />
-                      </button>
-                    </div>
-                  );
-                })}
+              <Header title="POWER GRID" />
+              <div className="space-y-4">
+                <EnergyWidget
+                  currentPower={450} // TODO: Lier à HA
+                  dailyConsumption={12.5} // TODO: Lier à HA
+                  isPeakHours={false} // TODO: Lier à HA
+                />
+
+                <div className="p-4 bg-black/40 rounded-xl border border-white/5 space-y-3">
+                  <div className="text-xs text-gray-400 uppercase tracking-wider mb-2">
+                    Appareils
+                  </div>
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-gray-300">🖥️ PC Jarvis</span>
+                    <span className="text-cyan-400">120 W</span>
+                  </div>
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-gray-300">🖨️ Imprimantes</span>
+                    <span className="text-purple-400">320 W</span>
+                  </div>
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-gray-300">💡 Lumières</span>
+                    <span className="text-yellow-400">10 W</span>
+                  </div>
+                </div>
               </div>
             </motion.div>
           )}
@@ -322,5 +407,31 @@ const TabButton = ({
     {active && (
       <div className="absolute -left-[1px] top-1/2 -translate-y-1/2 w-0.5 h-6 bg-cyan-400 rounded-r-full shadow-[0_0_5px_#00e5ff]" />
     )}
+  </button>
+);
+
+const SceneButton = ({
+  icon,
+  label,
+  color,
+  onClick,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  color: string;
+  onClick: () => void;
+}) => (
+  <button
+    onClick={onClick}
+    className="flex flex-col items-center justify-center p-3 rounded-xl bg-black/40 border border-white/10 hover:border-cyan-500/50 hover:bg-cyan-900/10 transition-all group"
+  >
+    <div
+      className={`mb-2 p-2 rounded-lg bg-white/5 group-hover:scale-110 transition-transform ${color}`}
+    >
+      {icon}
+    </div>
+    <span className="text-[10px] font-bold text-gray-400 tracking-wider group-hover:text-white transition-colors">
+      {label}
+    </span>
   </button>
 );
