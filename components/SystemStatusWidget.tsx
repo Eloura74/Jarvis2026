@@ -8,6 +8,7 @@ interface SystemStatusWidgetProps {
   cpuUsage: number;
   memoryUsage: string; // Ex: "45%" ou "8.2 GB"
   processes: number;
+  onClick?: () => void;
 }
 
 interface ChartData {
@@ -24,6 +25,7 @@ export const SystemStatusWidget: React.FC<SystemStatusWidgetProps> = ({
   cpuUsage,
   memoryUsage,
   processes,
+  onClick,
 }) => {
   const { wakeWordEnabled, setWakeWordEnabled } = useKernel();
 
@@ -77,7 +79,8 @@ export const SystemStatusWidget: React.FC<SystemStatusWidgetProps> = ({
       initial={{ x: -100, opacity: 0 }}
       animate={{ x: 0, opacity: 1 }}
       transition={{ duration: 0.8, ease: "easeOut" }}
-      className="jarvis-panel-glass p-3 rounded-2xl border border-cyan-400/30 bg-black/20 backdrop-blur-xl relative overflow-hidden group hover:border-cyan-400/50 transition-all duration-500 shadow-[0_0_20px_rgba(0,229,255,0.1)] w-full"
+      className={`jarvis-panel-glass p-3 rounded-2xl border border-cyan-400/30 bg-black/20 backdrop-blur-xl relative overflow-hidden group hover:border-cyan-400/50 transition-all duration-500 shadow-[0_0_20px_rgba(0,229,255,0.1)] w-full ${onClick ? "cursor-pointer hover:bg-white/5" : ""}`}
+      onClick={onClick}
     >
       {/* BACKGROUND IMAGE WITH OVERLAY */}
       <div className="absolute inset-0 z-0">
@@ -100,7 +103,10 @@ export const SystemStatusWidget: React.FC<SystemStatusWidgetProps> = ({
         <div className="flex items-center gap-3">
           {/* WAKE WORD TOGGLE BUTTON (VISIBILITÉ AMÉLIORÉE) */}
           <button
-            onClick={() => setWakeWordEnabled(!wakeWordEnabled)}
+            onClick={(e) => {
+              e.stopPropagation();
+              setWakeWordEnabled(!wakeWordEnabled);
+            }}
             className={`flex items-center gap-2 px-2 py-1 rounded-md border transition-all duration-300 group/btn hover:scale-105 active:scale-95 ${
               wakeWordEnabled
                 ? "border-cyan-400 bg-cyan-400/20 text-cyan-100 shadow-[0_0_15px_rgba(0,229,255,0.4)]"

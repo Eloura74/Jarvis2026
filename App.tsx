@@ -34,6 +34,7 @@ import WorkflowPanel from "./components/WorkflowPanel";
 import PrinterFleetDashboard from "./components/PrinterFleetDashboard";
 import GhostModePanel from "./components/GhostModePanel"; // Phase 2
 import PsychProfileWidget from "./components/PsychProfileWidget"; // Phase 3
+import { SystemLogsPanel } from "./components/SystemLogsPanel"; // Phase 6
 
 // Hooks Spécialisés
 import { useJarvisInteraction } from "./hooks/useJarvisInteraction";
@@ -280,6 +281,9 @@ const JarvisShell: React.FC<JarvisShellProps> = ({ shouldGreet }) => {
         }))}
         isProcessing={status === SystemStatus.PROCESSING}
         processingMessage={activeOverlay || "🤖 JARVIS analyse..."}
+        onToggleLogs={() =>
+          setActiveOverlay(activeOverlay === "LOGS" ? null : "LOGS")
+        }
       />
 
       {/* Overlay Visuel (Images) */}
@@ -394,6 +398,17 @@ const JarvisShell: React.FC<JarvisShellProps> = ({ shouldGreet }) => {
         width="max-w-3xl"
       >
         <PsychProfileWidget />
+      </HolographicModal>
+
+      {/* 6. System Logs (Nouveau) */}
+      <HolographicModal
+        isOpen={activeOverlay === "LOGS"}
+        onClose={() => setActiveOverlay(null)}
+        title="JOURNAL SYSTÈME"
+        width="max-w-5xl"
+        height="h-[800px]"
+      >
+        <SystemLogsPanel />
       </HolographicModal>
 
       <MoodIndicator />

@@ -60,29 +60,7 @@ export default function WorkflowPanel() {
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, x: 20 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: 20 }}
-      className="w-96 max-h-[70vh] jarvis-panel-glass overflow-hidden flex flex-col rounded-xl border border-purple-500/30 shadow-[0_0_20px_rgba(168,85,247,0.15)]"
-    >
-      {/* Header */}
-      <div className="bg-gradient-to-r from-purple-900/40 to-transparent p-4 border-b border-purple-500/20 shrink-0">
-        <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-purple-500/10 border border-purple-500/30">
-            <Workflow className="w-5 h-5 text-purple-400" />
-          </div>
-          <div>
-            <h3 className="font-bold text-purple-300 tracking-wider text-sm">
-              AUTOMATION SEQUENCE
-            </h3>
-            <div className="text-[10px] text-purple-500/60 font-mono">
-              BACKEND LINK: ACTIVE
-            </div>
-          </div>
-        </div>
-      </div>
-
+    <div className="w-full h-full flex flex-col p-4">
       <div className="p-4 space-y-6 overflow-y-auto custom-scrollbar flex-1">
         {/* Patterns Suggérés */}
         {suggestedPatterns.length > 0 && (
@@ -214,7 +192,7 @@ export default function WorkflowPanel() {
                   </div>
 
                   <div className="flex items-center gap-1 overflow-hidden">
-                    {wf.actions.slice(0, 4).map((action, i) => (
+                    {wf.actions.slice(0, 4).map((action: string, i: number) => (
                       <span
                         key={i}
                         className="px-1.5 py-0.5 rounded bg-black/40 border border-white/5 text-gray-400 text-[10px] truncate max-w-[80px]"
@@ -232,6 +210,6 @@ export default function WorkflowPanel() {
           )}
         </div>
       </div>
-    </motion.div>
+    </div>
   );
 }

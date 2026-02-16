@@ -42,6 +42,7 @@ interface PremiumLayoutProps {
     promptTokens: number;
     candidatesTokens: number;
   };
+  onToggleLogs?: () => void;
 }
 
 export const PremiumLayout: React.FC<PremiumLayoutProps> = ({
@@ -56,6 +57,7 @@ export const PremiumLayout: React.FC<PremiumLayoutProps> = ({
   processingMessage,
   successTrigger,
   tokenUsage,
+  onToggleLogs,
 }) => {
   const [isAppPathsOpen, setIsAppPathsOpen] = useState(false);
   const [isFileExplorerOpen, setIsFileExplorerOpen] = useState(false);
@@ -115,6 +117,7 @@ export const PremiumLayout: React.FC<PremiumLayoutProps> = ({
             cpuUsage={cpuUsage}
             memoryUsage={memoryUsage}
             processes={processes}
+            onClick={onToggleLogs}
           />
 
           {/* WEATHER WIDGET */}
