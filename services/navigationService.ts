@@ -37,7 +37,16 @@ async function getCurrentPosition(): Promise<string | null> {
 export async function getTravelTime(
   destination: string,
   departureTime?: string, // Format ISO ou "now"
-): Promise<RouteInfo | null> {
+  arrivalTime?: string, // Format ISO (nouveau paramètre)
+): Promise<
+  | RouteInfo
+  | null
+  | (RouteInfo & {
+      recommendedDeparture: string;
+      diffToLeave: string;
+      arrivalTarget: string;
+    })
+> {
   if (!GOOGLE_MAPS_API_KEY) {
     console.warn("⚠️ Clé API Google Maps manquante");
     return null;
@@ -110,27 +119,108 @@ export async function getTravelTime(
     }
   }
 
-  // URL Construction
-  // ... (Suite du code existant non modifié pour l'URL)
-  try {
-    const baseUrl = "http://localhost:3001"; // TODO: Mettre en env
-    let depTimeVal = "now";
-    if (
-      departureTime &&
-      departureTime !== "now" &&
-      !isNaN(new Date(departureTime).getTime())
-    ) {
-      depTimeVal = Math.floor(
-        new Date(departureTime).getTime() / 1000,
-      ).toString();
+  // Helper pour parser les inputs de temps (ISO ou "HH:MM" ou "HH:MM:SS")
+  function parseInputTime(input: string): Date | null {
+    if (!input) return null;
+    const now = new Date();
+
+    // Cas 1: ISO complet
+    const isoDate = new Date(input);
+    if (!isNaN(isoDate.getTime()) && input.includes("T")) {
+      return isoDate;
     }
 
-    const proxyUrl = `${baseUrl}/api/google/distancematrix?origins=${encodeURIComponent(origin)}&destinations=${encodeURIComponent(finalDestination)}&departure_time=${depTimeVal}`;
-    console.log("📍 NavigationService: Calling proxy", proxyUrl);
+    // Cas 2: Format Heure simple "09:00" ou "9:00" ou "09:00:00"
+    const timeMatch = input.match(/(\d{1,2})[:h](\d{2})(?::(\d{2}))?/);
+    if (timeMatch) {
+      const hours = parseInt(timeMatch[1], 10);
+      const minutes = parseInt(timeMatch[2], 10);
+      const seconds = timeMatch[3] ? parseInt(timeMatch[3], 10) : 0;
 
+      const date = new Date(now);
+      date.setHours(hours, minutes, seconds, 0);
+
+      // Si l'heure est déja passée aujourd'hui, on suppose demain ?
+      // Pour l'instant on garde aujourd'hui (le trajet peut être immédiat ou pour plus tard)
+      // Si l'utilisateur dit "arriver à 08h00" et il est 20h, c'est surement demain.
+      if (date.getTime() < now.getTime() - 1000 * 60 * 60) {
+        // Si passé de plus d'1h
+        date.setDate(date.getDate() + 1);
+      }
+      return date;
+    }
+
+    return null;
+  }
+
+  // MODE "ARRIVAL TIME" (Calcul inversé)
+  if (arrivalTime && arrivalTime !== "now") {
+    console.log(`📍 Calcul départ pour arriver à [raw]: ${arrivalTime}`);
+
+    const arrivalDate = parseInputTime(arrivalTime);
+
+    if (!arrivalDate || isNaN(arrivalDate.getTime())) {
+      console.error("❌ Arrival Time invalid:", arrivalTime);
+      // Fallback sur mode normal
+      return await fetchRoute(origin, finalDestination, "now");
+    }
+
+    console.log(
+      `📍 Calcul départ pour arriver à [parsed]: ${arrivalDate.toISOString()}`,
+    );
+
+    // 1. D'abord, obtenir la durée approximative du trajet (sans trafic ou avec trafic actuel)
+    // On fait un premier appel "now" pour avoir la durée
+    const routeEstimate = await fetchRoute(origin, finalDestination, "now");
+
+    if (!routeEstimate || !routeEstimate.duration_value) {
+      console.warn("Impossible d'estimer le temps initial");
+      return await fetchRoute(origin, finalDestination, "now");
+    }
+
+    // 2. Calculer l'heure de départ théorique
+    // Departure = Arrival - Duration
+    const durationSec = routeEstimate.duration_value;
+    const departureDate = new Date(arrivalDate.getTime() - durationSec * 1000);
+    const departureDateWithBuffer = new Date(
+      departureDate.getTime() - 10 * 60 * 1000,
+    ); // +10min buffer sécurité
+
+    // Recalculer le trajet avec cette heure de départ théorique pour vérifier le trafic
+    // (Optionnel mais plus précis) - Pour l'instant on garde l'estimation "now" mais on renvoie le conseil
+
+    return {
+      ...routeEstimate,
+      recommendedDeparture: departureDateWithBuffer.toISOString(),
+      diffToLeave: `Vous devriez partir vers ${departureDateWithBuffer.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`,
+      arrivalTarget: arrivalDate.toISOString(),
+    };
+  }
+
+  // MODE NORMAL (Departure Time)
+  return await fetchRoute(origin, finalDestination, departureTime || "now");
+}
+
+// Fonction Helper pour l'appel API (évite duplication)
+async function fetchRoute(
+  origin: string,
+  destination: string,
+  departureTimeType: string,
+): Promise<(RouteInfo & { duration_value: number }) | null> {
+  const baseUrl = "http://localhost:3001";
+  let depTimeVal = "now";
+
+  if (departureTimeType && departureTimeType !== "now") {
+    const d = new Date(departureTimeType);
+    if (!isNaN(d.getTime()))
+      depTimeVal = Math.floor(d.getTime() / 1000).toString();
+  }
+
+  const proxyUrl = `${baseUrl}/api/google/distancematrix?origins=${encodeURIComponent(origin)}&destinations=${encodeURIComponent(destination)}&departure_time=${depTimeVal}`;
+  console.log("📍 FetchRoute:", proxyUrl);
+
+  try {
     const response = await fetch(proxyUrl);
-    // ... (Suite du fetch existant)
-
     // Debug: Lire le texte brut d'abord
     const textResponse = await response.text();
     // console.log("📍 NavigationService: Raw response:", textResponse);
@@ -164,20 +254,17 @@ export async function getTravelTime(
       return null;
     }
 
-    // IMPORTANT : l'API Matrix peut renvoyer des adresses formatées différentes de l'input
-    // Si on a passé des coordonnées (geoPos), data.origin_addresses[0] sera l'adresse postale inverse
-    // C'est ce qu'on veut afficher !
-
     return {
       distance: element.distance.text,
       duration: element.duration.text,
+      duration_value: element.duration.value, // Ajout pour calculs
       durationInTraffic:
-        element.duration_in_traffic?.text || element.duration.text, // Fallback
-      startAddress: data.origin_addresses[0], // Adresse lisible (ex: "10 Rue de la Paix, Paris")
+        element.duration_in_traffic?.text || element.duration.text,
+      startAddress: data.origin_addresses[0],
       endAddress: data.destination_addresses[0],
     };
-  } catch (error) {
-    console.error("Erreur calcul trajet:", error);
+  } catch (e) {
+    console.error("Erreur calcul trajet:", e);
     return null;
   }
 }

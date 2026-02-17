@@ -1,11 +1,11 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import {
   GoogleMap,
-  LoadScript,
   DirectionsRenderer,
+  useJsApiLoader,
 } from "@react-google-maps/api";
 import { QRCodeCanvas } from "qrcode.react";
-import { Car, MapPin, Smartphone } from "lucide-react";
+import { Car, MapPin, Smartphone, AlertTriangle } from "lucide-react";
 
 interface TrafficPopupProps {
   routeData: any; // StatusOverlayData enrichment
@@ -22,14 +22,22 @@ const TrafficPopup: React.FC<TrafficPopupProps> = ({ routeData }) => {
     useState<google.maps.DirectionsResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const googleMapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+  const googleMapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "";
 
+  // Utilisation de useJsApiLoader pour une meilleure gestion du chargement
+  const { isLoaded, loadError } = useJsApiLoader({
+    googleMapsApiKey: googleMapsApiKey,
+    language: "fr",
+  });
+
+  // Calcul de l'itinéraire une fois l'API chargée
   useEffect(() => {
-    if (!routeData?.origin || !routeData?.destination || !window.google) {
-      console.warn(
-        "TrafficPopup: Données de route manquantes ou Google Maps non chargé",
-        routeData,
-      );
+    if (
+      !isLoaded ||
+      !routeData?.origin ||
+      !routeData?.destination ||
+      !window.google
+    ) {
       return;
     }
 
@@ -47,22 +55,26 @@ const TrafficPopup: React.FC<TrafficPopupProps> = ({ routeData }) => {
           destination: routeData.destination,
           travelMode: window.google.maps.TravelMode.DRIVING,
           drivingOptions: {
-            departureTime: new Date(), // Pour le trafic
+            departureTime: new Date(), // Pour le trafic temps réel
             trafficModel: window.google.maps.TrafficModel.BEST_GUESS,
           },
         },
         (result, status) => {
           if (status === window.google.maps.DirectionsStatus.OK) {
-            console.log("📍 TrafficPopup: Route OK");
+            console.log("📍 TrafficPopup: Route OK", result);
             setDirections(result);
+            setError(null);
           } else {
             console.error(
               `📍 TrafficPopup: Error fetching directions ${status}`,
               result,
             );
-            // Si ZERO_RESULTS, c'est peut-être l'adresse qui est mal formatée
             if (status === window.google.maps.DirectionsStatus.ZERO_RESULTS) {
-              setError("Aucun itinéraire trouvé pour ces adresses.");
+              setError("Adresse non localisable sur la carte.");
+            } else if (
+              status === window.google.maps.DirectionsStatus.NOT_FOUND
+            ) {
+              setError("Adresse introuvable.");
             } else {
               setError(`Erreur carte: ${status}`);
             }
@@ -71,24 +83,27 @@ const TrafficPopup: React.FC<TrafficPopupProps> = ({ routeData }) => {
       );
     };
 
-    if (window.google) {
+    // Petit délai pour s'assurer que le container de la map est prêt ou que Google a fini de s'init
+    const timer = setTimeout(() => {
       calculateRoute();
-    } else {
-      // Retry si Google Maps n'est pas encore prêt (race condition possible)
-      const checkGoogle = setInterval(() => {
-        if (window.google) {
-          clearInterval(checkGoogle);
-          calculateRoute();
-        }
-      }, 500);
-      return () => clearInterval(checkGoogle);
-    }
-  }, [routeData]);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [isLoaded, routeData]);
 
   // Lien Google Maps pour le téléphone
   const mapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(
     routeData?.origin || "",
   )}&destination=${encodeURIComponent(routeData?.destination || "")}&travelmode=driving`;
+
+  // Gestion des erreurs de chargement de l'API
+  if (loadError) {
+    return (
+      <div className="p-4 text-red-400">
+        Erreur de chargement Google Maps API
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-full gap-6 p-2 text-cyan-50 font-mono">
@@ -161,18 +176,14 @@ const TrafficPopup: React.FC<TrafficPopupProps> = ({ routeData }) => {
 
       {/* Colonne Droite : Map */}
       <div className="flex-1 bg-cyan-950/20 border border-cyan-500/30 rounded-lg overflow-hidden relative">
-        <LoadScript googleMapsApiKey={googleMapsApiKey || ""} language="fr">
+        {isLoaded ? (
           <GoogleMap
             mapContainerStyle={mapContainerStyle}
-            zoom={12}
-            center={{ lat: 48.8566, lng: 2.3522 }} // Default Paris, sera override par bounds fit
+            // Retrait du center/zoom hardcodés qui forcent le reset
             options={{
               disableDefaultUI: true,
               styles: [
-                {
-                  elementType: "geometry",
-                  stylers: [{ color: "#242f3e" }],
-                },
+                { elementType: "geometry", stylers: [{ color: "#242f3e" }] },
                 {
                   elementType: "labels.text.stroke",
                   stylers: [{ color: "#242f3e" }],
@@ -180,26 +191,6 @@ const TrafficPopup: React.FC<TrafficPopupProps> = ({ routeData }) => {
                 {
                   elementType: "labels.text.fill",
                   stylers: [{ color: "#746855" }],
-                },
-                {
-                  featureType: "administrative.locality",
-                  elementType: "labels.text.fill",
-                  stylers: [{ color: "#d59563" }],
-                },
-                {
-                  featureType: "poi",
-                  elementType: "labels.text.fill",
-                  stylers: [{ color: "#d59563" }],
-                },
-                {
-                  featureType: "poi.park",
-                  elementType: "geometry",
-                  stylers: [{ color: "#263c3f" }],
-                },
-                {
-                  featureType: "poi.park",
-                  elementType: "labels.text.fill",
-                  stylers: [{ color: "#6b9a76" }],
                 },
                 {
                   featureType: "road",
@@ -221,56 +212,57 @@ const TrafficPopup: React.FC<TrafficPopupProps> = ({ routeData }) => {
                   elementType: "geometry",
                   stylers: [{ color: "#746855" }],
                 },
-                {
-                  featureType: "road.highway",
-                  elementType: "geometry.stroke",
-                  stylers: [{ color: "#1f2835" }],
-                },
-                {
-                  featureType: "road.highway",
-                  elementType: "labels.text.fill",
-                  stylers: [{ color: "#f3d19c" }],
-                },
-                {
-                  featureType: "transit",
-                  elementType: "geometry",
-                  stylers: [{ color: "#2f3948" }],
-                },
-                {
-                  featureType: "transit.station",
-                  elementType: "labels.text.fill",
-                  stylers: [{ color: "#d59563" }],
-                },
-                {
-                  featureType: "water",
-                  elementType: "geometry",
-                  stylers: [{ color: "#17263c" }],
-                },
-                {
-                  featureType: "water",
-                  elementType: "labels.text.fill",
-                  stylers: [{ color: "#515c6d" }],
-                },
-                {
-                  featureType: "water",
-                  elementType: "labels.text.stroke",
-                  stylers: [{ color: "#17263c" }],
-                },
               ],
             }}
+            onLoad={(map) => {
+              // Si on a déjà des directions, on fit les bounds
+              if (directions && directions.routes[0]?.bounds) {
+                map.fitBounds(directions.routes[0].bounds);
+              } else {
+                // Sinon vue par défaut (Paris) en attendant
+                map.setCenter({ lat: 48.8566, lng: 2.3522 });
+                map.setZoom(12);
+              }
+            }}
           >
-            {directions && <DirectionsRenderer directions={directions} />}
+            {directions && (
+              <DirectionsRenderer
+                directions={directions}
+                options={{
+                  polylineOptions: {
+                    strokeColor: "#00CED1", // Cyan
+                    strokeWeight: 5,
+                  },
+                  suppressMarkers: false, // On garde les markers A/B par défaut
+                }}
+              />
+            )}
           </GoogleMap>
-        </LoadScript>
+        ) : (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/60">
+            <span className="text-cyan-400">Chargement Google Maps...</span>
+          </div>
+        )}
 
-        {/* Overlay si chargement/erreur */}
-        {!directions && !error && (
+        {/* Overlay si chargement itinéraire (après chargement API) */}
+        {isLoaded && !directions && !error && (
           <div className="absolute inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm z-10">
             <div className="flex flex-col items-center gap-2">
               <div className="w-8 h-8 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin" />
               <span className="text-cyan-400 text-sm">
                 Calcul de l'itinéraire visuel...
               </span>
+            </div>
+          </div>
+        )}
+
+        {/* Overlay Erreur */}
+        {error && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/80 backdrop-blur-sm z-10 p-4 text-center">
+            <div className="flex flex-col items-center gap-2">
+              <AlertTriangle className="text-red-500" size={32} />
+              <span className="text-red-400 font-bold">Erreur itinéraire</span>
+              <span className="text-cyan-200/70 text-sm">{error}</span>
             </div>
           </div>
         )}

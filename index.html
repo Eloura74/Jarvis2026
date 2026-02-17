@@ -15,6 +15,30 @@
     <!-- Tailwind CDN (temporaire - PostCSS v4 config à finaliser) -->
     <script src="https://cdn.tailwindcss.com"></script>
 
+    <!-- PATCH SILENCIEUX: Suppression des erreurs d'extensions Chrome (Content.js) -->
+    <script>
+      window.addEventListener(
+        "error",
+        function (event) {
+          if (
+            event.message &&
+            (event.message.includes("IndexSizeError") ||
+              event.message.includes("getRangeAt") ||
+              event.filename.includes("content.js"))
+          ) {
+            event.stopImmediatePropagation();
+            event.preventDefault();
+            console.debug(
+              "🚫 Erreur extension Chrome supprimée:",
+              event.message,
+            );
+            return true;
+          }
+        },
+        true,
+      );
+    </script>
+
     <!-- Import Maps pour React et dépendances -->
     <script type="importmap">
       {

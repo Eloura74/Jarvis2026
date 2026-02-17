@@ -199,6 +199,7 @@ export function useToolExecutor({
               const route = await getTravelTime(
                 toolArgs.destination,
                 toolArgs.departure_time,
+                toolArgs.arrival_time, // Passage du nouveau paramètre
               );
 
               if (!route) {
@@ -210,6 +211,21 @@ export function useToolExecutor({
               }
 
               console.log("📍 ToolExecutor: Route received", route);
+
+              // Message différent si recommandation de départ
+              let message = "";
+              let trafficStatus = "";
+              if ((route as any).diffToLeave) {
+                message = `${(route as any).diffToLeave} pour arriver à l'heure. Le trajet est estimé à ${route.duration}.`;
+              } else {
+                if (route.durationInTraffic) {
+                  trafficStatus =
+                    route.durationInTraffic !== route.duration
+                      ? `, comptez ${route.durationInTraffic} avec le trafic`
+                      : ". Le trafic est fluide";
+                }
+                message = `Le trajet vers ${route.endAddress.split(",")[0]} est de ${route.duration}${trafficStatus}.`;
+              }
 
               // Formatage pour l'overlay
               const overlayData: any = {
@@ -248,21 +264,25 @@ export function useToolExecutor({
                 additionalDeps.setActiveOverlay("traffic");
               } else {
                 console.error(
-                  "📍 ToolExecutor: Missing setActiveOverlay or setStatusOverlay",
+                  "📍 ToolExecutor: dependencies missing for overlay",
                 );
               }
 
-              const trafficStatus =
-                route.durationInTraffic &&
-                parseInt(route.durationInTraffic) > parseInt(route.duration)
-                  ? "avec du trafic"
-                  : "fluide";
-              const message = `Le trajet vers ${route.endAddress.split(",")[0]} est de ${route.duration}. C'est ${trafficStatus}.`;
+              // Délai de sécurité pour laisser le temps à l'UI de se mettre à jour
+              // sans interrompre le thread vocal immédiatement
+              setTimeout(() => {
+                console.log(
+                  "📍 ToolExecutor: Speaking message (delayed):",
+                  message,
+                );
+                speak(message, true); // Force queue
+              }, 500);
 
-              console.log("📍 ToolExecutor: Speaking message:", message);
-              speak(message, true); // Force queue
-
-              return { status: "success", data: route, message };
+              return {
+                status: "success",
+                message: message,
+                visualData: overlayData,
+              };
             } catch (err) {
               console.error(
                 "📍 ToolExecutor: Error in get_travel_time execution",

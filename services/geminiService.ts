@@ -305,6 +305,11 @@ const toolDeclarations: FunctionDeclaration[] = [
           type: Type.STRING,
           description: "ISO timestamp or 'now'. Optional.",
         },
+        arrival_time: {
+          type: Type.STRING,
+          description:
+            "Desired ARRIVAL time (ISO format). Use this if user asks 'When should I leave to arrive at...'. Do not use with departure_time.",
+        },
       },
       required: ["destination"],
     },
