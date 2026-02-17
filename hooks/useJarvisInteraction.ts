@@ -86,14 +86,16 @@ export function useJarvisInteraction({
 
         // On ne redémarre PAS si on est en train de quitter
         if (conversationModeRef.current && !isExitingRef.current) {
-          console.log("🎤 Mode conversation : Réactivation micro");
+          console.log(
+            "🎤 Mode conversation : Réactivation micro après pause sécurité",
+          );
           lastMicActivationTime.current = Date.now();
           startListening();
         } else if (isExitingRef.current) {
           console.log("👋 Fin de session confirmée, micro reste coupé.");
           isExitingRef.current = false; // Reset pour la prochaine fois
         }
-      }, 1500); // 1.5s de sécurité (ajusté car protection queueing ajoutée)
+      }, 500); // Délai court ici, la vraie sécurité est dans useVoiceRecognition
     },
   });
 
@@ -143,10 +145,13 @@ export function useJarvisInteraction({
         }
 
         // 3. Période de sécurité (Echo cancellation temporelle)
-        // On ignore tout résultat arrivant dans les 2s après que Jarvis ait fini de parler
+        // On ignore tout résultat arrivant dans les 3.5s après que Jarvis ait fini de parler
+        // Cela évite qu'il s'entende lui-même via les enceintes
         const timeSinceSpeech = Date.now() - lastSpeechEndTime.current;
-        if (timeSinceSpeech < 2000) {
-          // console.log("⏳ Écho filtré (Security period)");
+        if (timeSinceSpeech < 3500) {
+          console.log(
+            `⏳ Écho filtré (Security period: ${timeSinceSpeech}ms < 3500ms)`,
+          );
           return;
         }
 

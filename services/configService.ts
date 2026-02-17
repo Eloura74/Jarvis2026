@@ -18,6 +18,9 @@ export interface JarvisSettings {
   // Features
   ghostModeEnabled: boolean;
   psychProfileEnabled: boolean;
+
+  // Navigation
+  savedLocations?: Record<string, string>;
 }
 
 const DEFAULT_SETTINGS: JarvisSettings = {
@@ -28,21 +31,30 @@ const DEFAULT_SETTINGS: JarvisSettings = {
   theme: "ironman",
   ghostModeEnabled: false,
   psychProfileEnabled: true,
+  savedLocations: {},
 };
 
-const API_BASE = "/api/config";
+// FORCE HARDCODED URL - DO NOT CHANGE WITHOUT CHECKING PROXY
+const API_BASE = "http://localhost:3001/api/config";
 
 /**
  * Charge settings depuis backend (source of truth)
  * Fallback localStorage si backend fail
  */
 export async function loadSettings(): Promise<JarvisSettings> {
+  console.log("⚙️ Charge des paramètres depuis:", API_BASE);
   try {
     const response = await fetch(`${API_BASE}/settings`);
     if (response.ok) {
       const data = await response.json();
-      console.log("✅ Settings loaded from backend");
+      console.log("✅ Paramètres chargés du backend:", data);
       return { ...DEFAULT_SETTINGS, ...data };
+    } else {
+      console.error(
+        "❌ Erreur chargement backend:",
+        response.status,
+        response.statusText,
+      );
     }
   } catch (error) {
     console.warn("⚠️ Backend settings unavailable, using localStorage", error);
@@ -52,6 +64,7 @@ export async function loadSettings(): Promise<JarvisSettings> {
   const stored = localStorage.getItem("jarvis-settings");
   if (stored) {
     try {
+      console.log("⚠️ Utilisation du cache localStorage");
       return { ...DEFAULT_SETTINGS, ...JSON.parse(stored) };
     } catch {
       return DEFAULT_SETTINGS;

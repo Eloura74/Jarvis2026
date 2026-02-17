@@ -28,11 +28,13 @@ import {
   Brain,
   Key,
   X,
-  FolderSearch, // FIX: Import manquant
+  FolderSearch,
+  MapPin, // NOUVEAU
 } from "lucide-react";
 
 import { VoiceSettingsTab } from "./VoiceSettingsTab";
-import { MemoryTab } from "./MemoryTab"; // NOUVEAU
+import { MemoryTab } from "./MemoryTab";
+import { ConfigLocations } from "./ConfigLocations"; // NOUVEAU
 
 // Types
 interface AppData {
@@ -61,7 +63,9 @@ type TabType =
   | "voice"
   | "google"
   | "neural"
-  | "memory"; // NOUVEAU
+  | "memory"
+  | "navigation"; // NOUVEAU
+
 type ViewMode = "list" | "add" | "edit";
 
 export const ConfigPanelCRUD: React.FC<ConfigPanelCRUDProps> = ({
@@ -240,7 +244,7 @@ export const ConfigPanelCRUD: React.FC<ConfigPanelCRUDProps> = ({
           </div>
 
           {/* Tabs */}
-          <div className="flex gap-2 px-6 pt-4 border-b border-cyan-400/10">
+          <div className="flex gap-2 px-6 pt-4 border-b border-cyan-400/10 overflow-x-auto scrollbar-hide">
             <TabButton
               active={activeTab === "apps"}
               onClick={() => setActiveTab("apps")}
@@ -282,6 +286,12 @@ export const ConfigPanelCRUD: React.FC<ConfigPanelCRUDProps> = ({
               onClick={() => setActiveTab("memory")}
               icon={<FolderSearch size={18} />}
               label="Mémoire (RAG)"
+            />
+            <TabButton
+              active={activeTab === "navigation"}
+              onClick={() => setActiveTab("navigation")}
+              icon={<MapPin size={18} />}
+              label="Navigation"
             />
           </div>
 
@@ -517,6 +527,7 @@ export const ConfigPanelCRUD: React.FC<ConfigPanelCRUDProps> = ({
             {activeTab === "google" && <GoogleTab />}
             {activeTab === "neural" && <NeuralTab tokenUsage={tokenUsage} />}
             {activeTab === "memory" && <MemoryTab />}
+            {activeTab === "navigation" && <ConfigLocations />}
           </div>
         </motion.div>
       </motion.div>
@@ -533,7 +544,7 @@ const TabButton: React.FC<{
 }> = ({ active, onClick, icon, label }) => (
   <button
     onClick={onClick}
-    className={`flex items-center gap-2 px-6 py-3 rounded-t-lg transition-all ${
+    className={`flex items-center gap-2 px-4 py-3 rounded-t-lg transition-all whitespace-nowrap ${
       active
         ? "bg-slate-800/80 border-t border-x border-cyan-400/30 text-cyan-300"
         : "bg-transparent text-gray-500 hover:text-cyan-400"

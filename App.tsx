@@ -19,6 +19,7 @@ import { MemoryProvider } from "./contexts/MemoryContext"; // NOUVEAU
 import { PremiumLayout } from "./components/PremiumLayout";
 import { ImageOverlay } from "./components/ImageOverlay";
 import { HolographicStatusOverlay } from "./components/HolographicStatusOverlay";
+import TrafficPopup from "./components/TrafficPopup"; // NOUVEAU
 import { StatusOverlayData } from "./types/app.types";
 import HolographicHUD from "./components/HolographicHUD";
 import { HolographicModal } from "./components/ui/HolographicModal";
@@ -103,6 +104,11 @@ const JarvisShell: React.FC<JarvisShellProps> = ({ shouldGreet }) => {
   // ========================================
   // VÉRIFICATION BACKEND AU DÉMARRAGE
   // ========================================
+  useEffect(() => {
+    console.log("🚀 JARVIS FRONTEND v1.1.0 - NAVIGATION FIX LOADED");
+    console.log("🔌 Connecting to Backend at http://localhost:3001");
+  }, []);
+
   useEffect(() => {
     const verifyBackend = async () => {
       const isOnline = await checkBackendStatus();
@@ -297,11 +303,23 @@ const JarvisShell: React.FC<JarvisShellProps> = ({ shouldGreet }) => {
       />
 
       {/* Pop-up de Statut Holographique (Imprimantes, Capteurs, etc.) */}
-      <HolographicStatusOverlay
-        data={statusOverlay}
-        isVisible={!!statusOverlay}
-        onClose={() => setStatusOverlay(null)}
-      />
+      {statusOverlay?.type === "traffic" ? (
+        <HolographicModal
+          isOpen={!!statusOverlay}
+          onClose={() => setStatusOverlay(null)}
+          title={statusOverlay.title}
+          width="max-w-6xl"
+          height="h-[600px]"
+        >
+          <TrafficPopup routeData={statusOverlay} />
+        </HolographicModal>
+      ) : (
+        <HolographicStatusOverlay
+          data={statusOverlay}
+          isVisible={!!statusOverlay}
+          onClose={() => setStatusOverlay(null)}
+        />
+      )}
 
       {/* DEBUG BUTTON (ONLY IN DEV) */}
       <div className="fixed bottom-4 left-4 z-[99999] opacity-0 hover:opacity-100 transition-opacity">

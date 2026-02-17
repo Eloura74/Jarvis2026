@@ -144,4 +144,55 @@ router.put("/calendar/events/:id", async (req, res) => {
   }
 });
 
+/**
+ * GET /api/google/distancematrix
+ * Proxy pour Google Maps Distance Matrix API
+ */
+router.get("/distancematrix", async (req, res) => {
+  try {
+    const { origins, destinations, departure_time, mode, language } = req.query;
+
+    // Récupérer la clé API depuis process.env (chargé par dotenv dans server.js)
+    const apiKey = process.env.VITE_GOOGLE_MAPS_API_KEY;
+
+    if (!apiKey) {
+      console.error("❌ Erreur Proxy: VITE_GOOGLE_MAPS_API_KEY manquante");
+      return res.status(500).json({
+        status: "ERROR",
+        error_message: "Configuration serveur incomplète (clé API manquante)",
+      });
+    }
+
+    const url = new URL(
+      "https://maps.googleapis.com/maps/api/distancematrix/json",
+    );
+    // Construct URL parameters manually to avoid double encoding issues or missing params
+    const params = new URLSearchParams();
+    params.append("origins", origins || "");
+    params.append("destinations", destinations || "");
+    params.append("key", apiKey);
+    if (departure_time) params.append("departure_time", departure_time);
+    if (mode) params.append("mode", mode);
+    if (language) params.append("language", language);
+
+    const finalUrl = `${url.toString()}?${params.toString()}`;
+    console.log(
+      `📡 Google Proxy calling: ${finalUrl.replace(apiKey, "HIDDEN_KEY")}`,
+    );
+
+    const response = await fetch(finalUrl);
+    const data = await response.json();
+
+    // Log pour debug
+    if (data.status !== "OK") {
+      console.warn("⚠️ Google API returned non-OK status:", data);
+    }
+
+    res.json(data);
+  } catch (error) {
+    console.error("❌ Erreur Proxy Google Maps:", error);
+    res.status(500).json({ status: "ERROR", error_message: error.message });
+  }
+});
+
 export default router;

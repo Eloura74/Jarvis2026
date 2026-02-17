@@ -51,6 +51,7 @@ You are J.A.R.V.I.S., the sophisticated AI assistant of Monsieur.
 - Si la demande concerne un statut, une batterie, une température, une imprimante ou n'importe quel appareil : vous **DEVEZ** appeler l'outil \`show_status_overlay\`.
 - **NE RÉPONDEZ PAS** seulement par texte si un rapport visuel est possible. Appelez l'outil ET donnez un bref résumé vocal.
 - Même si vous avez les données dans votre contexte, l'appel de l'outil est **OBLIGATOIRE** pour activer l'interface holographique.
+- **APRÈS UN OUTIL**: Si vous appelez un outil (ex: navigation, météo), VOUS DEVEZ FAIRE UNE COURTE PHRASE DE CONCLUSION VOCALE ("Voici le trajet, Monsieur", "Météo affichée").
 
 **INTENT CLARIFICATION:**
 1. **VISUAL BROWSING**: Keywords: "Ouvre", "Montre-moi", "Va sur", "Cherche X sur Y". Tool: \`open_url\`.
@@ -289,6 +290,25 @@ const toolDeclarations: FunctionDeclaration[] = [
       required: ["target"],
     },
   },
+  {
+    name: "get_travel_time",
+    description: "Get travel duration and traffic info to a destination.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        destination: {
+          type: Type.STRING,
+          description:
+            "Target address or alias (e.g. 'Travail', 'Maison'). DO NOT TRANSLATE user input.",
+        },
+        departure_time: {
+          type: Type.STRING,
+          description: "ISO timestamp or 'now'. Optional.",
+        },
+      },
+      required: ["destination"],
+    },
+  },
 ];
 
 // ============================================================================
@@ -321,7 +341,7 @@ const cleanupOldShield = () => {
 let last429Time = cleanupOldShield();
 let lastRequestTime = 0;
 const BREAKER_COOLDOWN = 10000; // 10 secondes (réduit pour éviter blocage long)
-const AUTO_RESET_THRESHOLD = 60000; // 1 minute : auto-expiration du shield
+
 const MIN_REQUEST_GAP = 10; // 10ms
 
 const record429 = () => {
@@ -558,4 +578,37 @@ export const checkNeuralStatus = () => {
     ),
     lastRequestGap: now - lastRequestTime,
   };
+};
+
+export const getNeuralBriefing = async ({
+  task,
+  logs,
+}: {
+  task: string;
+  logs: string[];
+}): Promise<string> => {
+  if (checkShield())
+    return "Systèmes nominaux, Monsieur. Neural Core en refroidissement.";
+  await waitIfNecessary();
+
+  try {
+    const prompt = `Fais un briefing exécutif court et stylé (style J.A.R.V.I.S.) pour Monsieur.
+    TÂCHE ACTUELLE: ${task}
+    DERNIERS LOGS: ${JSON.stringify(logs.slice(-5))}
+    
+    Ton but est de rassurer et de synthétiser l'état actuel. Sois classe et concis.`;
+
+    const response = await ai.models.generateContent({
+      model: "gemini-2.0-flash",
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
+      config: { temperature: 0.2 },
+    });
+    return (
+      response.candidates?.[0].content?.parts?.[0].text ||
+      "Je suis opérationnel, Monsieur."
+    );
+  } catch (err: any) {
+    if (err.message?.includes("429")) record429();
+    return "Briefing indisponible momentanément, Monsieur.";
+  }
 };

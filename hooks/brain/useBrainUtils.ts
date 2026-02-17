@@ -13,7 +13,8 @@ export const isRichTool = (toolName: string): boolean => {
     toolName === "get_weather" ||
     toolName === "set_timer" ||
     toolName === "consult_memory" ||
-    toolName === "show_status_overlay"
+    toolName === "show_status_overlay" ||
+    toolName === "get_travel_time"
   );
 };
 

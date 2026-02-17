@@ -33,6 +33,7 @@ const DEFAULT_SETTINGS = {
   theme: "ironman",
   ghostModeEnabled: false,
   psychProfileEnabled: true,
+  savedLocations: {},
 };
 
 /**

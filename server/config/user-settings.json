@@ -1,0 +1,12 @@
+{
+  "wakeWordEnabled": true,
+  "wakeWordThreshold": 0.8,
+  "voiceLanguage": "fr-FR",
+  "voiceVolume": 1,
+  "theme": "ironman",
+  "ghostModeEnabled": false,
+  "psychProfileEnabled": true,
+  "savedLocations": {
+    "Travail": "RD20 Le Cellier, 13127 Vitrolles"
+  }
+}

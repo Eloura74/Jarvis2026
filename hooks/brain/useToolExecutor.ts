@@ -186,6 +186,95 @@ export function useToolExecutor({
           case "get_weather":
             return await handlers.handleGetWeather(toolArgs, ctx);
 
+          // === NAVIGATION ===
+          case "get_travel_time":
+            console.log(
+              "📍 ToolExecutor: get_travel_time called with",
+              toolArgs,
+            );
+            const { getTravelTime } =
+              await import("../../services/navigationService");
+
+            try {
+              const route = await getTravelTime(
+                toolArgs.destination,
+                toolArgs.departure_time,
+              );
+
+              if (!route) {
+                console.error("📍 ToolExecutor: No route returned");
+                const errMessage =
+                  "Désolé, je ne parviens pas à calculer le trajet pour le moment. Vérifiez la configuration.";
+                speak(errMessage, true);
+                return { status: "error", message: errMessage };
+              }
+
+              console.log("📍 ToolExecutor: Route received", route);
+
+              // Formatage pour l'overlay
+              const overlayData: any = {
+                id: `traffic-${Date.now()}`,
+                title: "TRAFIC TEMPS RÉEL",
+                type: "traffic",
+                lastUpdate: new Date().toLocaleTimeString(),
+                stats: [
+                  {
+                    label: "DISTANCE",
+                    value: route.distance,
+                    status: "normal",
+                  },
+                  {
+                    label: "DURÉE",
+                    value: route.duration,
+                    status:
+                      route.durationInTraffic &&
+                      parseInt(route.durationInTraffic) >
+                        parseInt(route.duration)
+                        ? "warning"
+                        : "normal",
+                  },
+                ],
+                origin: route.startAddress,
+                destination: route.endAddress,
+                distance: route.distance,
+                duration: route.duration,
+                durationInTraffic: route.durationInTraffic,
+              };
+
+              // Déclencher l'affichage visuel
+              if (additionalDeps.setActiveOverlay && ctx.setStatusOverlay) {
+                console.log("📍 ToolExecutor: Setting visual overlay");
+                ctx.setStatusOverlay(overlayData);
+                additionalDeps.setActiveOverlay("traffic");
+              } else {
+                console.error(
+                  "📍 ToolExecutor: Missing setActiveOverlay or setStatusOverlay",
+                );
+              }
+
+              const trafficStatus =
+                route.durationInTraffic &&
+                parseInt(route.durationInTraffic) > parseInt(route.duration)
+                  ? "avec du trafic"
+                  : "fluide";
+              const message = `Le trajet vers ${route.endAddress.split(",")[0]} est de ${route.duration}. C'est ${trafficStatus}.`;
+
+              console.log("📍 ToolExecutor: Speaking message:", message);
+              speak(message, true); // Force queue
+
+              return { status: "success", data: route, message };
+            } catch (err) {
+              console.error(
+                "📍 ToolExecutor: Error in get_travel_time execution",
+                err,
+              );
+              speak(
+                "Une erreur critique est survenue lors du calcul de l'itinéraire.",
+                true,
+              );
+              return { status: "error", message: String(err) };
+            }
+
           // === INNOVATION ===
           case "get_neural_briefing":
             const { getNeuralBriefing } =
