@@ -293,7 +293,7 @@ const toolDeclarations: FunctionDeclaration[] = [
   {
     name: "close_current_overlay",
     description:
-      "Close/Dismiss any active holographic overlay, popup or fleet view. Use this when user says 'Ferme', 'Close', 'Masque', 'Quitte'.",
+      "FORCE CLOSE any active holographic overlay, popup, fleet view, grid, or modal. MUST be called when user says 'Ferme', 'Close', 'Masque', 'Quitte', 'Enlève'. Works for ALL overlay types (printer, traffic, fleet, etc).",
     parameters: {
       type: Type.OBJECT,
       properties: {},
