@@ -1,6 +1,5 @@
 import React from "react";
 import { motion } from "framer-motion";
-import { Activity } from "lucide-react";
 import { Header } from "../Header";
 import { HA_ENTITIES } from "../../../services/homeAssistantService";
 
@@ -18,7 +17,7 @@ export const PrintersTab: React.FC<PrintersTabProps> = ({ states }) => {
       className="space-y-6"
     >
       <Header title="3D PRINTERS" />
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="flex flex-col gap-2">
         {HA_ENTITIES.PRINTERS.map((printer) => {
           const bed = states[printer.bed]?.state ?? 0;
           const ext = states[printer.ext]?.state ?? 0;
@@ -27,35 +26,64 @@ export const PrintersTab: React.FC<PrintersTabProps> = ({ states }) => {
             progressState && progressState !== "unavailable"
               ? Math.round(Number(progressState))
               : 0;
+          const isActive = progress > 0 && progress < 100;
 
           return (
             <div
               key={printer.name}
-              className="p-4 rounded-lg bg-black/40 border border-purple-500/20 group hover:border-purple-500/40 transition-all"
+              className={`flex items-center gap-2 p-2 rounded border border-l-2 transition-all group ${
+                isActive
+                  ? "bg-purple-900/20 border-purple-500/30 border-l-purple-500"
+                  : "bg-black/40 border-white/5 border-l-gray-600"
+              }`}
             >
-              <div className="flex justify-between items-center mb-3">
-                <span className="text-sm font-bold text-purple-300 tracking-wider group-hover:text-purple-200 transition-colors">
+              {/* Name & Progress Info */}
+              <div className="flex flex-col w-20 shrink-0">
+                <span
+                  className={`text-[10px] font-bold tracking-wider truncate ${
+                    isActive ? "text-purple-300" : "text-gray-500"
+                  }`}
+                >
                   {printer.name}
                 </span>
-                <span className="text-xs text-purple-400 font-mono">
-                  {progress}%
+                <span className="text-[9px] font-mono text-gray-500">
+                  {isActive ? `${progress}%` : "IDLE"}
                 </span>
               </div>
-              {/* Progress Bar */}
-              <div className="w-full h-2 bg-gray-900 rounded-full overflow-hidden mb-4 border border-purple-500/10">
+
+              {/* Progress Bar (Middle - Expanded) */}
+              <div className="flex-1 h-1.5 bg-gray-900 rounded-full overflow-hidden border border-white/5">
                 <div
-                  className="h-full bg-gradient-to-r from-purple-600 to-pink-500 shadow-[0_0_10px_#d946ef] transition-all duration-700 ease-out"
+                  className={`h-full transition-all duration-700 ease-out ${
+                    isActive
+                      ? "bg-gradient-to-r from-purple-600 to-pink-500 shadow-[0_0_5px_#d946ef]"
+                      : "bg-gray-800"
+                  }`}
                   style={{ width: `${progress}%` }}
                 />
               </div>
-              <div className="flex justify-between text-xs text-gray-400 font-mono">
-                <div className="flex items-center gap-1.5">
-                  <Activity size={12} className="text-pink-400" /> NZ:{" "}
-                  <span className="text-gray-300">{ext}°C</span>
+
+              {/* Temps (Right - Compact) */}
+              <div className="flex flex-col items-end gap-0.5 shrink-0 min-w-[30px]">
+                <div className="flex items-center justify-end gap-1">
+                  <span className="text-[8px] text-gray-600">N</span>
+                  <span
+                    className={`text-[9px] font-mono ${
+                      ext > 50 ? "text-pink-400" : "text-gray-500"
+                    }`}
+                  >
+                    {ext}°
+                  </span>
                 </div>
-                <div className="flex items-center gap-1.5">
-                  <Activity size={12} className="text-blue-400" /> BD:{" "}
-                  <span className="text-gray-300">{bed}°C</span>
+                <div className="flex items-center justify-end gap-1">
+                  <span className="text-[8px] text-gray-600">B</span>
+                  <span
+                    className={`text-[9px] font-mono ${
+                      bed > 40 ? "text-blue-400" : "text-gray-500"
+                    }`}
+                  >
+                    {bed}°
+                  </span>
                 </div>
               </div>
             </div>

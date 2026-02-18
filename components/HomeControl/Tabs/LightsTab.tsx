@@ -48,40 +48,45 @@ export const LightsTab: React.FC<LightsTabProps> = ({
         </div>
       </div>
 
-      <div className="space-y-4">
+      <div className="space-y-3">
         <Header title="LIGHTS CONTROL" />
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="flex flex-col gap-2">
           {HA_ENTITIES.LIGHTS.map((light) => {
             const state = states[light.id]?.state;
             const isOn = state === "on";
             return (
               <div
                 key={light.id}
-                className={`flex items-center justify-between p-4 rounded-lg border transition-all duration-300 group ${
+                onClick={() => onToggle(light.id)}
+                className={`flex items-center justify-between px-3 py-2 rounded border border-l-2 transition-all cursor-pointer group ${
                   isOn
-                    ? "bg-cyan-900/20 border-cyan-400/50 shadow-[0_0_15px_rgba(0,229,255,0.1)]"
-                    : "bg-black/40 border-gray-800 hover:border-cyan-500/30"
+                    ? "bg-cyan-900/20 border-cyan-400/30 border-l-cyan-400"
+                    : "bg-black/40 border-white/5 border-l-gray-700 hover:bg-white/5"
                 }`}
               >
+                <div className="flex items-center gap-3">
+                  <div
+                    className={`p-1.5 rounded-full ${isOn ? "bg-cyan-500 text-black shadow-[0_0_10px_#00e5ff]" : "bg-gray-800 text-gray-500"}`}
+                  >
+                    <Power size={12} />
+                  </div>
+                  <span
+                    className={`text-[10px] font-bold tracking-wider uppercase ${
+                      isOn
+                        ? "text-cyan-100"
+                        : "text-gray-400 group-hover:text-cyan-200"
+                    }`}
+                  >
+                    {light.label}
+                  </span>
+                </div>
+
+                {/* Status Indicator */}
                 <span
-                  className={`text-sm font-bold tracking-wider ${
-                    isOn
-                      ? "text-cyan-100"
-                      : "text-gray-400 group-hover:text-cyan-200"
-                  }`}
+                  className={`text-[9px] font-mono ${isOn ? "text-cyan-400" : "text-gray-600"}`}
                 >
-                  {light.label}
+                  {isOn ? "ON" : "OFF"}
                 </span>
-                <button
-                  onClick={() => onToggle(light.id)}
-                  className={`p-3 rounded-full transition-all duration-300 ${
-                    isOn
-                      ? "bg-cyan-400 text-black shadow-[0_0_15px_#00e5ff] scale-110"
-                      : "bg-gray-800 text-gray-500 hover:text-cyan-400 hover:bg-gray-700"
-                  }`}
-                >
-                  <Power size={18} />
-                </button>
               </div>
             );
           })}
