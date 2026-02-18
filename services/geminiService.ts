@@ -291,6 +291,15 @@ const toolDeclarations: FunctionDeclaration[] = [
     },
   },
   {
+    name: "close_current_overlay",
+    description:
+      "Close/Dismiss any active holographic overlay, popup or fleet view. Use this when user says 'Ferme', 'Close', 'Masque', 'Quitte'.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {},
+    },
+  },
+  {
     name: "get_travel_time",
     description: "Get travel duration and traffic info to a destination.",
     parameters: {

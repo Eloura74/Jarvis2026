@@ -45,7 +45,7 @@ export interface StatusStat {
 export interface StatusOverlayData {
   id: string;
   title: string;
-  type: "printer" | "system" | "custom" | "traffic";
+  type: "printer" | "system" | "custom" | "traffic" | "fleet";
   lastUpdate: string;
   image?: string;
   stats: Array<{
@@ -58,6 +58,7 @@ export interface StatusOverlayData {
     icon?: any;
   }>;
   // Nouveaux - Données enrichies (optionnelles)
+  items?: StatusOverlayData[]; // Pour le mode "fleet"
   thumbnail?: string | null;
   nozzleTemp?: number;
   ip?: string;

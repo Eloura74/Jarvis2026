@@ -148,6 +148,7 @@ export const handleShowStatusOverlay = async (
   const query = target.toLowerCase();
 
   addLog(`Status Overlay requested for: ${target}`, "SYSTEM", "info");
+  console.log(`[HA_HANDLER] Overlay Target: "${target}", Query: "${query}"`);
 
   try {
     const { fetchHAStates, HA_ENTITIES } =
@@ -156,6 +157,72 @@ export const handleShowStatusOverlay = async (
     const lastUpdate = new Date().toLocaleTimeString("fr-FR");
 
     // 1. Détection du type de demande
+
+    // CAS S: FLOTTE COMPLETE (Imprimantes)
+    if (
+      query.includes("flotte") ||
+      query.includes("fleet") ||
+      query.includes("toutes") ||
+      query.includes("tout") ||
+      query.includes("ensemble") ||
+      (query.includes("imprimante") && query.includes("toute")) ||
+      query.includes("imprimantes") || // Pluriel = souvent flotte
+      (query.includes("ferme") &&
+        !query.includes("popup") &&
+        !query.includes("fenêtre") &&
+        !query.includes("écran")) // "Ferme" (Farm) mais pas "Ferme" (Close)
+    ) {
+      console.log("[HA_HANDLER] 🚀 DETECTED FLEET MODE");
+      const printers = HA_ENTITIES.PRINTERS.map((p) => {
+        const bed = states[p.bed]?.state || "?";
+        const ext = states[p.ext]?.state || "?";
+        const progValue = states[p.progress]?.state;
+        const prog = progValue ? parseFloat(progValue) : 0;
+
+        return {
+          id: `printer-${p.name}-${Date.now()}`,
+          title: p.name,
+          type: "printer" as const,
+          ip: p.ip,
+          webcamUrl: p.webcamUrl,
+          image: p.webcamUrl || "/vzbot_330_render.png",
+          stats: [
+            {
+              label: "PROGRESSION",
+              value: `${prog}%`,
+              progress: prog,
+              status: prog > 90 ? "normal" : "normal",
+            },
+            {
+              label: "TEMP. PLATEAU",
+              value: bed,
+              unit: "°C",
+              status: parseFloat(bed) > 90 ? "warning" : "normal",
+            },
+            {
+              label: "TEMP. BUSE",
+              value: ext,
+              unit: "°C",
+              status: parseFloat(ext) > 250 ? "warning" : "normal",
+            },
+            { label: "SYSTEM", value: "ONLINE", status: "normal" as const },
+          ],
+          lastUpdate,
+        } as StatusOverlayData;
+      });
+
+      return {
+        status: "success",
+        data: {
+          id: `fleet-${Date.now()}`,
+          title: "FLOTTE D'IMPRESSION",
+          type: "fleet",
+          lastUpdate,
+          stats: [], // Vide car géré par items
+          items: printers,
+        },
+      };
+    }
 
     // CAS A: Imprimantes 3D - Matching plus robuste (enlève espaces et tirets)
     const normalizedQuery = query.replace(/[\s-]/g, "");

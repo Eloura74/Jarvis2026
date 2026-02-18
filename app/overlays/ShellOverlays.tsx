@@ -6,6 +6,7 @@ import { HolographicStatusOverlay } from "../../components/HolographicStatusOver
 import TrafficPopup from "../../components/TrafficPopup";
 import HolographicHUD from "../../components/HolographicHUD";
 import { HolographicModal } from "../../components/ui/HolographicModal";
+import { HolographicFleetOverlay } from "../../components/HolographicFleetOverlay";
 import { toasterConfig } from "../../utils/toasterConfig";
 import { TechNotification, StatusOverlayData } from "../../types/app.types";
 
@@ -45,6 +46,12 @@ export default function ShellOverlays({
         >
           <TrafficPopup routeData={statusOverlay} />
         </HolographicModal>
+      ) : statusOverlay?.type === "fleet" ? (
+        <HolographicFleetOverlay
+          data={statusOverlay}
+          isVisible={!!statusOverlay}
+          onClose={() => setStatusOverlay(null)}
+        />
       ) : (
         <HolographicStatusOverlay
           data={statusOverlay}

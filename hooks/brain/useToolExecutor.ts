@@ -141,6 +141,15 @@ export function useToolExecutor({
           case "analyze_screen":
             return await handlers.handleAnalyzeScreen(toolArgs, ctx);
 
+          // === UI CONTROL ===
+          case "close_current_overlay":
+            if (ctx.setStatusOverlay) {
+              ctx.setStatusOverlay(null);
+              speak("Affichage fermé.");
+              return { status: "success", message: "Overlay closed" };
+            }
+            return { status: "error", message: "No overlay controller" };
+
           // === GOOGLE SERVICES ===
           case "gmail_read":
             return await handlers.handleGmailRead(toolArgs, ctx);
