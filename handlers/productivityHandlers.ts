@@ -35,7 +35,7 @@ export const handleSetTimer = async (
  */
 export const handleManageNotes = async (
   args: {
-    action: "add" | "search" | "list" | "delete";
+    action: "add" | "search" | "list" | "delete" | "create";
     content?: string;
     query?: string;
     id?: string;
@@ -90,7 +90,14 @@ export const handleManageNotes = async (
  */
 export const handleManageTodos = async (
   args: {
-    action: "add" | "complete" | "list" | "delete";
+    action:
+      | "add"
+      | "complete"
+      | "list"
+      | "delete"
+      | "create"
+      | "toggle"
+      | "clear";
     text?: string;
     id?: string;
     priority?: "low" | "medium" | "high";

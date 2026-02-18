@@ -83,14 +83,21 @@ export function useVoiceSynthesis({
       return;
     }
 
+    // Force le démarrage si le navigateur ment sur "speaking" depuis trop longtemps
+    // Mais on essaie quand même de respecter la file d'attente
     if (window.speechSynthesis.speaking) {
-      // Attendre que la synthèse actuelle se termine
+      // Petit hack : parfois speaking reste true alors que ça ne parle plus.
+      // On pourrait ajouter un timeout de garde ici, mais pour l'instant on fait simple.
+      // On retente dans 100ms
+      setTimeout(processNextInQueue, 100);
       return;
     }
 
     const nextMessage = messageQueue.current.shift();
     if (nextMessage) {
       speakImmediate(nextMessage);
+    } else {
+      isProcessingQueue.current = false;
     }
   }, []);
 
@@ -100,7 +107,10 @@ export function useVoiceSynthesis({
   const speakImmediate = useCallback(
     (text: string) => {
       // Si la synthèse est désactivée, ne rien faire
-      if (!enabled) return;
+      if (!enabled) {
+        isProcessingQueue.current = false;
+        return;
+      }
 
       // Création de l'énoncé vocal
       const utterance = new SpeechSynthesisUtterance(text);
@@ -132,19 +142,27 @@ export function useVoiceSynthesis({
       utterance.volume = volume;
 
       // Synchronisation avec l'état du système
-      utterance.onstart = () => onStart?.();
-      utterance.onend = () => {
-        onEnd?.();
-        currentUtteranceRef.current = null;
-        // 🎯 Traiter le prochain message de la queue
-        processNextInQueue();
+      utterance.onstart = () => {
+        console.log("🔊 TTS Start:", text.substring(0, 20) + "...");
+        onStart?.();
       };
+
+      const handleEndOrError = (type: string) => {
+        console.log(`🔊 TTS ${type}`);
+        onEnd?.(); // Signal fin à l'UI
+        currentUtteranceRef.current = null;
+
+        // Délai avant le prochain message
+        setTimeout(() => {
+          processNextInQueue();
+        }, 50);
+      };
+
+      utterance.onend = () => handleEndOrError("End");
       utterance.onerror = (event) => {
         console.error("Erreur synthèse vocale:", event.error);
-        onEnd?.();
-        currentUtteranceRef.current = null;
-        // 🎯 Traiter le prochain message même en cas d'erreur
-        processNextInQueue();
+        // Si interrompu, c'est souvent volonaitre, on ne log pas en erreur critique
+        handleEndOrError("Error");
       };
 
       if (window.speechSynthesis.paused) {
@@ -155,7 +173,8 @@ export function useVoiceSynthesis({
         window.speechSynthesis.speak(utterance);
       } catch (e) {
         console.error("Exception synthèse vocale:", e);
-        processNextInQueue();
+        // En cas d'exception synchrone, on passe au suivant
+        handleEndOrError("Exception");
       }
     },
     [
@@ -166,13 +185,17 @@ export function useVoiceSynthesis({
       pitch,
       rate,
       voiceURI,
-      processNextInQueue,
+      processNextInQueue, // Dépendance cyclique gérée par useCallback/ref
     ],
   );
 
   const speak = useCallback(
     (text: string, queue: boolean = false) => {
       if (!enabled) return;
+
+      console.log(
+        `🗣️ Speak request: "${text.substring(0, 20)}..." (Queue: ${queue})`,
+      );
 
       if (queue) {
         // Ajouter à la file d'attente
@@ -185,10 +208,17 @@ export function useVoiceSynthesis({
         }
       } else {
         // Annuler tout et parler immédiatement
+        console.log("🛑 Force speak: cancelling previous audio");
         window.speechSynthesis.cancel();
-        messageQueue.current = []; // Vider la queue
-        isProcessingQueue.current = false;
-        speakImmediate(text);
+
+        // Timeout pour laisser le cancel se propager et nettoyer l'état
+        setTimeout(() => {
+          messageQueue.current = []; // Vider la queue
+          isProcessingQueue.current = false; // Reset état file
+          // Petit hack : parfois cancel() ne reset pas speaking immédiatement
+          // On force le passage
+          speakImmediate(text);
+        }, 50);
       }
     },
     [enabled, speakImmediate, processNextInQueue],

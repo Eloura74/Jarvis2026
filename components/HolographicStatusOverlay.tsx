@@ -1,29 +1,22 @@
 import React from "react";
 import ReactDOM from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
+import { Activity } from "lucide-react";
 import { DraggablePanel } from "./ui/DraggablePanel";
-import { Activity, Shield, Thermometer, Cpu, Gauge, Radio } from "lucide-react";
 import { useKlipperMoonraker } from "../hooks/useKlipperMoonraker";
-
 import { StatusOverlayData, StatusStat } from "../types/app.types";
+
+// Composants extraits
+import { THEME } from "./HolographicOverlay/theme";
+import { HolographicContainer } from "./HolographicOverlay/HolographicContainer";
+import { StatCard } from "./HolographicOverlay/StatCard";
+import { LiveBadge } from "./HolographicOverlay/LiveBadge";
 
 interface HolographicStatusOverlayProps {
   data: StatusOverlayData | null;
   isVisible: boolean;
   onClose: () => void;
 }
-
-// --- DESIGN TOKENS (Enhanced) ---
-const THEME = {
-  cyan: "#00f3ff",
-  cyanDim: "rgba(0, 243, 255, 0.15)",
-  cyanGlow: "rgba(0, 243, 255, 0.4)",
-  bg: "rgba(3, 7, 15, 0.92)",
-  bgLight: "rgba(10, 20, 35, 0.6)",
-  alert: "#ff3333",
-  warning: "#ffaa00",
-  gold: "#ffd700",
-};
 
 /**
  * Composant d'affichage holographique - Version Production Grade avec Support Temps Réel
@@ -125,50 +118,8 @@ export const HolographicStatusOverlay: React.FC<
               className="!relative !inset-auto !m-0" // Utilise le flux Flex du parent
             >
               <HolographicContainer>
-                {/* Effets de Fond Globaux */}
-                <div className="holo-scanline" />
-                <div className="holo-flicker" />
-
-                {/* Badge Live Status - Enhanced */}
-                {klipper.isConnected && (
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.8 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    style={{
-                      position: "absolute",
-                      top: 10,
-                      right: 60,
-                      zIndex: 100,
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "6px",
-                      background: `linear-gradient(135deg, ${THEME.cyanDim}, rgba(0, 243, 255, 0.05))`,
-                      padding: "5px 10px",
-                      borderRadius: "6px",
-                      border: `1.5px solid ${THEME.cyan}`,
-                      boxShadow: `0 0 15px ${THEME.cyanGlow}, inset 0 0 10px rgba(0, 243, 255, 0.1)`,
-                    }}
-                  >
-                    <motion.div
-                      animate={{ scale: [1, 1.2, 1], opacity: [1, 0.6, 1] }}
-                      transition={{ duration: 1.5, repeat: Infinity }}
-                    >
-                      <Radio size={11} color={THEME.cyan} strokeWidth={3} />
-                    </motion.div>
-                    <span
-                      style={{
-                        color: THEME.cyan,
-                        fontSize: "9px",
-                        fontWeight: 700,
-                        fontFamily: '"JetBrains Mono", monospace',
-                        letterSpacing: "0.5px",
-                        textShadow: `0 0 8px ${THEME.cyanGlow}`,
-                      }}
-                    >
-                      LIVE LINK ACTIVE
-                    </span>
-                  </motion.div>
-                )}
+                {/* Badge Live Status */}
+                {klipper.isConnected && <LiveBadge />}
 
                 {/* Header Image Section */}
                 <div style={{ position: "relative", marginBottom: "24px" }}>
@@ -245,7 +196,7 @@ export const HolographicStatusOverlay: React.FC<
                   style={{
                     display: "grid",
                     gridTemplateColumns: "repeat(2, 1fr)",
-                    gap: "16px", // Plus d'espace
+                    gap: "16px",
                   }}
                 >
                   {displayData.stats.map((stat: StatusStat, idx: number) => (
@@ -291,196 +242,6 @@ export const HolographicStatusOverlay: React.FC<
   );
 
   return ReactDOM.createPortal(content, document.body);
-};
-
-// --- SOUS-COMPOSANTS ---
-
-const HolographicContainer: React.FC<{ children: React.ReactNode }> = ({
-  children,
-}) => (
-  <div
-    style={{
-      width: "550px", // Plus large
-      maxWidth: "95vw",
-      backgroundColor: THEME.bg,
-      border: `1px solid ${THEME.cyanDim}`,
-      boxShadow: `0 20px 50px rgba(0,0,0,0.8), inset 0 0 30px ${THEME.cyanDim}`,
-      padding: "20px",
-      position: "relative",
-      overflow: "hidden",
-      fontFamily: '"Rajdhani", sans-serif',
-      color: "#fff",
-    }}
-  >
-    <style>{`
-      @keyframes scanline {
-        0% { transform: translateY(-100%); opacity: 0; }
-        50% { opacity: 0.4; }
-        100% { transform: translateY(100vh); opacity: 0; }
-      }
-      @keyframes flicker {
-        0% { opacity: 0.97; }
-        5% { opacity: 0.92; }
-        10% { opacity: 0.98; }
-        15% { opacity: 0.95; }
-        20% { opacity: 0.99; }
-        100% { opacity: 1; }
-      }
-      .holo-scanline {
-        position: absolute; top: 0; left: 0; right: 0; height: 3px;
-        background: ${THEME.cyan};
-        opacity: 0.15;
-        box-shadow: 0 0 15px ${THEME.cyan};
-        animation: scanline 4s linear infinite;
-        pointer-events: none;
-        z-index: 10;
-      }
-      .holo-flicker {
-        position: absolute; inset: 0; pointer-events: none; z-index: 5;
-        animation: flicker 0.1s infinite;
-        background: rgba(0, 243, 255, 0.01);
-      }
-      .holo-grid-overlay {
-        position: absolute; inset: 0; pointer-events: none; z-index: 2;
-        background-image: linear-gradient(${THEME.cyanDim} 1px, transparent 1px),
-                          linear-gradient(90deg, ${THEME.cyanDim} 1px, transparent 1px);
-        background-size: 25px 25px;
-        opacity: 0.1;
-      }
-    `}</style>
-
-    <Corner pos="tl" />
-    <Corner pos="tr" />
-    <Corner pos="bl" />
-    <Corner pos="br" />
-
-    {children}
-  </div>
-);
-
-const StatCard: React.FC<{ stat: StatusStat; index: number }> = ({
-  stat,
-  index,
-}) => {
-  const getStatusColor = () => {
-    if (stat.status === "critical") return THEME.alert;
-    if (stat.status === "warning") return THEME.warning;
-    return THEME.cyan;
-  };
-
-  const color = getStatusColor();
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, x: -10 }}
-      animate={{ opacity: 1, x: 0 }}
-      transition={{ delay: 0.1 + index * 0.05 }}
-      style={{
-        background: "rgba(255, 255, 255, 0.02)",
-        border: `1px solid rgba(0, 243, 255, 0.08)`,
-        borderLeft: `3px solid ${color}`,
-        padding: "12px",
-        position: "relative",
-      }}
-    >
-      <div
-        style={{
-          fontSize: "10px",
-          textTransform: "uppercase",
-          letterSpacing: "1.5px",
-          color: "rgba(255,255,255,0.4)",
-          marginBottom: "6px",
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-        }}
-      >
-        {stat.label}
-        {stat.icon || getAutoIcon(stat.label)}
-      </div>
-
-      <div
-        style={{
-          fontSize: "22px",
-          fontWeight: 700,
-          color: color,
-          textShadow: `0 0 10px ${color}50`,
-          fontFamily: '"JetBrains Mono", monospace',
-        }}
-      >
-        {stat.value}{" "}
-        <span style={{ fontSize: "12px", opacity: 0.6, fontWeight: 400 }}>
-          {stat.unit}
-        </span>
-      </div>
-
-      {stat.progress !== undefined && (
-        <div
-          style={{
-            width: "100%",
-            height: "3px",
-            background: "rgba(0,0,0,0.4)",
-            marginTop: "10px",
-            borderRadius: "2px",
-            overflow: "hidden",
-          }}
-        >
-          <motion.div
-            initial={{ width: 0 }}
-            animate={{ width: `${stat.progress}%` }}
-            transition={{ duration: 1.2, ease: "easeOut" }}
-            style={{
-              height: "100%",
-              background: color,
-              boxShadow: `0 0 10px ${color}`,
-            }}
-          />
-        </div>
-      )}
-    </motion.div>
-  );
-};
-
-const getAutoIcon = (label: string) => {
-  const l = label.toLowerCase();
-  if (l.includes("temp")) return <Thermometer size={12} opacity={0.5} />;
-  if (l.includes("prog")) return <Gauge size={12} opacity={0.5} />;
-  if (l.includes("sys")) return <Cpu size={12} opacity={0.5} />;
-  return <Shield size={12} opacity={0.5} />;
-};
-
-const Corner: React.FC<{ pos: "tl" | "tr" | "bl" | "br" }> = ({ pos }) => {
-  const base: React.CSSProperties = {
-    position: "absolute",
-    width: "12px",
-    height: "12px",
-    borderColor: THEME.cyan,
-    borderStyle: "solid",
-    opacity: 0.6,
-  };
-
-  if (pos === "tl") {
-    base.top = 0;
-    base.left = 0;
-    base.borderWidth = "2px 0 0 2px";
-  }
-  if (pos === "tr") {
-    base.top = 0;
-    base.right = 0;
-    base.borderWidth = "2px 2px 0 0";
-  }
-  if (pos === "bl") {
-    base.bottom = 0;
-    base.left = 0;
-    base.borderWidth = "0 0 2px 2px";
-  }
-  if (pos === "br") {
-    base.bottom = 0;
-    base.right = 0;
-    base.borderWidth = "0 2px 2px 0";
-  }
-
-  return <div style={base} />;
 };
 
 export default HolographicStatusOverlay;
