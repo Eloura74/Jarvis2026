@@ -28,23 +28,28 @@ export async function handleGmailRead(
 
     if (data.error) throw new Error(data.error);
 
-    const emails = data.emails;
+    interface GmailMessage {
+      id: string;
+      snippet: string;
+      from: string;
+      subject: string;
+      date: string;
+    }
+
+    const emails = data.emails as GmailMessage[];
     if (emails.length === 0) {
       return { status: "success", message: "Aucun email trouvé", data: [] };
     }
 
     // On ne "speak" plus ici, on laisse le brain générer une synthèse intelligente via Gemini
-    emails.forEach((email: any) => {
+    emails.forEach((email) => {
       addLog(`Email de ${email.from}: ${email.subject}`, "GMAIL", "info");
     });
 
     return { status: "success", data: emails };
-  } catch (error: any) {
-    addLog(
-      `Erreur Gmail: ${error.message || String(error)}`,
-      "SYSTEM",
-      "error",
-    );
+  } catch (error: unknown) {
+    const err = error as Error;
+    addLog(`Erreur Gmail: ${err.message || String(error)}`, "SYSTEM", "error");
     throw error;
   }
 }
@@ -74,9 +79,10 @@ export async function handleGmailSend(
     if (data.error) throw new Error(data.error);
 
     return { status: "success", message: "Email envoyé", data: { to } };
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const err = error as Error;
     addLog(
-      `Erreur envoi Gmail: ${error.message || String(error)}`,
+      `Erreur envoi Gmail: ${err.message || String(error)}`,
       "SYSTEM",
       "error",
     );
@@ -103,24 +109,39 @@ export async function handleCalendarList(
 
     if (data.error) throw new Error(data.error);
 
-    const events = data.events;
+    interface CalendarEvent {
+      summary: string;
+      start: { dateTime?: string; date?: string };
+    }
+
+    const events = data.events as CalendarEvent[];
+
+    if (events.length > 0) {
+      // Logique de notification (à implémenter)
+    }
+
     if (events.length === 0) {
       return { status: "success", message: "Aucun évènement", data: [] };
     }
 
-    events.forEach((event: any) => {
-      const date = new Date(event.start).toLocaleDateString("fr-FR", {
+    events.forEach((event) => {
+      const date = new Date(
+        event.start.dateTime || event.start.date!,
+      ).toLocaleDateString("fr-FR", {
         weekday: "long",
         day: "numeric",
         month: "long",
+        hour: "2-digit",
+        minute: "2-digit",
       });
-      addLog(`RDV: ${event.summary} (${date})`, "CALENDAR", "info");
+      addLog(`📅 ${date} : ${event.summary}`, "CALENDAR", "info");
     });
 
     return { status: "success", data: events };
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const err = error as Error;
     addLog(
-      `Erreur Calendrier: ${error.message || String(error)}`,
+      `Erreur Calendar: ${err.message || String(error)}`,
       "SYSTEM",
       "error",
     );
@@ -173,9 +194,10 @@ export async function handleCalendarCreate(
 
     addLog(`✅ Rendez-vous créé: ${summary}`, "CALENDAR", "success");
     return { status: "success", message: "Évènement créé", data };
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const err = error as Error;
     addLog(
-      `Erreur création calendrier: ${error.message || String(error)}`,
+      `Erreur création calendrier: ${err.message || String(error)}`,
       "SYSTEM",
       "error",
     );
@@ -207,9 +229,10 @@ export async function handleCalendarDelete(
 
     addLog(`✅ Évènement supprimé`, "CALENDAR", "success");
     return { status: "success", message: "Évènement supprimé" };
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const err = error as Error;
     addLog(
-      `Erreur suppression calendrier: ${error.message || String(error)}`,
+      `Erreur suppression calendrier: ${err.message || String(error)}`,
       "SYSTEM",
       "error",
     );

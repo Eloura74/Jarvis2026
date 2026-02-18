@@ -27,9 +27,9 @@ export interface BambuStatus {
 }
 
 export function initBambuMqtt(
-  ip?: string,
-  accessCode?: string,
-  serial?: string,
+  _ip?: string,
+  _accessCode?: string,
+  _serial?: string,
 ): void {
   console.warn(
     "⚠️ initBambuMqtt (frontend) est déprécié. Le backend gère désormais la connexion MQTT.",
@@ -37,7 +37,7 @@ export function initBambuMqtt(
 }
 
 export function subscribeBambuStatus(
-  callback: (status: BambuStatus) => void,
+  _callback: (status: BambuStatus) => void,
 ): () => void {
   console.warn(
     "⚠️ subscribeBambuStatus est déprécié. Utilisez le polling API via usePrinterFleet.",

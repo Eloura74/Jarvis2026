@@ -5,7 +5,7 @@ import { Header } from "../Header";
 import { HA_ENTITIES } from "../../../services/homeAssistantService";
 
 interface DoorsTabProps {
-  states: Record<string, any>;
+  states: Record<string, unknown>;
 }
 
 export const DoorsTab: React.FC<DoorsTabProps> = ({ states }) => {
@@ -20,7 +20,8 @@ export const DoorsTab: React.FC<DoorsTabProps> = ({ states }) => {
       <Header title="SECURITY GATES" />
       <div className="flex flex-col gap-2">
         {HA_ENTITIES.DOORS.map((door) => {
-          const isOpen = states[door.id]?.state === "on";
+          const isOpen =
+            (states[door.id] as { state?: string })?.state === "on";
           return (
             <div
               key={door.id}

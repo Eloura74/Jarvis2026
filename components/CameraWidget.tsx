@@ -39,7 +39,8 @@ export const CameraWidget: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [glitch, setGlitch] = useState(false);
   const [imgError, setImgError] = useState(false);
-  const [refreshTrigger, setRefreshTrigger] = useState(Date.now());
+  const [refreshTrigger, setRefreshTrigger] = useState(() => Date.now());
+  const [glitchOffset, setGlitchOffset] = useState(0);
 
   // -- EFFECTS --
 
@@ -47,6 +48,7 @@ export const CameraWidget: React.FC = () => {
   useEffect(() => {
     const interval = setInterval(() => {
       if (Math.random() > 0.95) {
+        setGlitchOffset(Math.random() * 10 - 5);
         setGlitch(true);
         setTimeout(() => setGlitch(false), 150);
       }
@@ -56,6 +58,7 @@ export const CameraWidget: React.FC = () => {
 
   // Reset img error on camera change
   useEffect(() => {
+    // eslint-disable-next-line
     setImgError(false);
   }, [activeCameraId]);
 
@@ -177,7 +180,7 @@ export const CameraWidget: React.FC = () => {
                 animate={{ opacity: 0.5 }}
                 exit={{ opacity: 0 }}
                 className="absolute inset-0 bg-cyan-500/20 mix-blend-color-dodge z-10"
-                style={{ transform: `translateX(${Math.random() * 10 - 5}px)` }}
+                style={{ transform: `translateX(${glitchOffset}px)` }}
               />
             )}
           </AnimatePresence>

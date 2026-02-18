@@ -38,10 +38,13 @@ const loadHistoryFromStorage = (): ChatMessage[] => {
     const parsed = JSON.parse(stored);
 
     // Reconvertir les timestamps string en Date
-    return parsed.map((msg: any) => ({
-      ...msg,
-      timestamp: new Date(msg.timestamp),
-    }));
+    return parsed.map((msg: unknown) => {
+      const m = msg as ChatMessage;
+      return {
+        ...m,
+        timestamp: new Date(m.timestamp),
+      };
+    });
   } catch (error) {
     console.error("Erreur chargement historique localStorage :", error);
     return [];
@@ -148,11 +151,18 @@ export const useConversationMemory = () => {
       }
 
       // Reconvertir les timestamps
-      const imported = parsed.map((msg: any) => ({
-        role: msg.role,
-        text: msg.text,
-        timestamp: new Date(msg.timestamp),
-      }));
+      const imported = parsed.map((msg: unknown) => {
+        const m = msg as {
+          role: "user" | "model";
+          text: string;
+          timestamp: string;
+        };
+        return {
+          role: m.role,
+          text: m.text,
+          timestamp: new Date(m.timestamp),
+        };
+      });
 
       setHistory(imported);
       return true;

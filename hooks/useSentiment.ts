@@ -26,7 +26,7 @@ interface SentimentHookReturn {
   /** Adapter une réponse au mood */
   adaptResponse: (response: string) => string;
   /** Obtenir suggestion d'action */
-  getMoodSuggestion: () => any | null;
+  getMoodSuggestion: () => unknown | null;
 }
 
 export function useSentiment(): SentimentHookReturn {

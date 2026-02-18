@@ -22,7 +22,9 @@ import { useState, useEffect, useRef, useCallback } from "react";
 // Types pour Web Speech API (non standard dans TS)
 declare global {
   interface Window {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     SpeechRecognition: any;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     webkitSpeechRecognition: any;
   }
 }
@@ -59,6 +61,7 @@ export function useWakeWord(
   const [isListening, setIsListening] = useState(false);
   const [lastDetection, setLastDetection] = useState<Date | null>(null);
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const recognitionRef = useRef<any>(null);
   const restartTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -68,6 +71,9 @@ export function useWakeWord(
   useEffect(() => {
     isEnabledRef.current = isEnabled;
   }, [isEnabled]);
+
+  // Serialiser keywords pour useMemo/useEffect dependency
+  const keywordsKey = JSON.stringify(keywords);
 
   /**
    * Démarre l'écoute continue du wake word
@@ -86,7 +92,7 @@ export function useWakeWord(
       try {
         recognitionRef.current.onend = null;
         recognitionRef.current.stop();
-      } catch (e) {
+      } catch {
         /* ignore */
       }
     }
@@ -99,6 +105,7 @@ export function useWakeWord(
     recognition.maxAlternatives = 3;
 
     // --- ÉVÉNEMENT: Résultat de reconnaissance ---
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     recognition.onresult = (event: any) => {
       const results = event.results;
       const lastResult = results[results.length - 1];
@@ -157,7 +164,7 @@ export function useWakeWord(
             ) {
               recognition.start();
             }
-          } catch (error) {
+          } catch {
             // console.error("Erreur redémarrage wake word:", error);
           }
         }, 1000); // 1s de pause avant relance
@@ -165,6 +172,7 @@ export function useWakeWord(
     };
 
     // --- ÉVÉNEMENT: Erreur ---
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     recognition.onerror = (event: any) => {
       // Ignorer "aborted" (stop manuel ou conflit)
       if (event.error === "aborted") return;
@@ -188,16 +196,11 @@ export function useWakeWord(
     // Démarrer avec protection
     try {
       recognition.start();
-    } catch (error) {
+    } catch {
       // console.error("❌ Impossible de démarrer wake word:", error);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    JSON.stringify(keywords),
-    confidenceThreshold,
-    language,
-    onWakeWordDetected,
-  ]);
+  }, [keywordsKey, confidenceThreshold, language, onWakeWordDetected]);
   const stopListening = useCallback(() => {
     // 🛑 Arrêt critique : on met le ref à false immédiatement pour bloquer tout restart
     isEnabledRef.current = false;
@@ -211,7 +214,7 @@ export function useWakeWord(
       try {
         recognitionRef.current.onend = null; // Important: ne pas déclencher onend
         recognitionRef.current.stop();
-      } catch (error) {
+      } catch {
         // ignore
       }
       recognitionRef.current = null;

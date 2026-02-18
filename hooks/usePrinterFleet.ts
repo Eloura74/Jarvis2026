@@ -180,7 +180,7 @@ export function usePrinterFleet(
               : undefined,
           });
         }
-      } catch (error) {
+      } catch {
         // Silent fail (offline or backend down)
         // console.debug("Bambu polling failed", error);
       }

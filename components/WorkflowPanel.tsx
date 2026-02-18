@@ -7,7 +7,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import {
-  Workflow,
   Play,
   Trash2,
   Plus,
@@ -66,7 +65,7 @@ export default function WorkflowPanel() {
     try {
       await new Promise((resolve) => setTimeout(resolve, 2000));
       toast.success(`"${workflowName}" exécuté avec succès`, { id: "run-wf" });
-    } catch (error) {
+    } catch {
       toast.error("Erreur lors de l'exécution", { id: "run-wf" });
     } finally {
       setRunningWorkflow(null);
@@ -109,20 +108,20 @@ export default function WorkflowPanel() {
                   onClick={() => setSelectedPatternIndex(i)}
                 >
                   <div className="flex items-center gap-1 flex-wrap mb-2">
-                    {pattern.pattern.map((cmd: string, j: number) => (
+                    {pattern.sequence.map((cmd: string, j: number) => (
                       <span key={j} className="flex items-center gap-1">
                         <span className="text-cyan-300 text-xs bg-cyan-900/30 px-1.5 py-0.5 rounded border border-cyan-500/20">
                           {cmd}
                         </span>
-                        {j < pattern.pattern.length - 1 && (
+                        {j < pattern.sequence.length - 1 && (
                           <ChevronRight className="w-3 h-3 text-gray-600" />
                         )}
                       </span>
                     ))}
                   </div>
                   <div className="text-[10px] text-gray-500 font-mono flex justify-between">
-                    <span>Féquence: {pattern.count}x</span>
-                    <span>Intervalle: {pattern.timeWindow}s</span>
+                    <span>Fréquence: {pattern.count}x</span>
+                    <span>Intervalle: 15min</span>
                   </div>
                 </div>
               ))}

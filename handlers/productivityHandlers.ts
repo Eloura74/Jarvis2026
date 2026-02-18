@@ -66,10 +66,11 @@ export const handleManageNotes = async (
         }
         break;
 
-      case "list":
+      case "list": {
         const notes = productivity.getNotes();
         addLog(`Total notes: ${notes.length}`, "SYSTEM", "info");
         break;
+      }
 
       case "delete":
         if (id) {
@@ -78,7 +79,7 @@ export const handleManageNotes = async (
         }
         break;
     }
-  } catch (error) {
+  } catch {
     addLog(`Note ${action} failed`, "SYSTEM", "error");
   }
 
@@ -133,10 +134,11 @@ export const handleManageTodos = async (
         addLog("Todo clear requested", "SYSTEM", "info");
         break;
 
-      case "list":
+      case "list": {
         const todos = productivity.getActiveTodos();
         addLog(`Active todos: ${todos.length}`, "SYSTEM", "info");
         break;
+      }
 
       case "delete":
         if (id) {
@@ -145,7 +147,7 @@ export const handleManageTodos = async (
         }
         break;
     }
-  } catch (error) {
+  } catch {
     addLog(`Todo ${action} failed`, "SYSTEM", "error");
   }
 

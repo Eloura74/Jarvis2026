@@ -36,9 +36,10 @@ export interface StatusStat {
   label: string;
   value: string | number;
   unit?: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   icon?: any; // Generic to avoid React dependency in shared types
   progress?: number;
-  status?: "normal" | "warning" | "critical";
+  status?: "normal" | "warning" | "critical" | "error";
 }
 
 export interface StatusOverlayData {
@@ -53,10 +54,14 @@ export interface StatusOverlayData {
     unit?: string;
     progress?: number;
     status?: "normal" | "warning" | "error";
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    icon?: any;
   }>;
   // Nouveaux - Données enrichies (optionnelles)
   thumbnail?: string | null;
   nozzleTemp?: number;
+  ip?: string;
+  webcamUrl?: string;
   nozzleTarget?: number;
   bedTemp?: number;
   bedTarget?: number;
@@ -92,4 +97,18 @@ export interface HandlerContext {
   speak: (text: string) => void;
   setVisualMode?: (query: string | null, isVisible: boolean) => void;
   stopConversation?: () => void;
+}
+
+export interface ToolResult {
+  status: "success" | "error";
+  data?: unknown;
+  message?: string;
+}
+
+export interface TechNotification {
+  id: string;
+  title: string;
+  message: string;
+  timestamp: Date;
+  type: "info" | "success" | "warning" | "error" | "quantum" | "alert";
 }

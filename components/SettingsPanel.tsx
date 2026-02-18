@@ -40,33 +40,34 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
   onSettingsChange,
   currentSettings,
 }) => {
-  const [settings, setSettings] = useState<JarvisSettings>(
-    currentSettings || DEFAULT_SETTINGS,
-  );
-
-  // Charger settings depuis localStorage au montage
-  useEffect(() => {
+  const [settings, setSettings] = useState<JarvisSettings>(() => {
     try {
-      const saved = localStorage.getItem("jarvis_settings");
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        setSettings(parsed);
-        onSettingsChange(parsed);
+      if (typeof window !== "undefined") {
+        const saved = localStorage.getItem("jarvis_settings");
+        return saved ? JSON.parse(saved) : currentSettings || DEFAULT_SETTINGS;
       }
     } catch (err) {
       console.error("Failed to load settings:", err);
     }
-  }, []);
+    return currentSettings || DEFAULT_SETTINGS;
+  });
 
-  // Sauvegarder settings dans localStorage à chaque modification
+  // Ref pour onSettingsChange afin de l'utiliser dans l'effet sans créer de boucle
+  const onSettingsChangeRef = React.useRef(onSettingsChange);
+
+  useEffect(() => {
+    onSettingsChangeRef.current = onSettingsChange;
+  }, [onSettingsChange]);
+
+  // Sauvegarde automatique et notification parent
   useEffect(() => {
     try {
       localStorage.setItem("jarvis_settings", JSON.stringify(settings));
-      onSettingsChange(settings);
+      onSettingsChangeRef.current(settings);
     } catch (err) {
       console.error("Failed to save settings:", err);
     }
-  }, [settings, onSettingsChange]);
+  }, [settings]);
 
   /**
    * Réinitialiser tous les paramètres

@@ -24,7 +24,9 @@ import { useState, useEffect, useRef, useCallback } from "react";
 // Déclaration globale pour la Web Speech API
 declare global {
   interface Window {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     SpeechRecognition: any;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     webkitSpeechRecognition: any;
   }
 }
@@ -44,6 +46,28 @@ interface UseVoiceRecognitionReturn {
   stopAndWait: () => Promise<void>;
 }
 
+// Types pour Web Speech API
+interface SpeechRecognitionEvent {
+  results: {
+    length: number;
+    item(index: number): {
+      transcript: string;
+      confidence: number;
+    }[];
+    [index: number]: {
+      isFinal: boolean;
+      0: {
+        transcript: string;
+        confidence: number;
+      };
+    };
+  };
+}
+
+interface SpeechRecognitionErrorEvent {
+  error: string;
+}
+
 export function useVoiceRecognition(
   onTranscript: (text: string) => void,
   onStatusChange?: (listening: boolean) => void,
@@ -51,6 +75,7 @@ export function useVoiceRecognition(
 ): UseVoiceRecognitionReturn {
   const [isListening, setIsListening] = useState(false);
   const [isSupported, setIsSupported] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const recognitionRef = useRef<any>(null);
   // Flag pour empêcher les appels multiples à start() avant onstart
   const isStartingRef = useRef(false);
@@ -122,7 +147,8 @@ export function useVoiceRecognition(
           // Support résultats intermédiaires pour feedback instantané
           let lastInterimTranscript = "";
 
-          recognition.onresult = (event: any) => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          recognition.onresult = (event: SpeechRecognitionEvent) => {
             // Récupérer dernier résultat
             const lastResult = event.results[event.results.length - 1];
             const transcript = lastResult[0].transcript;
@@ -181,7 +207,8 @@ export function useVoiceRecognition(
             }
           };
           // Événement : erreur de reconnaissance
-          recognition.onerror = (event: any) => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
             // Ignorer les erreurs "aborted" et "no-speech" qui sont fréquentes/normales
             if (event.error === "aborted" || event.error === "no-speech") {
               console.warn(
@@ -218,7 +245,7 @@ export function useVoiceRecognition(
       if (recognitionRef.current) {
         try {
           recognitionRef.current.stop();
-        } catch (error) {
+        } catch {
           // Ignore les erreurs si déjà arrêté
         }
       }
@@ -249,8 +276,9 @@ export function useVoiceRecognition(
       // console.log("✅ Démarrage reconnaissance vocale...");
       isStartingRef.current = true;
       recognitionRef.current.start();
-    } catch (error: any) {
-      console.error("❌ Erreur démarrage reconnaissance:", error.message);
+    } catch (error: unknown) {
+      const err = error as Error;
+      console.error("❌ Erreur démarrage reconnaissance:", err.message);
       isStartingRef.current = false;
       isListeningRef.current = false;
     }
@@ -311,8 +339,9 @@ export function useVoiceRecognition(
       // Démarrer l'arrêt
       try {
         recognitionRef.current.stop();
-      } catch (error: any) {
-        console.error("⚠️ Erreur stopAndWait:", error.message);
+      } catch (error: unknown) {
+        const err = error as Error;
+        console.error("⚠️ Erreur stopAndWait:", err.message);
         // En cas d'erreur, nettoyer le listener et résoudre quand même
         recognitionRef.current?.removeEventListener("end", onEndHandler);
         isListeningRef.current = false;

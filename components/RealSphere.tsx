@@ -279,11 +279,13 @@ export const RealSphere: React.FC<RealSphereProps> = ({
 
     frameIdRef.current = requestAnimationFrame(animate);
 
+    const mountNode = mountRef.current;
+
     // CLEANUP
     return () => {
       cancelAnimationFrame(frameIdRef.current);
-      if (mountRef.current) {
-        mountRef.current.removeChild(renderer.domElement);
+      if (mountNode) {
+        mountNode.removeChild(renderer.domElement);
       }
       geometry.dispose();
       material.dispose();
@@ -291,7 +293,7 @@ export const RealSphere: React.FC<RealSphereProps> = ({
       particlesMat.dispose();
       renderer.dispose();
     };
-  }, [size]); // Re-init si taille change
+  }, [size, baseColor, isActive, isListening, isThinking]); // Re-init si taille ou couleur change
 
   // 5. UPDATE DYNAMIC PROPS
   useEffect(() => {

@@ -20,7 +20,7 @@ export const AppForm: React.FC<AppFormProps> = ({
 }) => {
   const [localApp, setLocalApp] = useState(app);
 
-  const handleChange = (field: keyof AppPath, value: any) => {
+  const handleChange = (field: keyof AppPath, value: string | string[]) => {
     const updated = { ...localApp, [field]: value };
     setLocalApp(updated);
     onChange(updated);

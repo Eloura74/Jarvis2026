@@ -347,12 +347,22 @@ let last429Time = cleanupOldShield();
 let lastRequestTime = 0;
 const BREAKER_COOLDOWN = 10000; // 10 secondes (réduit pour éviter blocage long)
 
-const MIN_REQUEST_GAP = 10; // 10ms
+const MIN_REQUEST_GAP = 1000; // 1s entre requêtes pour ménager l'API
 
 const record429 = () => {
   last429Time = Date.now();
-  // localStorage.setItem("jarvis_last_429", last429Time.toString());
-  console.warn("🔻 Neural Core Saturated. (Logging only - Shield Disabled)");
+  console.warn("🔻 Neural Core 429 Reported.");
+};
+
+const waitIfNecessary = async () => {
+  const now = Date.now();
+  const timeSinceLast = now - lastRequestTime;
+  if (timeSinceLast < MIN_REQUEST_GAP) {
+    await new Promise((resolve) =>
+      setTimeout(resolve, MIN_REQUEST_GAP - timeSinceLast),
+    );
+  }
+  lastRequestTime = Date.now();
 };
 
 const checkShield = (): boolean => {
@@ -377,33 +387,71 @@ export const resetNeuralShield = () => {
   console.log("🔓 Neural Shield manually reset by user.");
 };
 
-// Helper pour attendre le quota
-const waitIfNecessary = async () => {
-  const now = Date.now();
-  const timeSinceLast = now - lastRequestTime;
-  if (timeSinceLast < MIN_REQUEST_GAP) {
-    const delay = MIN_REQUEST_GAP - timeSinceLast;
-    await new Promise((r) => setTimeout(r, delay));
+const MAX_RETRIES = 3;
+const INITIAL_RETRY_DELAY = 1000;
+
+/**
+ * Wrapper avec retry exponentiel et FALLBACK pour les appels Gemini
+ */
+async function generateContentWithFallback(
+  input: string | any[],
+  config: any,
+  retries = MAX_RETRIES,
+  delay = INITIAL_RETRY_DELAY,
+  useFallback = false,
+): Promise<any> {
+  // Stratégie : D'abord 2.0-flash, si 429/500 -> 1.5-flash (plus stable)
+  const currentModel = useFallback ? "gemini-1.5-flash" : "gemini-2.0-flash";
+
+  try {
+    return await ai.models.generateContent({
+      model: currentModel,
+      contents: input,
+      config: config,
+    });
+  } catch (error: any) {
+    const isRetryable =
+      error.status === 429 ||
+      error.code === 429 ||
+      error.status === 503 ||
+      error.status === 500 ||
+      error.message?.includes("429");
+
+    if (isRetryable) {
+      console.warn(
+        `⚠️ Error with ${currentModel} (Code: ${error.status || "Unknown"}).`,
+      );
+
+      // Si on est déjà sur le fallback et qu'il reste des retries, on attend
+      if (useFallback && retries > 0) {
+        console.log(`⏳ Retrying fallback in ${delay}ms...`);
+        await new Promise((resolve) => setTimeout(resolve, delay));
+        return generateContentWithFallback(
+          input,
+          config,
+          retries - 1,
+          delay * 2,
+          true,
+        );
+      }
+
+      // Si on était sur le modèle principal, on passe au FALLBACK immédiatement
+      if (!useFallback) {
+        console.warn("🛡️ SWITCHING TO FALLBACK MODEL (Gemini 1.5 Flash)");
+        return generateContentWithFallback(input, config, retries, delay, true);
+      }
+    }
+    throw error;
   }
-  lastRequestTime = Date.now();
-};
+}
 
 export const parseCommand = async (
   input: string,
   memories: AppMemory[],
   conversationContext: string = "",
 ): Promise<OmniDecision> => {
-  // Check Shield
-  if (checkShield()) {
-    const remaining = Math.ceil(
-      (BREAKER_COOLDOWN - (Date.now() - last429Time)) / 1000,
-    );
-    return {
-      type: "TEXT_RESPONSE",
-      text: `Monsieur, mon noyau neural est saturé. Protection active (${remaining}s).`,
-      confidence: 1.0,
-    };
-  }
+  // Check Shield (Désactivé pour laisser le backoff gérer)
+  // if (checkShield()) { ... }
 
   await waitIfNecessary();
 
@@ -420,36 +468,32 @@ export const parseCommand = async (
 
     const haContext = await getHAContext();
 
-    // On reste sur 2.0 Flash par défaut
-    const response = await ai.models.generateContent({
-      model: "gemini-2.0-flash",
-      contents: input,
-      config: {
-        systemInstruction:
-          generateSystemInstruction(memSum, conversationContext) + haContext,
-        tools: [{ functionDeclarations: toolDeclarations }],
-        temperature: 0.1,
-      },
+    // Appel avec Fallback
+    const response = await generateContentWithFallback(input, {
+      systemInstruction:
+        generateSystemInstruction(memSum, conversationContext) + haContext,
+      tools: [{ functionDeclarations: toolDeclarations }],
+      temperature: 0.1,
     });
 
     const candidate = response.candidates?.[0];
     if (!candidate) throw new Error("No response from Neural Core.");
 
     const functionCalls = candidate.content?.parts
-      ?.filter((p) => p.functionCall)
-      .map((p) => p.functionCall);
+      ?.filter((p: any) => p.functionCall)
+      .map((p: any) => p.functionCall);
 
     const validCalls =
       functionCalls
         ?.filter(
-          (fc): fc is { name: string; args: Record<string, unknown> } =>
+          (fc: any): fc is { name: string; args: Record<string, unknown> } =>
             fc?.name !== undefined && fc?.args !== undefined,
         )
-        .map((fc) => ({ name: fc.name, args: fc.args })) || [];
+        .map((fc: any) => ({ name: fc.name, args: fc.args })) || [];
 
     const textResponse = candidate.content?.parts
-      ?.filter((p) => p.text)
-      .map((p) => p.text)
+      ?.filter((p: any) => p.text)
+      .map((p: any) => p.text)
       .join("");
 
     let decision: OmniDecision;
@@ -477,42 +521,24 @@ export const parseCommand = async (
       validCalls.length > 0 ? validCalls[0].name : "",
     );
     return decision;
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("OMNI Core Error:", error);
 
     // MODIFICATION D'URGENCE : Affichage de l'erreur réelle au lieu du message "Saturé"
-    // Cela permet de confirmer si c'est bien une 429 ou un autre problème de clé
+    const errorMessage =
+      error instanceof Error ? error.message : "Erreur inconnue";
     return {
       type: "TEXT_RESPONSE", // CHANGÉ DE ERROR À TEXT_RESPONSE POUR ÊTRE SÛR QUE JARVIS LE DISE
-      text: `⚠️ ALERTE SYSTÈME : ${error.message || "Erreur inconnue"}. (Code: ERR_CORE_FAIL)`,
+      text: `⚠️ ALERTE SYSTÈME : ${errorMessage}. (Code: ERR_CORE_FAIL)`,
       confidence: 1.0,
     };
-    /*
-    if (error.message?.includes("429")) {
-      record429();
-      return {
-        type: "TEXT_RESPONSE",
-        text: "Monsieur mon noyau neural est saturé. Mode sécurité activé.",
-        confidence: 1.0,
-      };
-    }
-    return {
-      type: "ERROR",
-      text: "Désolé Monsieur une erreur interne perturbe mon jugement.",
-      confidence: 0,
-    };
-    */
   }
 };
 
 export const summarizeToolResults = async (
   toolName: string,
-  resultData: any,
+  resultData: unknown,
 ): Promise<string> => {
-  if (checkShield()) {
-    return "Données reçues, Monsieur. Neural Core en refroidissement.";
-  }
-
   await waitIfNecessary();
 
   try {
@@ -528,16 +554,15 @@ export const summarizeToolResults = async (
       "- Ne pas lire les adresses email complètes.\n" +
       "- S'adresser à l'utilisateur comme 'Monsieur'.";
 
-    const response = await ai.models.generateContent({
-      model: "gemini-2.0-flash",
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
-      config: { temperature: 0.1 },
-    });
+    const response = await generateContentWithFallback(
+      [{ role: "user", parts: [{ text: prompt }] }],
+      { temperature: 0.1 },
+    );
     return (
       response.candidates?.[0].content?.parts?.[0].text || "Exécuté, Monsieur."
     );
-  } catch (err: any) {
-    if (err.message?.includes("429")) record429();
+  } catch (err: unknown) {
+    console.error("Erreur summarize:", err);
     return "J'ai les résultats, Monsieur.";
   }
 };
@@ -545,8 +570,12 @@ export const summarizeToolResults = async (
 export const getQMSAnalysis = async (
   logs: string[],
   taskContext: string,
-): Promise<any> => {
-  if (checkShield()) return { hasSuggestion: false };
+): Promise<{
+  hasSuggestion: boolean;
+  tool?: string;
+  args?: Record<string, unknown>;
+  explanation?: string;
+}> => {
   await waitIfNecessary();
   try {
     const prompt =
@@ -557,17 +586,16 @@ export const getQMSAnalysis = async (
       "CONTEXTE: " +
       taskContext +
       "\n\n" +
-      "RÉPONDRE UNIQUEMENT EN JSON avec structure: { hasSuggestion: boolean, message: string, detail: string }";
+      "RÉPONDRE UNIQUEMENT EN JSON avec structure: { hasSuggestion: boolean, tool: string, args: object, explanation: string }";
 
-    const response = await ai.models.generateContent({
-      model: "gemini-2.0-flash",
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
-      config: { temperature: 0.1, responseMimeType: "application/json" },
-    });
+    const response = await generateContentWithFallback(
+      [{ role: "user", parts: [{ text: prompt }] }],
+      { temperature: 0.1, responseMimeType: "application/json" },
+    );
     const text = response.candidates?.[0].content?.parts?.[0].text;
     return text ? JSON.parse(text) : { hasSuggestion: false };
-  } catch (err: any) {
-    if (err.message?.includes("429")) record429();
+  } catch (err: unknown) {
+    /* Silently fail QMS if overloaded */
     return { hasSuggestion: false };
   }
 };
@@ -597,23 +625,24 @@ export const getNeuralBriefing = async ({
   await waitIfNecessary();
 
   try {
-    const prompt = `Fais un briefing exécutif court et stylé (style J.A.R.V.I.S.) pour Monsieur.
-    TÂCHE ACTUELLE: ${task}
-    DERNIERS LOGS: ${JSON.stringify(logs.slice(-5))}
-    
-    Ton but est de rassurer et de synthétiser l'état actuel. Sois classe et concis.`;
+    const prompt =
+      "Génère un briefing court basés sur ces logs: " +
+      JSON.stringify(logs) +
+      "\n" +
+      "CONTEXTE: " +
+      task;
 
-    const response = await ai.models.generateContent({
-      model: "gemini-2.0-flash",
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
-      config: { temperature: 0.2 },
-    });
-    return (
-      response.candidates?.[0].content?.parts?.[0].text ||
-      "Je suis opérationnel, Monsieur."
+    const response = await generateContentWithFallback(
+      [{ role: "user", parts: [{ text: prompt }] }],
+      { temperature: 0.7 },
     );
-  } catch (err: any) {
-    if (err.message?.includes("429")) record429();
+
+    return (
+      response.candidates?.[0].content?.parts?.[0].text || "Rien à signaler."
+    );
+  } catch (err: unknown) {
+    const error = err as Error;
+    if (error.message?.includes("429")) record429();
     return "Briefing indisponible momentanément, Monsieur.";
   }
 };

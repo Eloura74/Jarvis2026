@@ -77,7 +77,12 @@ export const handleControlMedia = async (
           : "mute";
 
     addLog(`Redirection média vers volume: ${volumeAction}`, "SYSTEM", "info");
-    return await handleAdjustVolume({ action: volumeAction as any }, ctx);
+    return await handleAdjustVolume(
+      {
+        action: volumeAction as "increase" | "decrease" | "mute",
+      },
+      ctx,
+    );
   }
 
   addLog(`Media Interface: ${action.toLowerCase()}`, "SYSTEM", "success");

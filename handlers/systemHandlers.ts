@@ -28,7 +28,7 @@ export const handleSearchAndLaunchApp = async (
   ctx: HandlerContext,
   additionalDeps: {
     setActiveOverlay: (text: string | null) => void;
-    appMemory: any[];
+    appMemory: { appName: string; lastPath: string }[];
     updateMemory: (app: string, path: string) => void;
     findAppPath?: (query: string) => { name: string; path: string } | null; // ✨ Nouvelle fonction de recherche configurée
   },
@@ -36,7 +36,8 @@ export const handleSearchAndLaunchApp = async (
   const { appName, adminMode, url } = args;
   const targetApp = appName.toLowerCase();
   const { addLog, setStatus } = ctx;
-  const { setActiveOverlay, appMemory, updateMemory, findAppPath } = additionalDeps;
+  const { setActiveOverlay, appMemory, updateMemory, findAppPath } =
+    additionalDeps;
 
   setStatus(SystemStatus.SEARCHING);
   setActiveOverlay(
@@ -52,18 +53,22 @@ export const handleSearchAndLaunchApp = async (
     const configuredApp = findAppPath(targetApp);
     if (configuredApp) {
       foundPath = configuredApp.path;
-      addLog(`✅ Using configured path for "${configuredApp.name}": ${foundPath}`, "SYSTEM", "success");
+      addLog(
+        `✅ Using configured path for "${configuredApp.name}": ${foundPath}`,
+        "SYSTEM",
+        "success",
+      );
       // Mettre à jour la mémoire avec le chemin configuré
       updateMemory(targetApp, foundPath);
       // Passer directement au lancement
       setActiveOverlay(`LAUNCHING: ${configuredApp.name.toUpperCase()}`);
-      
+
       try {
         // Si une URL est fournie, la passer comme argument au navigateur
         const launchArgs = url ? [url] : undefined;
         const result = await launchAppOnBackend(foundPath, launchArgs);
         if (result) {
-          const message = url 
+          const message = url
             ? `${configuredApp.name} lancé avec ${url}`
             : `Application "${configuredApp.name}" launched successfully`;
           addLog(message, "SYSTEM", "success");
@@ -72,10 +77,18 @@ export const handleSearchAndLaunchApp = async (
           return { status: "success", message };
         }
       } catch (error) {
-        addLog(`Failed to launch: ${error instanceof Error ? error.message : String(error)}`, "SYSTEM", "error");
+        addLog(
+          `Failed to launch: ${error instanceof Error ? error.message : String(error)}`,
+          "SYSTEM",
+          "error",
+        );
       }
     } else {
-      addLog(`⚠️ No configured path for "${targetApp}", falling back to search...`, "SYSTEM", "warning");
+      addLog(
+        `⚠️ No configured path for "${targetApp}", falling back to search...`,
+        "SYSTEM",
+        "warning",
+      );
     }
   }
 
@@ -95,7 +108,7 @@ export const handleSearchAndLaunchApp = async (
 
     if (backendResults.length > 0) {
       const bestMatch = backendResults[0];
-      foundPath = bestMatch.path;
+      foundPath = bestMatch.path as string;
       addLog(`Found: "${bestMatch.name}" at ${foundPath}`, "OMNI", "success");
       cacheAppPath(targetApp, foundPath);
     } else {
@@ -146,7 +159,7 @@ export const handleSearchAndLaunchApp = async (
     const launched = await launchAppOnBackend(foundPath, launchArgs);
 
     if (launched) {
-      const message = url 
+      const message = url
         ? `${targetApp} lancé avec ${url}`
         : "Application launched successfully";
       addLog(message, "SYSTEM", "success");
@@ -161,7 +174,7 @@ export const handleSearchAndLaunchApp = async (
       return { status: "error", message: "Failed to launch" };
     }
   }
-  
+
   return { status: "error", message: "No path found" };
 };
 
@@ -180,7 +193,7 @@ export const handleManageWindow = async (
 
   try {
     let success = false;
-    
+
     switch (action) {
       case "focus":
         success = await focusWindow(windowTitle);
@@ -206,7 +219,11 @@ export const handleManageWindow = async (
       setStatus(SystemStatus.IDLE);
       return { status: "success", message: `Window ${action} completed` };
     } else {
-      addLog(`Window ${action} failed (window not found?)`, "SYSTEM", "warning");
+      addLog(
+        `Window ${action} failed (window not found?)`,
+        "SYSTEM",
+        "warning",
+      );
       setStatus(SystemStatus.ERROR);
       setTimeout(() => setStatus(SystemStatus.IDLE), 2000);
       return { status: "error", message: `Window "${windowTitle}" not found` };

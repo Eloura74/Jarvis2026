@@ -26,6 +26,7 @@ export const CommandsTab: React.FC = () => {
   };
 
   useEffect(() => {
+    // eslint-disable-next-line
     loadCommands();
   }, []);
 

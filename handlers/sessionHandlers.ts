@@ -9,7 +9,10 @@ import { controlPowerOnBackend } from "../services/backendApi";
 /**
  * Verrouiller la session Windows
  */
-export const handleLockSession = async (_args: {}, ctx: HandlerContext) => {
+export const handleLockSession = async (
+  _args: Record<string, unknown>,
+  ctx: HandlerContext,
+) => {
   const { addLog, setStatus } = ctx;
 
   setStatus(SystemStatus.EXECUTING);
@@ -77,7 +80,10 @@ export const handleRestartSystem = async (
 /**
  * Mettre en veille
  */
-export const handleSleepSystem = async (_args: {}, ctx: HandlerContext) => {
+export const handleSleepSystem = async (
+  _args: Record<string, unknown>,
+  ctx: HandlerContext,
+) => {
   const { addLog, setStatus } = ctx;
 
   setStatus(SystemStatus.EXECUTING);

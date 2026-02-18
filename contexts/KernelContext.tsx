@@ -1,74 +1,15 @@
-import React, {
-  createContext,
-  useContext,
-  useState,
-  useCallback,
-  ReactNode,
-} from "react";
-import { LogEntry, SystemStatus, AppMemory } from "../types";
+import React, { useState, useCallback, ReactNode } from "react";
+import { LogEntry } from "../types";
 import { useSystemStatus } from "../hooks/useSystemStatus";
 import { useAppMemory } from "../hooks/useAppMemory";
-import { useAppPaths, AppPath } from "../hooks/useAppPaths";
-import {
-  useConversationMemory,
-  ChatMessage,
-} from "../hooks/useConversationMemory";
+import { useAppPaths } from "../hooks/useAppPaths";
+import { useConversationMemory } from "../hooks/useConversationMemory";
 import { INITIAL_LOGS } from "../constants";
-
-// ========================================
-// TYPES
-// ========================================
-
-export interface VoiceSettings {
-  voiceURI: string | null;
-  pitch: number;
-  rate: number;
-  volume: number;
-}
-
-interface KernelContextType {
-  // État Système
-  status: SystemStatus;
-  setStatus: (status: SystemStatus) => void;
-
-  // Logs
-  logs: LogEntry[];
-  addLog: (
-    message: string,
-    source?: LogEntry["source"],
-    type?: LogEntry["type"],
-  ) => void;
-  clearLogs: () => void;
-
-  // Mémoire Applicative
-  appMemory: AppMemory[];
-  updateMemory: (appName: string, path: string) => void;
-  findApp: (appName: string) => AppPath | null;
-
-  // Mémoire Conversationnelle
-  conversationHistory: ChatMessage[];
-  addConversationMessage: (role: "user" | "model", text: string) => void;
-  clearConversationHistory: () => void;
-  getConversationContext: () => string;
-
-  // Mode Visuel (Images)
-  visualMode: { query: string | null; isVisible: boolean };
-  setVisualMode: (query: string | null, isVisible: boolean) => void;
-
-  // Paramètres Voix
-  voiceSettings: VoiceSettings;
-  setVoiceSettings: (settings: VoiceSettings) => void;
-
-  // Wake Word (NOUVEAU)
-  wakeWordEnabled: boolean;
-  setWakeWordEnabled: (enabled: boolean) => void;
-}
-
-// ========================================
-// CONTEXT
-// ========================================
-
-const KernelContext = createContext<KernelContextType | undefined>(undefined);
+import {
+  KernelContext,
+  KernelContextType,
+  VoiceSettings,
+} from "./KernelContextDefinition";
 
 // ========================================
 // PROVIDER
@@ -93,7 +34,7 @@ export const KernelProvider: React.FC<KernelProviderProps> = ({ children }) => {
         timestamp: new Date().toISOString(),
         message,
         source,
-        type: type as any,
+        type,
       };
       setLogs((prev) => [newLog, ...prev].slice(0, 100));
     },
@@ -188,16 +129,4 @@ export const KernelProvider: React.FC<KernelProviderProps> = ({ children }) => {
   return (
     <KernelContext.Provider value={value}>{children}</KernelContext.Provider>
   );
-};
-
-// ========================================
-// HOOK DE CONSOMMATION
-// ========================================
-
-export const useKernel = () => {
-  const context = useContext(KernelContext);
-  if (context === undefined) {
-    throw new Error("useKernel must be used within a KernelProvider");
-  }
-  return context;
 };

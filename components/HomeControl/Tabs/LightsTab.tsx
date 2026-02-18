@@ -6,7 +6,7 @@ import { SceneButton } from "../SceneButton";
 import { HA_ENTITIES } from "../../../services/homeAssistantService";
 
 interface LightsTabProps {
-  states: Record<string, any>;
+  states: Record<string, unknown>;
   onToggle: (entityId: string) => void;
   onRunScene: (sceneName: string) => void;
 }
@@ -52,7 +52,7 @@ export const LightsTab: React.FC<LightsTabProps> = ({
         <Header title="LIGHTS CONTROL" />
         <div className="flex flex-col gap-2">
           {HA_ENTITIES.LIGHTS.map((light) => {
-            const state = states[light.id]?.state;
+            const state = (states[light.id] as { state?: string })?.state;
             const isOn = state === "on";
             return (
               <div

@@ -12,8 +12,9 @@ import { AnimatePresence } from "framer-motion";
 import { checkBackendStatus } from "./services/backendApi";
 
 // Context
-import { KernelProvider, useKernel } from "./contexts/KernelContext";
-import { MemoryProvider } from "./contexts/MemoryContext"; // NOUVEAU
+import { KernelProvider } from "./contexts/KernelContext";
+import { MemoryProvider } from "./contexts/MemoryContext";
+import { useKernel } from "./hooks/useKernel";
 
 // Composants UI
 import { PremiumLayout } from "./components/PremiumLayout";
@@ -153,7 +154,9 @@ const JarvisShell: React.FC<JarvisShellProps> = ({ shouldGreet }) => {
   // CERVEAU & INTERACTION
   // ========================================
 
-  const brainRef = useRef<any>(null);
+  const brainRef = useRef<{
+    processCommand: (cmd: string) => Promise<void>;
+  } | null>(null);
 
   // Interaction (Voix/Micro)
   const interaction = useJarvisInteraction({
@@ -286,7 +289,9 @@ const JarvisShell: React.FC<JarvisShellProps> = ({ shouldGreet }) => {
         logs={logs.map((log) => ({
           source: log.source,
           message: log.message,
-          type: log.type as any,
+          type: (["alert", "quantum"].includes(log.type)
+            ? "info"
+            : log.type) as "info" | "success" | "warning" | "error",
         }))}
         isProcessing={status === SystemStatus.PROCESSING}
         processingMessage={activeOverlay || "🤖 JARVIS analyse..."}
@@ -343,7 +348,12 @@ const JarvisShell: React.FC<JarvisShellProps> = ({ shouldGreet }) => {
       <Toaster {...toasterConfig} />
 
       {/* HUD Holographique pour les suggestions magiques */}
-      <HolographicHUD notifications={brain.hudNotifications} />
+      <HolographicHUD
+        notifications={brain.hudNotifications.map((n) => ({
+          ...n,
+          type: n.type as "info" | "warning" | "alert" | "quantum",
+        }))}
+      />
 
       {/* 🆕 MENU ORBITAL MK-85 (Nouveau Système de Navigation) */}
       <OrbitalMenu

@@ -29,7 +29,6 @@ export const JarvisCinematicBackground: React.FC = () => {
 
     // Plus de particules bokeh
 
-    let gridOffset = 0;
     let animationId: number;
 
     const draw = () => {
@@ -53,9 +52,6 @@ export const JarvisCinematicBackground: React.FC = () => {
       ctx.fillStyle = gradient;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       */
-
-      // Incrément grille
-      gridOffset += 0.3;
 
       animationId = requestAnimationFrame(draw);
     };

@@ -7,8 +7,9 @@ import TrafficPopup from "../../components/TrafficPopup";
 import HolographicHUD from "../../components/HolographicHUD";
 import { HolographicModal } from "../../components/ui/HolographicModal";
 import { toasterConfig } from "../../utils/toasterConfig";
-import { StatusOverlayData } from "../../types/app.types";
+import { TechNotification, StatusOverlayData } from "../../types/app.types";
 
+// Force Refresh
 type VisualModeLike = { query: string | null; isVisible: boolean };
 
 export default function ShellOverlays({
@@ -19,12 +20,12 @@ export default function ShellOverlays({
   hudNotifications,
 }: {
   visualMode: VisualModeLike;
-  setVisualMode: (query: any, isVisible: boolean) => void;
+  setVisualMode: (query: string | null, isVisible: boolean) => void;
   statusOverlay: StatusOverlayData | null;
   setStatusOverlay: React.Dispatch<
     React.SetStateAction<StatusOverlayData | null>
   >;
-  hudNotifications: any[];
+  hudNotifications: TechNotification[];
 }) {
   return (
     <>
@@ -62,7 +63,7 @@ export default function ShellOverlays({
               type: "custom",
               stats: [{ label: "TEST_MODE", value: "ACTIVE", progress: 100 }],
               lastUpdate: new Date().toLocaleTimeString(),
-            } as any);
+            } as StatusOverlayData);
           }}
           className="bg-cyan-500/20 text-cyan-500 text-[10px] px-2 py-1 rounded border border-cyan-500/50"
         >

@@ -24,14 +24,19 @@ export const VoiceWave: React.FC<VoiceWaveProps> = ({
   isActive = true,
 }) => {
   // Générer des valeurs aléatoires stables pour chaque barre
-  // On utilise useMemo pour ne pas régénérer à chaque render sauf si barCount change
-  const bars = useMemo(() => {
-    return Array.from({ length: barCount }).map((_, i) => ({
-      duration: 0.8 + Math.random() * 0.8, // Entre 0.8s et 1.6s
-      delay: Math.random() * -1, // Délai négatif pour commencer désynchronisé
-      maxH: 20 + Math.random() * (maxHeight - 20), // Hauteur entre 20 et maxHeight
-    }));
-  }, [barCount, maxHeight]);
+  const bars = useMemo(
+    () =>
+      Array.from({ length: barCount }).map((_, i) => {
+        // Pseudo-random deterministic based on index to satisfy pure render requirements
+        const seed = i * 1337 + barCount;
+        return {
+          duration: 0.8 + Math.abs(Math.sin(seed)) * 0.8, // 0.8s - 1.6s
+          delay: Math.abs(Math.cos(seed)) * -1,
+          maxH: 20 + Math.abs(Math.sin(seed * 2)) * (maxHeight - 20), // 20 - maxHeight
+        };
+      }),
+    [barCount, maxHeight],
+  );
 
   return (
     <div

@@ -5,7 +5,7 @@ import { Header } from "../Header";
 import { HA_ENTITIES } from "../../../services/homeAssistantService";
 
 interface SensorsTabProps {
-  states: Record<string, any>;
+  states: Record<string, unknown>;
 }
 
 export const SensorsTab: React.FC<SensorsTabProps> = ({ states }) => {
@@ -20,7 +20,7 @@ export const SensorsTab: React.FC<SensorsTabProps> = ({ states }) => {
       <Header title="ENV. SENSORS" />
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-2">
         {HA_ENTITIES.SENSORS.map((sensor) => {
-          const rawVal = states[sensor.id]?.state;
+          const rawVal = (states[sensor.id] as { state?: string })?.state;
           const isAvailable =
             rawVal && rawVal !== "unavailable" && rawVal !== "unknown";
           const val = isAvailable ? rawVal : "N/A";

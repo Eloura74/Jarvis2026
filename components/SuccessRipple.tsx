@@ -16,6 +16,7 @@ export const SuccessRipple: React.FC<SuccessRippleProps> = ({ trigger }) => {
   useEffect(() => {
     if (trigger === 0) return;
 
+    // eslint-disable-next-line
     setIsVisible(true);
 
     const timer = setTimeout(() => {

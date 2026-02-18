@@ -233,7 +233,7 @@ async function fetchRoute(
     let data;
     try {
       data = JSON.parse(textResponse);
-    } catch (e) {
+    } catch {
       throw new Error(
         `Réponse Backend invalide (pas du JSON): ${textResponse.substring(0, 50)}...`,
       );

@@ -13,7 +13,7 @@ import { useVoiceRecognition } from "./useVoiceRecognition";
 import { useVoiceSynthesis } from "./useVoiceSynthesis";
 import { useWakeWord } from "./useWakeWord";
 import { SystemStatus, LogEntry } from "../types";
-import { useKernel } from "../contexts/KernelContext";
+import { useKernel } from "../hooks/useKernel";
 
 interface UseJarvisInteractionProps {
   status: SystemStatus;

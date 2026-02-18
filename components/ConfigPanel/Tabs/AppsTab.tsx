@@ -25,7 +25,7 @@ export const AppsTab: React.FC = () => {
   const [apps, setApps] = useState<Record<string, AppData>>({});
   const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [searchQuery, setSearchQuery] = useState("");
-  const [_editingApp, setEditingApp] = useState<string | null>(null);
+  const [, setEditingApp] = useState<string | null>(null);
 
   // Form state
   const [formName, setFormName] = useState("");
@@ -34,10 +34,6 @@ export const AppsTab: React.FC = () => {
   const [formDescription, setFormDescription] = useState("");
   const [formKeywords, setFormKeywords] = useState("");
   const [formAliases, setFormAliases] = useState("");
-
-  useEffect(() => {
-    loadApps();
-  }, []);
 
   const loadApps = async () => {
     try {
@@ -48,6 +44,11 @@ export const AppsTab: React.FC = () => {
       console.error("Erreur chargement apps:", error);
     }
   };
+
+  useEffect(() => {
+    // eslint-disable-next-line
+    loadApps();
+  }, []);
 
   const saveApp = async () => {
     const appData: AppData = {

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useKernel } from "../contexts/KernelContext";
+import { useKernel } from "../hooks/useKernel";
 
 import { PremiumLayout } from "../components/PremiumLayout";
 import { SystemStatus } from "../types";
@@ -15,8 +15,8 @@ import { useGeminiBootstrap } from "../hooks/useGeminiBootstrap";
 import { useGreeting } from "../hooks/useGreeting";
 import { useShellShortcuts } from "../hooks/useShellShortcuts";
 
-import ShellOverlays from "./overlays/ShellOverlays.tsx";
-import ShellPanels from "./overlays/ShellPanels.tsx";
+import ShellOverlays from "./overlays/ShellOverlays";
+import ShellPanels from "./overlays/ShellPanels";
 
 export interface JarvisShellProps {
   shouldGreet?: boolean;
@@ -64,7 +64,9 @@ export default function JarvisShell({ shouldGreet }: JarvisShellProps) {
   // Vérif backend isolée (log + console)
   useBackendBootstrap({ addLog });
 
-  const brainRef = useRef<any>(null);
+  const brainRef = useRef<{
+    processCommand: (cmd: string) => Promise<void>;
+  } | null>(null);
 
   const interaction = useJarvisInteraction({
     status,
@@ -98,7 +100,9 @@ export default function JarvisShell({ shouldGreet }: JarvisShellProps) {
     },
   });
 
-  brainRef.current = brain;
+  useEffect(() => {
+    brainRef.current = brain;
+  }, [brain]);
 
   useAutonomy({
     enabled: status === SystemStatus.IDLE,
@@ -141,7 +145,7 @@ export default function JarvisShell({ shouldGreet }: JarvisShellProps) {
         logs={logs.map((log) => ({
           source: log.source,
           message: log.message,
-          type: log.type as any,
+          type: log.type,
         }))}
         isProcessing={status === SystemStatus.PROCESSING}
         processingMessage={activeOverlay || "🤖 JARVIS analyse..."}

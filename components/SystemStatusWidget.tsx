@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { AreaChart, Area, ResponsiveContainer, YAxis } from "recharts";
 import { Mic, MicOff } from "lucide-react";
-import { useKernel } from "../contexts/KernelContext";
+import { useKernel } from "../hooks/useKernel";
 
 interface SystemStatusWidgetProps {
   cpuUsage: number;
@@ -34,7 +34,12 @@ export const SystemStatusWidget: React.FC<SystemStatusWidgetProps> = ({
   const { wakeWordEnabled, setWakeWordEnabled } = useKernel();
 
   // Historique des données pour les graphiques
-  const [cpuData, setCpuData] = useState<ChartData[]>([]);
+  const [cpuData, setCpuData] = useState<ChartData[]>(() =>
+    Array.from({ length: 20 }, (_, i) => ({
+      time: i,
+      value: 20 + Math.random() * 10,
+    })),
+  );
   // Simulation GPU si pas de données réelles (pour l'instant on simule)
   const [gpuUsage, setGpuUsage] = useState(0);
 
@@ -49,28 +54,27 @@ export const SystemStatusWidget: React.FC<SystemStatusWidgetProps> = ({
     return isNaN(val) ? 40 : val < 100 ? val : 40;
   };
 
-  useEffect(() => {
-    // Initialisation
-    const initialData = Array.from({ length: 20 }, (_, i) => ({
-      time: i,
-      value: 20 + Math.random() * 10,
-    }));
-    setCpuData(initialData);
-  }, []);
+  // Ref pour accéder à la valeur actuelle dans l'intervalle sans le redémarrer
+  const cpuUsageRef = React.useRef(cpuUsage);
 
-  // Update Data - On ralentit la fréquence visuelle ou on lisse
   useEffect(() => {
+    cpuUsageRef.current = cpuUsage;
+  }, [cpuUsage]);
+
+  useEffect(() => {
+    // Initialisation gérée par useState lazy
+
     const interval = setInterval(() => {
       setCpuData((prev) => {
         const now = Date.now();
         // Lissage : on ne prend pas la valeur brute CPU instantanée qui peut faire le yoyo
         // On lisse avec la valeur précédente
         const lastVal = prev[prev.length - 1]?.value || 0;
-        const smoothVal = lastVal * 0.7 + cpuUsage * 0.3;
+        const currentCpu = cpuUsageRef.current;
+        const smoothVal = lastVal * 0.7 + currentCpu * 0.3;
 
         const newData = [...prev, { time: now, value: smoothVal }];
-        return newData.slice(-30); // Plus de points pour un défilement plus lent visuellement ? Non, c'est l'inverse sur Recharts fixe
-        // Pour ralentir, on update moins souvent ou on affiche plus d'historique
+        return newData.slice(-30);
       });
 
       // Simulation variation GPU
@@ -78,10 +82,10 @@ export const SystemStatusWidget: React.FC<SystemStatusWidgetProps> = ({
         const target = Math.random() * 60 + 20; // Entre 20 et 80
         return prev * 0.9 + target * 0.1;
       });
-    }, 200); // 200ms au lieu de dépendre du prop change direct qui peut être très rapide
+    }, 200);
 
     return () => clearInterval(interval);
-  }, [cpuUsage]);
+  }, []); // Plus de dépendance à cpuUsage pour éviter le reset de l'intervalle
 
   return (
     <motion.div

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState } from "react";
 import {
   GoogleMap,
   DirectionsRenderer,
@@ -7,8 +7,10 @@ import {
 import { QRCodeCanvas } from "qrcode.react";
 import { Car, MapPin, Smartphone, AlertTriangle } from "lucide-react";
 
+import { StatusOverlayData } from "../types/app.types";
+
 interface TrafficPopupProps {
-  routeData: any; // StatusOverlayData enrichment
+  routeData: StatusOverlayData; // StatusOverlayData enrichment
 }
 
 const mapContainerStyle = {
@@ -44,43 +46,49 @@ const TrafficPopup: React.FC<TrafficPopupProps> = ({ routeData }) => {
     const calculateRoute = () => {
       const directionsService = new window.google.maps.DirectionsService();
 
-      console.log("📍 TrafficPopup: Calculating route...", {
-        origin: routeData.origin,
-        destination: routeData.destination,
-      });
+      // Reset directions and error when routeData changes or API loads/unloads
+      setDirections(null);
+      setError(null);
 
-      directionsService.route(
-        {
+      if (isLoaded && routeData?.origin && routeData?.destination) {
+        console.log("📍 TrafficPopup: Preparing to calculate route...", {
           origin: routeData.origin,
           destination: routeData.destination,
-          travelMode: window.google.maps.TravelMode.DRIVING,
-          drivingOptions: {
-            departureTime: new Date(), // Pour le trafic temps réel
-            trafficModel: window.google.maps.TrafficModel.BEST_GUESS,
+        });
+
+        directionsService.route(
+          {
+            origin: routeData.origin,
+            destination: routeData.destination,
+            travelMode: window.google.maps.TravelMode.DRIVING,
+            drivingOptions: {
+              departureTime: new Date(), // Pour le trafic temps réel
+              trafficModel: window.google.maps.TrafficModel.BEST_GUESS,
+            },
           },
-        },
-        (result, status) => {
-          if (status === window.google.maps.DirectionsStatus.OK) {
-            console.log("📍 TrafficPopup: Route OK", result);
-            setDirections(result);
-            setError(null);
-          } else {
-            console.error(
-              `📍 TrafficPopup: Error fetching directions ${status}`,
-              result,
-            );
-            if (status === window.google.maps.DirectionsStatus.ZERO_RESULTS) {
-              setError("Adresse non localisable sur la carte.");
-            } else if (
-              status === window.google.maps.DirectionsStatus.NOT_FOUND
-            ) {
-              setError("Adresse introuvable.");
+          (result, status) => {
+            if (status === window.google.maps.DirectionsStatus.OK) {
+              console.log("📍 TrafficPopup: Route OK", result);
+              setDirections(result);
+              setError(null);
             } else {
-              setError(`Erreur carte: ${status}`);
+              console.error(
+                `📍 TrafficPopup: Error fetching directions ${status}`,
+                result,
+              );
+              if (status === window.google.maps.DirectionsStatus.ZERO_RESULTS) {
+                setError("Adresse non localisable sur la carte.");
+              } else if (
+                status === window.google.maps.DirectionsStatus.NOT_FOUND
+              ) {
+                setError("Adresse introuvable.");
+              } else {
+                setError(`Erreur carte: ${status}`);
+              }
             }
-          }
-        },
-      );
+          },
+        );
+      }
     };
 
     // Petit délai pour s'assurer que le container de la map est prêt ou que Google a fini de s'init

@@ -77,7 +77,7 @@ function saveMemoryToStorage(memory: AppMemory[]): void {
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(cleaned));
         console.log("✅ Mémoire nettoyée et sauvegardée");
-      } catch (retryError) {
+      } catch {
         console.error("❌ Impossible de sauvegarder même après nettoyage");
       }
     }

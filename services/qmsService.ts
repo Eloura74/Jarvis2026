@@ -8,7 +8,7 @@ export interface QMSScanResult {
   reason?: string;
   suggestedAction?: {
     tool: string;
-    args: any;
+    args: Record<string, unknown>;
     explanation: string;
   };
 }
@@ -33,8 +33,8 @@ export async function scanForQuantumLinks(
         reason: analysis.explanation,
         suggestedAction: {
           tool: analysis.tool,
-          args: analysis.args,
-          explanation: analysis.explanation,
+          args: analysis.args || {},
+          explanation: analysis.explanation || "Action suggérée",
         },
       };
     }

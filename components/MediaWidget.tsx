@@ -1,19 +1,12 @@
 // fichier pour les widgets de l'interface
 import React, { useState, useEffect } from "react";
-import {
-  Play,
-  SkipForward,
-  SkipBack,
-  Disc,
-  Music,
-  Podcast,
-} from "lucide-react";
+import { Play, SkipForward, SkipBack, Disc, Music } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 export const MediaWidget: React.FC = () => {
   // Mode Simulation : si vrai, simule une activité média
   // (A terme, connecter au vrai état système)
-  const [isPlaying, setIsPlaying] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(true);
 
   // Simulation content
   const [simulatedTrack, setSimulatedTrack] = useState({
@@ -26,9 +19,6 @@ export const MediaWidget: React.FC = () => {
   // Effet pour simuler une détection (ou le vide)
   // Ici on force le playing pour "simuler si rien ouvert" comme demandé
   useEffect(() => {
-    // En prod, check API. Ici on simule un toggle ou permanent
-    setIsPlaying(true);
-
     // Playlist simulée qui change
     const tracks = [
       {
@@ -58,6 +48,12 @@ export const MediaWidget: React.FC = () => {
 
     return () => clearInterval(interval);
   }, []);
+
+  // Génération stable des barres du spectre
+  // Génération stable des barres du spectre
+  const [spectrumBars] = React.useState(() =>
+    Array.from({ length: 30 }).map(() => Math.random() * 100),
+  );
 
   return (
     <div className="w-full relative overflow-hidden rounded-xl border border-cyan-400/30 bg-black/20 backdrop-blur-xl p-4 group hover:border-cyan-400/50 transition-colors shadow-[0_0_15px_rgba(0,229,255,0.1)]">
@@ -149,12 +145,12 @@ export const MediaWidget: React.FC = () => {
       {/* Spectrum Visualizer (Fake or Real) */}
       <div className="flex items-end justify-center gap-[2px] h-3 mt-3 opacity-50">
         {isPlaying &&
-          [...Array(30)].map((_, i) => (
+          spectrumBars.map((height, i) => (
             <div
               key={i}
               className="w-1 bg-cyan-500 rounded-t-sm"
               style={{
-                height: `${Math.random() * 100}%`,
+                height: `${height}%`,
                 animation: `pulse 0.${3 + (i % 5)}s infinite alternate`,
               }}
             />

@@ -1,5 +1,4 @@
-import React from "react";
-import { Zap, Activity, Info, Settings } from "lucide-react";
+import { Zap, Info, Settings } from "lucide-react";
 
 interface EnergyWidgetProps {
   currentPower: number; // En Watts

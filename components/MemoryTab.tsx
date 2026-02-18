@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useMemory } from "../contexts/MemoryContext";
+import { useMemory } from "../hooks/useMemory";
 import {
   FolderSearch,
   HardDrive,
@@ -11,8 +11,7 @@ import {
 import { motion } from "framer-motion";
 
 export const MemoryTab: React.FC = () => {
-  const { status, scanDirectory, searchResults, searchMemory, clearResults } =
-    useMemory();
+  const { status, scanDirectory, searchResults, searchMemory } = useMemory();
   const [pathInput, setPathInput] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
 

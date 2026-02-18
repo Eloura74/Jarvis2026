@@ -128,6 +128,14 @@ const CALM_WORDS = [
 // ANALYSE DE SENTIMENT
 // ============================================================================
 
+// Helper temporaire pour compatibilité
+export const analyzeSentiment = (
+  text: string,
+  commandFrequency?: number,
+): UserMood => {
+  return analyzeUserMood(text, commandFrequency);
+};
+
 /**
  * Analyse le sentiment d'un texte utilisateur
  *
@@ -135,7 +143,7 @@ const CALM_WORDS = [
  * @param commandFrequency - Nb de commandes dans les 2 dernières minutes (optionnel)
  * @returns Mood détecté
  */
-export function analyzeSentiment(
+export function analyzeUserMood(
   text: string,
   commandFrequency?: number,
 ): UserMood {
@@ -171,7 +179,6 @@ export function analyzeSentiment(
 
   // Analyser la ponctuation
   const exclamationCount = (text.match(/!/g) || []).length;
-  const questionCount = (text.match(/\?/g) || []).length;
   const capsRatio = (text.match(/[A-Z]/g) || []).length / text.length;
 
   // Calculer valence (-1 à +1)

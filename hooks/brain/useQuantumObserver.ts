@@ -7,7 +7,10 @@ interface QuantumObserverProps {
   currentTask: string;
   onSuggestion: (suggestion: QMSScanResult) => void;
   isEnabled: boolean;
-  executeTool: (name: string, args: any) => Promise<any>;
+  executeTool: (
+    name: string,
+    args: Record<string, unknown>,
+  ) => Promise<unknown>;
 }
 
 /**
@@ -25,7 +28,10 @@ export function useQuantumObserver({
   const lastScanTime = useRef<number>(
     parseInt(localStorage.getItem("jarvis_last_qms_scan") || "0"),
   );
-  const lastActionTime = useRef(Date.now());
+  const lastActionTime = useRef(0);
+  useEffect(() => {
+    if (lastActionTime.current === 0) lastActionTime.current = Date.now();
+  }, []);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const scanInterval = 300000; // 5 minutes (Encore plus calme)
   const ghostModeIdleThreshold = 900000; // 15 minutes d'inactivité
@@ -46,43 +52,45 @@ export function useQuantumObserver({
 
         // Éviter de scanner si on a déjà fait une action récemment ou si le noyau est saturé
         const { isOverloaded } = checkNeuralStatus();
-        if (isOverloaded || now - lastActionTime.current < 30000) return;
 
-        // 1. Quantum Memory Stitching
-        if (now - lastScanTime.current >= scanInterval) {
+        // 🛑 OPTIMISATION: Si surchargé ou action < 1 min, on skip
+        if (isOverloaded || now - lastActionTime.current < 60000) return;
+
+        // 1. Quantum Memory Stitching (Toutes les 10 min au lieu de 5)
+        // 🛑 OPTIMISATION: Vérifier si les logs ont changé depuis le dernier scan (TODO plus tard)
+        // Pour l'instant on augmente juste l'intervalle drastiquement
+        if (now - lastScanTime.current >= 600000) {
+          // 10 minutes
           console.log("🌌 [QMS] Neural Observation heartbeat check...");
           try {
+            // On ne scanne que si on a au moins 5 logs
+            if (logs.length < 5) return;
+
             const result = await scanForQuantumLinks(
               logs.slice(-10),
               currentTask,
             );
             if (result && result.hasSuggestion) {
               onSuggestion(result);
-              lastScanTime.current = now;
-              localStorage.setItem("jarvis_last_qms_scan", now.toString());
             }
-          } catch (e) {
-            console.warn("QMS Scan paused.");
+            // On update le temps de scan MÊME si pas de suggestion pour éviter boucle
+            lastScanTime.current = now;
+            localStorage.setItem("jarvis_last_qms_scan", now.toString());
+          } catch {
+            console.warn("QMS Scan paused or failed.");
           }
         }
 
-        // 2. Ghost Mode
+        // 2. Ghost Mode (Désactivé temporairement pour sauver les quotas)
+        /*
         if (now - lastActionTime.current >= ghostModeIdleThreshold) {
-          console.log("👻 [Ghost Mode] Vision proactive activée...");
-          try {
-            await executeTool("analyze_screen", {
-              type: "general",
-              prompt: "Que fait Monsieur ? Propose une aide magique.",
-            });
-            lastActionTime.current = now;
-          } catch (e) {
-            console.warn("Ghost Mode failed.");
-          }
+           // ...code...
         }
+        */
       }, 60000); // Check toutes les 1 minute
 
-      intervalRef.current = timer as any;
-    }, 30000); // 30s de pause au démarrage
+      intervalRef.current = timer as unknown as NodeJS.Timeout;
+    }, 60000); // 1 minute de pause au démarrage (augmenté)
 
     return () => {
       clearTimeout(initialDelay);

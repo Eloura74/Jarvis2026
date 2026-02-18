@@ -10,7 +10,6 @@
  * Design inspiré d'Iron Man / JARVIS avec effets holographiques
  */
 
-import React from "react";
 import "./CommandFeedback.css";
 
 /** États possibles d'une commande */

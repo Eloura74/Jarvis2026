@@ -5,13 +5,7 @@ import {
   resetNeuralShield,
 } from "../services/geminiService";
 import { RotateCcw } from "lucide-react";
-
-export interface TechNotification {
-  id: string;
-  title: string;
-  message: string;
-  type: "info" | "warning" | "alert" | "quantum";
-}
+import { TechNotification } from "../types/app.types";
 
 interface HolographicHUDProps {
   notifications: TechNotification[];

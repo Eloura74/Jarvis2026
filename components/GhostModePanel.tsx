@@ -1,6 +1,6 @@
 import { useRef, useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Eye, Loader2, AlertCircle, Camera, ScanLine } from "lucide-react";
+import { Loader2, AlertCircle, Camera, ScanLine } from "lucide-react";
 import { useGhostMode } from "../hooks/useGhostMode";
 
 /**
@@ -11,7 +11,7 @@ export default function GhostModePanel() {
   const { analyze, isAnalyzing, lastAnalysis, error } = useGhostMode();
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [stream, setStream] = useState<MediaStream | null>(null);
+  const [, setStream] = useState<MediaStream | null>(null);
   const [cameraError, setCameraError] = useState<string | null>(null);
 
   // Initialisation Caméra
@@ -30,7 +30,7 @@ export default function GhostModePanel() {
           // Et surtout pour éviter que le navigateur focus le composant vidéo
           videoRef.current.muted = true;
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error("Camera Error:", err);
         setCameraError(
           "Impossible d'accéder à la caméra. Vérifiez les permissions.",

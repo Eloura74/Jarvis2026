@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Activity } from "lucide-react";
 import { DraggablePanel } from "./ui/DraggablePanel";
 import { useKlipperMoonraker } from "../hooks/useKlipperMoonraker";
-import { StatusOverlayData, StatusStat } from "../types/app.types";
+import { StatusOverlayData } from "../types/app.types";
 
 // Composants extraits
 import { THEME } from "./HolographicOverlay/theme";
@@ -25,6 +25,11 @@ export const HolographicStatusOverlay: React.FC<
   HolographicStatusOverlayProps
 > = ({ data, isVisible, onClose }) => {
   const [mounted, setMounted] = React.useState(false);
+
+  // ID de chiffrement stable pour l'affichage
+  const [encId] = React.useState(() =>
+    Math.random().toString(36).substring(7).toUpperCase(),
+  );
 
   // Connection Temps Réel (si IP disponible)
   const klipper = useKlipperMoonraker(
@@ -199,7 +204,7 @@ export const HolographicStatusOverlay: React.FC<
                     gap: "16px",
                   }}
                 >
-                  {displayData.stats.map((stat: StatusStat, idx: number) => (
+                  {displayData.stats.map((stat, idx) => (
                     <StatCard
                       key={`${displayData.id}-stat-${idx}`}
                       stat={stat}
@@ -226,9 +231,7 @@ export const HolographicStatusOverlay: React.FC<
                     ID:{" "}
                     {displayData.id?.split("-")[0].toUpperCase() || "UNKNOWN"}
                   </span>
-                  <span>
-                    ENC: {Math.random().toString(36).substring(7).toUpperCase()}
-                  </span>
+                  <span>ENC: {encId}</span>
                   <span style={{ color: THEME.cyan }}>
                     SYNC: {displayData.lastUpdate}
                   </span>

@@ -1,11 +1,11 @@
 /**
  * Service Gemini TTS - Génération de voix avec Gemini
- * 
+ *
  * Utilise Gemini 2.5 Flash TTS pour générer de l'audio de haute qualité.
  * GRATUIT avec limites (15 req/min typiquement).
- * 
+ *
  * Bien meilleur que la synthèse vocale du navigateur (speechSynthesis).
- * 
+ *
  * @module geminiTTS
  */
 
@@ -50,11 +50,13 @@ export interface TTSResult {
 
 /**
  * Génère de l'audio à partir de texte avec Gemini TTS
- * 
+ *
  * @param options - Options de génération
  * @returns Promise avec l'audio en base64
  */
-export const generateSpeech = async (options: TTSOptions): Promise<TTSResult> => {
+export const generateSpeech = async (
+  options: TTSOptions,
+): Promise<TTSResult> => {
   try {
     const { text } = options;
 
@@ -79,15 +81,24 @@ export const generateSpeech = async (options: TTSOptions): Promise<TTSResult> =>
       throw new Error("Aucune réponse TTS de Gemini");
     }
 
+    interface GeminiPart {
+      text?: string;
+      audio?: {
+        data: string;
+        mimeType?: string;
+      };
+    }
+
     // L'audio devrait être dans les parts
-    const audioPart = candidate.content?.parts?.find((p: any) => p.audio);
-    
-    if (!audioPart || !(audioPart as any).audio) {
+    const parts = candidate.content?.parts as unknown as GeminiPart[];
+    const audioPart = parts?.find((p) => p.audio);
+
+    if (!audioPart || !audioPart.audio) {
       throw new Error("Pas d'audio généré par Gemini TTS");
     }
 
-    const audioData = (audioPart as any).audio.data;
-    const format = (audioPart as any).audio.mimeType || "audio/wav";
+    const audioData = audioPart.audio.data;
+    const format = audioPart.audio.mimeType || "audio/wav";
 
     return {
       audioData,
@@ -101,7 +112,7 @@ export const generateSpeech = async (options: TTSOptions): Promise<TTSResult> =>
 
 /**
  * Joue l'audio généré par Gemini TTS
- * 
+ *
  * @param audioData - Audio en base64
  * @param format - Format MIME (audio/wav, audio/mp3, etc.)
  */
@@ -119,7 +130,7 @@ export const playTTSAudio = (audioData: string, format: string) => {
     // Créer une URL et jouer
     const url = URL.createObjectURL(blob);
     const audio = new Audio(url);
-    
+
     audio.onended = () => {
       URL.revokeObjectURL(url);
     };
@@ -133,30 +144,30 @@ export const playTTSAudio = (audioData: string, format: string) => {
 
 /**
  * Fonction principale : Parler avec Gemini TTS
- * 
+ *
  * Wrapper simple qui génère et joue l'audio automatiquement.
- * 
+ *
  * @param text - Texte à dire
  * @param options - Options optionnelles
  */
 export const speakWithGemini = async (
   text: string,
-  options?: Partial<TTSOptions>
+  options?: Partial<TTSOptions>,
 ): Promise<void> => {
   try {
     console.log(`🔊 Génération TTS Gemini : "${text.substring(0, 50)}..."`);
-    
+
     const result = await generateSpeech({
       text,
       ...options,
     });
 
     playTTSAudio(result.audioData, result.format);
-    
+
     console.log(`✅ Audio TTS joué avec succès`);
   } catch (error) {
     console.error("❌ Erreur TTS Gemini:", error);
-    
+
     // Fallback : utiliser la synthèse du navigateur
     console.log("⚠️ Fallback vers synthèse navigateur");
     const utterance = new SpeechSynthesisUtterance(text);

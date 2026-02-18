@@ -14,30 +14,40 @@ import {
   listWorkflows,
   deleteWorkflow,
   incrementWorkflowTrigger,
-  type Workflow,
+  type DetectedPattern,
 } from "../services/workflowEngine";
+import { Workflow } from "../types";
 
 interface WorkflowHookReturn {
   /** Workflows disponibles */
   workflows: Workflow[];
   /** Patterns détectés (suggérables) */
-  suggestedPatterns: any[];
+  suggestedPatterns: DetectedPattern[];
   /** Créer workflow depuis pattern */
   acceptPattern: (patternIndex: number, name: string) => void;
   /** Exécuter un workflow */
   executeWorkflow: (
     name: string,
-    executeToolFn: (tool: string, args: any) => Promise<any>,
+    executeToolFn: (
+      tool: string,
+      args: Record<string, unknown>,
+    ) => Promise<unknown>,
   ) => Promise<void>;
   /** Supprimer workflow */
   removeWorkflow: (name: string) => void;
   /** Enregistrer commande */
-  trackCommand: (command: string, tool: string, args: any) => void;
+  trackCommand: (
+    command: string,
+    tool: string,
+    args: Record<string, unknown>,
+  ) => void;
 }
 
 export function useWorkflows(): WorkflowHookReturn {
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
-  const [suggestedPatterns, setSuggestedPatterns] = useState<any[]>([]);
+  const [suggestedPatterns, setSuggestedPatterns] = useState<DetectedPattern[]>(
+    [],
+  );
 
   // Rafraîchir workflows et suggestions
   const refresh = useCallback(() => {
@@ -46,6 +56,7 @@ export function useWorkflows(): WorkflowHookReturn {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line
     refresh();
     // Rafraîchir toutes les minutes
     const interval = setInterval(refresh, 60000);
@@ -66,7 +77,10 @@ export function useWorkflows(): WorkflowHookReturn {
   const executeWorkflow = useCallback(
     async (
       name: string,
-      executeToolFn: (tool: string, args: any) => Promise<any>,
+      _executeToolFn: (
+        tool: string,
+        args: Record<string, unknown>,
+      ) => Promise<unknown>,
     ) => {
       const workflow = getWorkflow(name);
       if (!workflow) {
@@ -103,7 +117,7 @@ export function useWorkflows(): WorkflowHookReturn {
   );
 
   const trackCommand = useCallback(
-    (command: string, tool: string, args: any) => {
+    (command: string, tool: string, args: Record<string, unknown>) => {
       recordCommand(command, tool, args);
       refresh(); // Rafraîchir pour détecter nouveaux patterns
     },

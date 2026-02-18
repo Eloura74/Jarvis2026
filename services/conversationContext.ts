@@ -28,7 +28,7 @@ export interface EntityReference {
   type: EntityType;
   id: string;
   label: string;
-  value?: any; // Données supplémentaires (path, URL, etc.)
+  value?: unknown; // Données supplémentaires (path, URL, etc.)
   mentionedAt: number;
 }
 
@@ -209,7 +209,7 @@ export function trackEntity(
   type: EntityType,
   id: string,
   label: string,
-  value?: any,
+  value?: unknown,
 ): void {
   const entity: EntityReference = {
     type,
@@ -305,7 +305,6 @@ export function formatEntitiesForPrompt(): string {
  */
 export function extractEntitiesFromMessage(message: string): EntityReference[] {
   const entities: EntityReference[] = [];
-  const lowerMessage = message.toLowerCase();
 
   // Détection URLs
   const urlRegex = /(https?:\/\/[^\s]+|[a-zA-Z0-9-]+\.(com|fr|org|net|io))/gi;

@@ -13,7 +13,7 @@ export async function handleGetWeather(
   ctx: HandlerContext,
 ) {
   const { addLog } = ctx;
-  const { city, dateTime, needsForecast } = args;
+  const { city } = args;
 
   try {
     addLog(
@@ -33,12 +33,9 @@ export async function handleGetWeather(
     // Si needsForecast est vrai, on pourrait appeler un futur service forecast.
 
     return { status: "success", data };
-  } catch (error: any) {
-    addLog(
-      `Erreur météo: ${error.message || String(error)}`,
-      "SYSTEM",
-      "error",
-    );
+  } catch (error: unknown) {
+    const err = error as Error;
+    addLog(`Erreur météo: ${err.message || String(error)}`, "SYSTEM", "error");
     throw error;
   }
 }

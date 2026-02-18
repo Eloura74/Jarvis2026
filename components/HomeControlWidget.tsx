@@ -14,7 +14,7 @@ import { ChevronRight } from "lucide-react";
 
 export const HomeControlWidget: React.FC = () => {
   const [activeTab, setActiveTab] = useState<Tab>("LIGHTS");
-  const [states, setStates] = useState<Record<string, any>>({});
+  const [states, setStates] = useState<Record<string, unknown>>({});
   const [isExpanded, setIsExpanded] = useState(false);
 
   // Polling des états HA
@@ -29,13 +29,14 @@ export const HomeControlWidget: React.FC = () => {
   }, []);
 
   const handleToggle = async (entityId: string) => {
-    const currentState = states[entityId]?.state;
+    const currentState =
+      (states[entityId] as { state?: string })?.state || "off";
     await toggleEntity(entityId, currentState);
     // Optimistic update
     setStates((prev) => ({
       ...prev,
       [entityId]: {
-        ...prev[entityId],
+        ...(prev[entityId] as object),
         state: currentState === "on" ? "off" : "on",
       },
     }));

@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { TrendingUp, X, Brain } from "lucide-react";
+import { TrendingUp, Brain } from "lucide-react";
 import {
   getLastProfile,
   analyzePsychProfile,

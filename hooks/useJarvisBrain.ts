@@ -5,7 +5,12 @@
 import React, { useState, useCallback } from "react";
 import { parseCommand } from "../services/geminiService";
 import { trackCommand } from "../services/predictionEngine";
-import { CommandInfo } from "../types/app.types";
+import {
+  CommandInfo,
+  StatusOverlayData,
+  ToolResult,
+  TechNotification,
+} from "../types/app.types";
 import { LogEntry, SystemStatus, AppMemory, OmniDecision } from "../types";
 import { AppPath } from "./useAppPaths";
 
@@ -30,7 +35,7 @@ interface UseJarvisBrainProps {
   getConversationContext?: () => string;
   setVisualMode?: (query: string | null, isVisible: boolean) => void;
   stopConversation?: () => void;
-  setStatusOverlay?: (data: any) => void;
+  setStatusOverlay?: (data: StatusOverlayData | null) => void;
 }
 
 export function useJarvisBrain(props: UseJarvisBrainProps) {
@@ -50,7 +55,9 @@ export function useJarvisBrain(props: UseJarvisBrainProps) {
 
   // Utilisation du routeur d'outils extrait
   const { executeTool } = useToolExecutor(props);
-  const [hudNotifications, setHudNotifications] = useState<any[]>([]);
+  const [hudNotifications, setHudNotifications] = useState<TechNotification[]>(
+    [],
+  );
 
   // 🌌 QUANTUM OBSERVER (Analyse proactive + Ghost Mode)
   // On ne passe que les commandes réelles de l'utilisateur (pas les prompts internes de bouclage)
@@ -72,11 +79,12 @@ export function useJarvisBrain(props: UseJarvisBrainProps) {
     onSuggestion: (result) => {
       if (result.suggestedAction) {
         // Ajouter au HUD
-        const newNotif = {
+        const newNotif: TechNotification = {
           id: `quantum-${Date.now()}`,
           title: "Neural Suggestion",
-          message: result.reason,
+          message: (result.reason as string) || "Suggestion disponible",
           type: "quantum",
+          timestamp: new Date(),
         };
         setHudNotifications((prev) => [...prev, newNotif]);
 
@@ -145,25 +153,27 @@ export function useJarvisBrain(props: UseJarvisBrainProps) {
                 toolCall.args,
               );
 
+              const tResult = toolResult as ToolResult;
+
               if (toolCall.name === "show_status_overlay") {
                 console.log(
                   "🌌 BRAIN: toolResult for show_status_overlay:",
-                  toolResult,
+                  tResult,
                 );
               }
 
               // Chainable tools (autonomous loop)
               if (
-                toolResult &&
-                (toolResult as any).status === "success" &&
+                tResult &&
+                tResult.status === "success" &&
                 isChainableTool(toolCall.name)
               ) {
-                const dataStr = JSON.stringify((toolResult as any).data || "");
+                const dataStr = JSON.stringify(tResult.data || "");
                 const toolResultMsg = `[RÉSULTAT ${toolCall.name.toUpperCase()}] : ${dataStr.substring(0, 5000)}...`;
                 if (addConversationMessage)
                   addConversationMessage("model", toolResultMsg);
 
-                if (i === result.toolCalls.length - 1) {
+                if (i === result.toolCalls!.length - 1) {
                   await new Promise((r) => setTimeout(r, 1000));
                   return processCommand(
                     "IMPORTANT : L'action est TERMINÉE. Utilisez ces données pour compléter l'objectif de Monsieur. Agissez immédiatement.",
@@ -174,21 +184,22 @@ export function useJarvisBrain(props: UseJarvisBrainProps) {
 
               // Rich tools (intelligent summary)
               if (
-                toolResult &&
-                (toolResult as any).data &&
+                tResult &&
+                tResult.data &&
                 isRichTool(toolCall.name) &&
                 !hasSpokenSummary
               ) {
                 let summary: string;
                 if (toolCall.name === "show_status_overlay") {
-                  summary = `Affichage du rapport pour ${(toolResult as any).data.title || "le dispositif"}, Monsieur.`;
+                  const data = tResult.data as { title?: string };
+                  summary = `Affichage du rapport pour ${data.title || "le dispositif"}, Monsieur.`;
                   console.log("🌌 BRAIN: Using static summary for overlay.");
                 } else {
                   const { summarizeToolResults } =
                     await import("../services/geminiService");
                   summary = await summarizeToolResults(
                     toolCall.name,
-                    (toolResult as any).data,
+                    tResult.data,
                   );
                 }
                 speak(summary, result.type === "MIXED_RESPONSE");
@@ -196,7 +207,7 @@ export function useJarvisBrain(props: UseJarvisBrainProps) {
                 if (addConversationMessage)
                   addConversationMessage("model", summary);
               }
-            } catch (err) {
+            } catch {
               /* handled in executor */
             }
           }
@@ -235,14 +246,23 @@ export function useJarvisBrain(props: UseJarvisBrainProps) {
           setStatus(SystemStatus.IDLE);
           speak("Entendu.");
         }
-      } catch (error) {
+      } catch {
         setStatus(SystemStatus.ERROR);
         addLog("Erreur traitement", "SYSTEM", "error");
         speak("Désolé, une erreur est survenue.");
         setTimeout(() => setStatus(SystemStatus.IDLE), 2000);
       }
     },
-    [props, executeTool],
+    [
+      executeTool,
+      addConversationMessage,
+      addLog,
+      appMemory,
+      getConversationContext,
+      resetInactivity,
+      setStatus,
+      speak,
+    ],
   );
 
   return {

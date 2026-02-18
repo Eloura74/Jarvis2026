@@ -1,27 +1,9 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
-
-// Types
-interface MemoryFile {
-  path: string;
-  name: string;
-  preview: string;
-}
-
-interface IndexingStatus {
-  isIndexing: boolean;
-  lastIndexedPath: string | null;
-  lastIndexedCount: number;
-}
-
-interface MemoryContextType {
-  status: IndexingStatus;
-  searchResults: MemoryFile[];
-  searchMemory: (query: string) => Promise<void>;
-  scanDirectory: (path: string) => Promise<void>;
-  clearResults: () => void;
-}
-
-const MemoryContext = createContext<MemoryContextType | undefined>(undefined);
+import React, { useState } from "react";
+import {
+  MemoryContext,
+  IndexingStatus,
+  MemoryFile,
+} from "./MemoryContextDefinition";
 
 export const MemoryProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
@@ -90,11 +72,4 @@ export const MemoryProvider: React.FC<{ children: React.ReactNode }> = ({
       {children}
     </MemoryContext.Provider>
   );
-};
-
-export const useMemory = () => {
-  const context = useContext(MemoryContext);
-  if (!context)
-    throw new Error("useMemory must be used within a MemoryProvider");
-  return context;
 };

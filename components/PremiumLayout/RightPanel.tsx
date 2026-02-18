@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { NeuralFeed } from "../NeuralFeed";
 import { FingerprintScanner } from "../FingerprintScanner";
 
@@ -129,7 +129,16 @@ export const RightPanel: React.FC<RightPanelProps> = ({
         </div>
 
         <div className="flex-1 overflow-hidden p-2 relative z-10">
-          <NeuralFeed messages={mockMessages as any} />
+          <NeuralFeed
+            messages={
+              mockMessages as {
+                id: string;
+                text: string;
+                sender: "user" | "jarvis";
+                timestamp: Date;
+              }[]
+            }
+          />
         </div>
 
         {/* Input Area Placeholder (Visual only) */}

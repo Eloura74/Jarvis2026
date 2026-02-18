@@ -41,11 +41,14 @@ export const ImageOverlay: React.FC<ImageOverlayProps> = ({
           let foundImages: ImageResult[] = [];
 
           if (wikiData.query && wikiData.query.pages) {
-            const pages = Object.values(wikiData.query.pages) as any[];
+            const pages = Object.values(wikiData.query.pages) as {
+              thumbnail?: { source: string };
+              title: string;
+            }[];
             foundImages = pages
               .filter((p) => p.thumbnail && p.thumbnail.source)
               .map((p) => ({
-                url: p.thumbnail.source,
+                url: p.thumbnail!.source,
                 title: p.title,
               }));
           }
@@ -59,13 +62,16 @@ export const ImageOverlay: React.FC<ImageOverlayProps> = ({
             const commonsRes = await fetch(commonsEndpoint);
             const commonsData = await commonsRes.json();
             if (commonsData.query && commonsData.query.pages) {
-              const pages = Object.values(commonsData.query.pages) as any[];
+              const pages = Object.values(commonsData.query.pages) as {
+                imageinfo?: { url: string }[];
+                title?: string;
+              }[];
               const commonImages = pages
                 .filter(
                   (p) => p.imageinfo && p.imageinfo[0] && p.imageinfo[0].url,
                 )
                 .map((p) => ({
-                  url: p.imageinfo[0].url,
+                  url: p.imageinfo![0].url,
                   title: (p.title || "")
                     .replace("File:", "")
                     .replace(".jpg", ""),

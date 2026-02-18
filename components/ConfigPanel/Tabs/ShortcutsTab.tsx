@@ -15,7 +15,7 @@ export const ShortcutsTab: React.FC = () => {
   const [formKeys, setFormKeys] = useState("");
   const [formDescription, setFormDescription] = useState("");
 
-  const loadShortcuts = async () => {
+  const loadShortcuts = React.useCallback(async () => {
     try {
       const res = await fetch("http://localhost:3001/api/shortcuts");
       const data = await res.json();
@@ -23,11 +23,12 @@ export const ShortcutsTab: React.FC = () => {
     } catch (e) {
       console.error(e);
     }
-  };
+  }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line
     loadShortcuts();
-  }, []);
+  }, [loadShortcuts]);
 
   const handleSave = async () => {
     try {

@@ -6,7 +6,7 @@ import {
   CheckCircle,
   XCircle,
 } from "lucide-react";
-import { useKernel } from "../contexts/KernelContext";
+import { useKernel } from "../hooks/useKernel";
 
 export const SystemLogsPanel: React.FC = () => {
   const { logs } = useKernel();

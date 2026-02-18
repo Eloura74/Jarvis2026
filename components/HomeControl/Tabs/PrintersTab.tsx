@@ -4,7 +4,7 @@ import { Header } from "../Header";
 import { HA_ENTITIES } from "../../../services/homeAssistantService";
 
 interface PrintersTabProps {
-  states: Record<string, any>;
+  states: Record<string, unknown>;
 }
 
 export const PrintersTab: React.FC<PrintersTabProps> = ({ states }) => {
@@ -19,9 +19,10 @@ export const PrintersTab: React.FC<PrintersTabProps> = ({ states }) => {
       <Header title="3D PRINTERS" />
       <div className="flex flex-col gap-2">
         {HA_ENTITIES.PRINTERS.map((printer) => {
-          const bed = states[printer.bed]?.state ?? 0;
-          const ext = states[printer.ext]?.state ?? 0;
-          const progressState = states[printer.progress]?.state;
+          const bed = (states[printer.bed] as { state?: number })?.state ?? 0;
+          const ext = (states[printer.ext] as { state?: number })?.state ?? 0;
+          const progressState = (states[printer.progress] as { state?: string })
+            ?.state;
           const progress =
             progressState && progressState !== "unavailable"
               ? Math.round(Number(progressState))

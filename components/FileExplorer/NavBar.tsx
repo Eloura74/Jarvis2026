@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import { ArrowLeft, Home, Search, Loader } from "lucide-react";
 
 interface NavBarProps {

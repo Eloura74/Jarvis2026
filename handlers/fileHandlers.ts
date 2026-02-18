@@ -96,7 +96,17 @@ export const handleWriteFile = async (
 // GESTION FICHIERS CLASSIQUE (Existants)
 // ============================================================================
 
-export const handleCreateFile = async (args: any, ctx: HandlerContext) => {
+// Interface générique pour les arguments fichiers
+interface FileActionArgs {
+  path: string;
+  content?: string;
+  [key: string]: unknown;
+}
+
+export const handleCreateFile = async (
+  args: FileActionArgs,
+  ctx: HandlerContext,
+) => {
   // Redirige vers write pour simplifier, ou implémenter via API legacy
   return handleWriteFile({ path: args.path, content: args.content || "" }, ctx);
 };
@@ -135,18 +145,30 @@ export const handleDeleteFile = async (
   }
 };
 
-export const handleMoveFile = async (_args: any, _ctx: HandlerContext) => {
+export const handleMoveFile = async (
+  _args: Record<string, unknown>,
+  _ctx: HandlerContext,
+) => {
   return { status: "warning", message: "Non implémenté" };
 };
-export const handleCopyFile = async (_args: any, _ctx: HandlerContext) => {
+export const handleCopyFile = async (
+  _args: Record<string, unknown>,
+  _ctx: HandlerContext,
+) => {
   return { status: "warning", message: "Non implémenté" };
 };
-export const handleSearchFiles = async (_args: any, _ctx: HandlerContext) => {
+export const handleSearchFiles = async (
+  _args: Record<string, unknown>,
+  _ctx: HandlerContext,
+) => {
   return {
     status: "warning",
     message: "Utilisez 'consult_memory' pour la recherche.",
   };
 };
-export const handleOrganizeFiles = async (_args: any, _ctx: HandlerContext) => {
+export const handleOrganizeFiles = async (
+  _args: Record<string, unknown>,
+  _ctx: HandlerContext,
+) => {
   return { status: "warning", message: "Non implémenté" };
 };

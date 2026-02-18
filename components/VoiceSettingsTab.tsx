@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useKernel } from "../contexts/KernelContext";
+import { useKernel } from "../hooks/useKernel";
 import { Play, Volume2, Mic, Activity } from "lucide-react";
 
 export const VoiceSettingsTab: React.FC = () => {
@@ -58,7 +58,10 @@ export const VoiceSettingsTab: React.FC = () => {
     window.speechSynthesis.speak(utterance);
   };
 
-  const handleChange = (key: keyof typeof voiceSettings, value: any) => {
+  const handleChange = (
+    key: keyof typeof voiceSettings,
+    value: string | number,
+  ) => {
     setVoiceSettings({
       ...voiceSettings,
       [key]: value,

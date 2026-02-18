@@ -85,7 +85,7 @@ export const handleReadWebPage = async (
   const { url } = args;
   const { addLog, setStatus } = ctx;
 
-  addLog(`📖 Reading web page: ${url}`, "NETWORKING", "info");
+  addLog(`📖 Reading web page: ${url}`, "SYSTEM", "info");
   setStatus(SystemStatus.NETWORKING);
 
   try {
@@ -100,7 +100,7 @@ export const handleReadWebPage = async (
     if (data.success && data.data) {
       addLog(
         `✅ Page read: ${data.data.title} (${data.data.content.length} chars)`,
-        "NETWORKING",
+        "SYSTEM",
         "success",
       );
       setStatus(SystemStatus.IDLE);
@@ -117,7 +117,7 @@ export const handleReadWebPage = async (
       throw new Error(data.error || "Erreur inconnue");
     }
   } catch (error) {
-    addLog(`❌ Read error: ${error}`, "NETWORKING", "error");
+    addLog(`❌ Read error: ${error}`, "SYSTEM", "error");
     setStatus(SystemStatus.ERROR);
     return {
       status: "error",
@@ -237,10 +237,11 @@ export const handleManageBookmarks = async (
         }
         break;
 
-      case "list":
+      case "list": {
         const bookmarks = webNav.getBookmarks();
         addLog(`Found ${bookmarks.length} bookmarks`, "SYSTEM", "info");
         break;
+      }
 
       case "delete":
         if (name) {
@@ -249,7 +250,7 @@ export const handleManageBookmarks = async (
         }
         break;
     }
-  } catch (error) {
+  } catch {
     addLog(`Bookmark ${action} failed`, "SYSTEM", "error");
   }
 

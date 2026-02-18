@@ -125,7 +125,7 @@ export interface OmniDecision {
   type: "TOOL_CALL" | "TEXT_RESPONSE" | "MIXED_RESPONSE" | "ERROR";
 
   // Support des workflows Multi-Tool
-  toolCalls?: { name: string; args: any }[];
+  toolCalls?: { name: string; args: Record<string, unknown> }[];
 
   // Réponse textuelle (disponible aussi en MIXED_RESPONSE)
   text?: string;

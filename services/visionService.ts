@@ -1,16 +1,16 @@
 /**
  * Service Gemini Vision - Analyse d'images et screenshots
- * 
+ *
  * Utilise Gemini 2.5 Flash avec support Vision
  * pour analyser le contenu de l'écran.
- * 
+ *
  * Fonctionnalités :
  * - Screenshot automatique (html2canvas)
  * - Analyse du contenu visuel
  * - OCR (extraction de texte)
  * - Détection d'erreurs dans le code
  * - Description de l'interface
- * 
+ *
  * @module visionService
  */
 
@@ -56,12 +56,12 @@ export interface VisionAnalysisResult {
 
 /**
  * Capture un screenshot de l'interface J.A.R.V.I.S. actuelle
- * 
+ *
  * Utilise html2canvas pour capturer l'onglet automatiquement
  * SANS popup ni permission requise.
- * 
+ *
  * Note : Capture SEULEMENT l'onglet J.A.R.V.I.S., pas les autres écrans.
- * 
+ *
  * @returns Promise avec l'image en base64
  */
 export const captureScreen = async (): Promise<string> => {
@@ -100,14 +100,14 @@ export const captureScreen = async (): Promise<string> => {
 
 /**
  * Convertit une dataURL en format Gemini
- * 
+ *
  * @param dataUrl - Data URL de l'image (data:image/png;base64,...)
  * @returns Objet image pour Gemini
  */
 const dataUrlToGeminiImage = (dataUrl: string) => {
   // Extraire le base64 pur (sans le préfixe data:image/png;base64,)
   const base64Data = dataUrl.split(",")[1];
-  
+
   return {
     inlineData: {
       mimeType: "image/png",
@@ -124,16 +124,13 @@ const dataUrlToGeminiImage = (dataUrl: string) => {
 const ANALYSIS_PROMPTS: Record<AnalysisType, string> = {
   general:
     "Analyse cette image et décris ce que tu vois de manière détaillée. Identifie les éléments principaux, les couleurs, le contexte et tout ce qui semble important.",
-  
-  ocr:
-    "Extrais tout le texte visible dans cette image. Présente-le de manière structurée et lisible. Si du code est présent, conserve sa mise en forme.",
-  
-  code:
-    "Analyse ce code visible dans l'image. Identifie le langage, explique ce qu'il fait, détecte les erreurs potentielles, et propose des améliorations.",
-  
-  ui:
-    "Analyse cette interface utilisateur. Décris les éléments visuels, l'organisation, l'ergonomie, et propose des améliorations UX/UI si pertinent.",
-  
+
+  ocr: "Extrais tout le texte visible dans cette image. Présente-le de manière structurée et lisible. Si du code est présent, conserve sa mise en forme.",
+
+  code: "Analyse ce code visible dans l'image. Identifie le langage, explique ce qu'il fait, détecte les erreurs potentielles, et propose des améliorations.",
+
+  ui: "Analyse cette interface utilisateur. Décris les éléments visuels, l'organisation, l'ergonomie, et propose des améliorations UX/UI si pertinent.",
+
   error:
     "Recherche des erreurs dans cette image (messages d'erreur, bugs visuels, problèmes de code). Liste chaque erreur trouvée et propose des solutions.",
 };
@@ -144,14 +141,14 @@ const ANALYSIS_PROMPTS: Record<AnalysisType, string> = {
 
 /**
  * Analyse une image avec Gemini Vision
- * 
+ *
  * GRATUIT : Utilise Gemini 2.0 Flash avec Vision (15 req/min gratuit)
- * 
+ *
  * @param imageDataUrl - Data URL de l'image à analyser
  * @param type - Type d'analyse à effectuer
  * @param customPrompt - Prompt personnalisé (optionnel)
  * @returns Résultat de l'analyse
- * 
+ *
  * @example
  * ```typescript
  * const screenshot = await captureScreen();
@@ -162,7 +159,7 @@ const ANALYSIS_PROMPTS: Record<AnalysisType, string> = {
 export const analyzeImage = async (
   imageDataUrl: string,
   type: AnalysisType = "general",
-  customPrompt?: string
+  customPrompt?: string,
 ): Promise<VisionAnalysisResult> => {
   try {
     // Convertir l'image au format Gemini
@@ -179,6 +176,7 @@ export const analyzeImage = async (
           role: "user",
           parts: [
             { text: prompt },
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             geminiImage as any, // Image inline
           ],
         },
@@ -202,7 +200,7 @@ export const analyzeImage = async (
       type,
       timestamp: Date.now(),
     };
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("❌ Erreur Gemini Vision :", error);
     throw error;
   }
@@ -210,28 +208,28 @@ export const analyzeImage = async (
 
 /**
  * Analyse l'écran actuel (raccourci)
- * 
+ *
  * Capture automatiquement l'écran et l'analyse avec Gemini.
- * 
+ *
  * @param type - Type d'analyse
  * @param customPrompt - Prompt personnalisé (optionnel)
  * @returns Résultat de l'analyse
- * 
+ *
  * @example
  * ```typescript
  * // Analyse générale
  * const result = await analyzeCurrentScreen();
- * 
+ *
  * // Extraction de texte
  * const ocr = await analyzeCurrentScreen("ocr");
- * 
+ *
  * // Analyse de code
  * const codeAnalysis = await analyzeCurrentScreen("code");
  * ```
  */
 export const analyzeCurrentScreen = async (
   type: AnalysisType = "general",
-  customPrompt?: string
+  customPrompt?: string,
 ): Promise<VisionAnalysisResult> => {
   // 1. Capturer l'écran
   const screenshot = await captureScreen();
@@ -242,7 +240,7 @@ export const analyzeCurrentScreen = async (
 
 /**
  * Analyse une image depuis une URL
- * 
+ *
  * @param imageUrl - URL de l'image à analyser
  * @param type - Type d'analyse
  * @param customPrompt - Prompt personnalisé (optionnel)
@@ -251,7 +249,7 @@ export const analyzeCurrentScreen = async (
 export const analyzeImageFromUrl = async (
   imageUrl: string,
   type: AnalysisType = "general",
-  customPrompt?: string
+  customPrompt?: string,
 ): Promise<VisionAnalysisResult> => {
   try {
     // Charger l'image

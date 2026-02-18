@@ -17,8 +17,17 @@ export const NetworkWidget: React.FC = () => {
     handleResize();
     window.addEventListener("resize", handleResize);
 
+    interface NetworkNode {
+      x: number;
+      y: number;
+      vx: number;
+      vy: number;
+      pulse: number;
+      pulseSpeed: number;
+    }
+
     const nodeCount = 20;
-    const nodes: any[] = [];
+    const nodes: NetworkNode[] = [];
 
     for (let i = 0; i < nodeCount; i++) {
       nodes.push({

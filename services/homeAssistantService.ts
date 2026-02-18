@@ -7,7 +7,7 @@ export interface HAEntity {
   label: string;
   type?: "light" | "switch" | "sensor" | "binary_sensor" | "button";
   unit?: string;
-  attributes?: Record<string, any>;
+  attributes?: Record<string, unknown>;
 }
 
 export type HAPrinter = {
@@ -139,8 +139,8 @@ export const fetchHAStates = async (): Promise<Record<string, any>> => {
     if (!res.ok) throw new Error("Fetch HA states failed");
     const data = await res.json();
 
-    const states: Record<string, any> = {};
-    data.forEach((ent: any) => {
+    const states: Record<string, unknown> = {};
+    data.forEach((ent: { entity_id: string; [key: string]: unknown }) => {
       states[ent.entity_id] = ent;
     });
     return states;
@@ -157,7 +157,7 @@ export const callHAService = async (
   domain: string,
   service: string,
   entityId: string,
-  data: Record<string, any> = {},
+  data: Record<string, unknown> = {},
 ) => {
   if (!HA_TOKEN) return;
   try {

@@ -43,7 +43,7 @@ interface CommandHistoryEntry {
   /** Tool appelé (search_and_launch_app, control_lights, etc.) */
   tool: string;
   /** Arguments du tool */
-  args: any;
+  args: Record<string, unknown>;
   /** Timestamp d'exécution */
   timestamp: number;
 }
@@ -51,7 +51,7 @@ interface CommandHistoryEntry {
 /**
  * Pattern détecté (séquence répétée)
  */
-interface DetectedPattern {
+export interface DetectedPattern {
   /** Séquence de commandes (ex: ["vscode", "chrome", "spotify"]) */
   sequence: string[];
   /** Tools correspondants */
@@ -89,7 +89,11 @@ const detectedPatterns = new Map<string, DetectedPattern>();
  * @param tool - Nom du tool appelé
  * @param args - Arguments du tool
  */
-export function recordCommand(command: string, tool: string, args: any): void {
+export function recordCommand(
+  command: string,
+  tool: string,
+  args: Record<string, unknown>,
+): void {
   const entry: CommandHistoryEntry = {
     command,
     tool,

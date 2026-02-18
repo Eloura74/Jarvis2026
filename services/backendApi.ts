@@ -25,7 +25,9 @@ export async function checkBackendStatus(): Promise<boolean> {
 /**
  * Recherche une application via le backend
  */
-export async function searchAppOnBackend(query: string): Promise<any[]> {
+export async function searchAppOnBackend(
+  query: string,
+): Promise<Record<string, unknown>[]> {
   try {
     const response = await fetch(
       `${BACKEND_URL}/api/search?q=${encodeURIComponent(query)}`,
@@ -37,7 +39,7 @@ export async function searchAppOnBackend(query: string): Promise<any[]> {
 
     const data = await response.json();
     return data.results || [];
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Backend search error:", error);
     return [];
   }
@@ -67,7 +69,7 @@ export async function launchAppOnBackend(
 
     const data = await response.json();
     return data.success;
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Backend launch error:", error);
     return false;
   }
@@ -89,7 +91,7 @@ export async function controlVolumeOnBackend(
       body: JSON.stringify({ action, value }),
     });
     return response.ok;
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Backend volume error:", error);
     return false;
   }
@@ -107,7 +109,7 @@ export async function takeScreenshotOnBackend(): Promise<string | null> {
     });
     const data = await response.json();
     return data.success ? data.path : null;
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Backend screenshot error:", error);
     return null;
   }
@@ -127,7 +129,7 @@ export async function controlPowerOnBackend(
       body: JSON.stringify({ action, delay }),
     });
     return response.ok;
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Backend power error:", error);
     return false;
   }

@@ -24,7 +24,7 @@
  * ```
  */
 
-import { useCallback, useRef } from "react";
+import { useCallback, useRef, useEffect } from "react";
 
 interface UseVoiceSynthesisOptions {
   /** Active ou désactive la synthèse vocale */
@@ -74,28 +74,28 @@ export function useVoiceSynthesis({
   const messageQueue = useRef<string[]>([]);
   const isProcessingQueue = useRef(false);
 
+  // Ref pour stocker la fonction speakImmediate et éviter les cycles
+  const speakImmediateRef = useRef<(text: string) => void>(() => {});
+
   /**
    * Traite le prochain message de la queue
    */
-  const processNextInQueue = useCallback(() => {
+  const processNextInQueue = useCallback(function processNext() {
     if (messageQueue.current.length === 0) {
       isProcessingQueue.current = false;
       return;
     }
 
     // Force le démarrage si le navigateur ment sur "speaking" depuis trop longtemps
-    // Mais on essaie quand même de respecter la file d'attente
     if (window.speechSynthesis.speaking) {
-      // Petit hack : parfois speaking reste true alors que ça ne parle plus.
-      // On pourrait ajouter un timeout de garde ici, mais pour l'instant on fait simple.
-      // On retente dans 100ms
-      setTimeout(processNextInQueue, 100);
+      setTimeout(processNext, 100);
       return;
     }
 
     const nextMessage = messageQueue.current.shift();
     if (nextMessage) {
-      speakImmediate(nextMessage);
+      // Utilisation de la ref pour appeler la fonction définie après
+      speakImmediateRef.current(nextMessage);
     } else {
       isProcessingQueue.current = false;
     }
@@ -161,7 +161,6 @@ export function useVoiceSynthesis({
       utterance.onend = () => handleEndOrError("End");
       utterance.onerror = (event) => {
         if (event.error === "interrupted") {
-          // Interruption volontaire, on ignore
           handleEndOrError("Interrupted");
           return;
         }
@@ -177,7 +176,6 @@ export function useVoiceSynthesis({
         window.speechSynthesis.speak(utterance);
       } catch (e) {
         console.error("Exception synthèse vocale:", e);
-        // En cas d'exception synchrone, on passe au suivant
         handleEndOrError("Exception");
       }
     },
@@ -189,9 +187,14 @@ export function useVoiceSynthesis({
       pitch,
       rate,
       voiceURI,
-      processNextInQueue, // Dépendance cyclique gérée par useCallback/ref
+      processNextInQueue,
     ],
   );
+
+  // Mise à jour de la ref à chaque changement de speakImmediate
+  useEffect(() => {
+    speakImmediateRef.current = speakImmediate;
+  }, [speakImmediate]);
 
   const speak = useCallback(
     (text: string, queue: boolean = false) => {
@@ -219,8 +222,6 @@ export function useVoiceSynthesis({
         setTimeout(() => {
           messageQueue.current = []; // Vider la queue
           isProcessingQueue.current = false; // Reset état file
-          // Petit hack : parfois cancel() ne reset pas speaking immédiatement
-          // On force le passage
           speakImmediate(text);
         }, 50);
       }

@@ -30,17 +30,13 @@ export const JarvisHUDAuthentic: React.FC<JarvisHUDAuthenticProps> = ({
 
   // Couleur selon statut (Déplacé pour accès dans JSX)
   let color = "#00e5ff"; // cyan par défaut
-  let glowIntensity = 8;
 
   if (status === "listening") {
     color = "#00e5ff";
-    glowIntensity = 12;
   } else if (status === "processing") {
     color = "#ffd700";
-    glowIntensity = 10;
   } else if (status === "speaking") {
     color = "#00e5ff";
-    glowIntensity = 15;
   }
 
   useEffect(() => {
@@ -54,10 +50,6 @@ export const JarvisHUDAuthentic: React.FC<JarvisHUDAuthenticProps> = ({
     canvas.width = size * 2; // Haute résolution
     canvas.height = size * 2;
     ctx.scale(2, 2);
-
-    const centerX = size / 2;
-    const centerY = size / 2;
-    const baseRadius = size * 0.35;
 
     let animationId: number;
 

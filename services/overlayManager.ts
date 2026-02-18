@@ -28,7 +28,7 @@ export interface OverlayConfig {
   /** Type d'overlay */
   type: OverlayType;
   /** Données à afficher */
-  data: StatusOverlayData | any;
+  data: StatusOverlayData | Record<string, unknown>;
   /** Fermer automatiquement après N ms (optionnel) */
   autoCloseMs?: number;
   /** Position suggérée (optionnel, sinon auto) */

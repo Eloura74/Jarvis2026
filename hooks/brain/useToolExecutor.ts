@@ -1,6 +1,6 @@
 import { useCallback } from "react";
 import * as handlers from "../../handlers";
-import { HandlerContext } from "../../types/app.types";
+import { HandlerContext, StatusOverlayData } from "../../types/app.types";
 import { SystemStatus, AppMemory, LogEntry } from "../../types";
 import { AppPath } from "../useAppPaths";
 
@@ -18,7 +18,7 @@ interface ToolExecutorProps {
   setActiveOverlay: (overlay: string | null) => void;
   setVisualMode?: (query: string | null, isVisible: boolean) => void;
   stopConversation?: () => void;
-  setStatusOverlay?: (data: any) => void;
+  setStatusOverlay?: (data: StatusOverlayData | null) => void;
 }
 
 /**
@@ -38,11 +38,12 @@ export function useToolExecutor({
   setStatusOverlay,
 }: ToolExecutorProps) {
   const executeTool = useCallback(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     async (toolName: string, toolArgs: any) => {
       // Contexte commun
       const ctx: HandlerContext & {
         speak?: (text: string) => void;
-        setStatusOverlay?: (data: any) => void;
+        setStatusOverlay?: (data: StatusOverlayData | null) => void;
       } = {
         addLog,
         setStatus,
@@ -81,7 +82,7 @@ export function useToolExecutor({
             return await handlers.handleTakeScreenshot({}, ctx);
 
           // === SESSION ===
-          case "control_session":
+          case "control_session": {
             const { action: sessionAction } = toolArgs;
             if (sessionAction === "lock")
               return await handlers.handleLockSession({}, ctx);
@@ -92,6 +93,7 @@ export function useToolExecutor({
             if (sessionAction === "sleep")
               return await handlers.handleSleepSystem({}, ctx);
             return null;
+          }
 
           // === FILES ===
           case "create_file":
@@ -152,12 +154,13 @@ export function useToolExecutor({
             return await handlers.handleCalendarDelete(toolArgs, ctx);
 
           // === HOME ASSISTANT ===
-          case "control_home_automation":
+          case "control_home_automation": {
             const { handleControlHomeAutomation } =
               await import("../../handlers/haHandlers");
             return await handleControlHomeAutomation(toolArgs, ctx);
+          }
 
-          case "show_status_overlay":
+          case "show_status_overlay": {
             console.log("🛠️ EXECUTOR: show_status_overlay started...");
             const { handleShowStatusOverlay } =
               await import("../../handlers/haHandlers");
@@ -167,11 +170,15 @@ export function useToolExecutor({
               result.status,
             );
 
-            if (result.status === "success" && ctx.setStatusOverlay) {
+            if (
+              result.status === "success" &&
+              ctx.setStatusOverlay &&
+              result.data
+            ) {
               console.log(
                 "🛠️ EXECUTOR: Calling actual setStatusOverlay with data...",
               );
-              ctx.setStatusOverlay(result.data);
+              ctx.setStatusOverlay(result.data as StatusOverlayData);
             } else {
               console.error(
                 "🛠️ EXECUTOR: FAILED to call setStatusOverlay. Status:",
@@ -181,13 +188,14 @@ export function useToolExecutor({
               );
             }
             return result;
+          }
 
           // === WEATHER ===
           case "get_weather":
             return await handlers.handleGetWeather(toolArgs, ctx);
 
           // === NAVIGATION ===
-          case "get_travel_time":
+          case "get_travel_time": {
             console.log(
               "📍 ToolExecutor: get_travel_time called with",
               toolArgs,
@@ -215,8 +223,8 @@ export function useToolExecutor({
               // Message différent si recommandation de départ
               let message = "";
               let trafficStatus = "";
-              if ((route as any).diffToLeave) {
-                message = `${(route as any).diffToLeave} pour arriver à l'heure. Le trajet est estimé à ${route.duration}.`;
+              if ((route as { diffToLeave?: string }).diffToLeave) {
+                message = `${(route as { diffToLeave?: string; duration?: string }).diffToLeave} pour arriver à l'heure. Le trajet est estimé à ${route.duration}.`;
               } else {
                 if (route.durationInTraffic) {
                   trafficStatus =
@@ -228,7 +236,7 @@ export function useToolExecutor({
               }
 
               // Formatage pour l'overlay
-              const overlayData: any = {
+              const overlayData: StatusOverlayData = {
                 id: `traffic-${Date.now()}`,
                 title: "TRAFIC TEMPS RÉEL",
                 type: "traffic",
@@ -294,9 +302,10 @@ export function useToolExecutor({
               );
               return { status: "error", message: String(err) };
             }
+          }
 
           // === INNOVATION ===
-          case "get_neural_briefing":
+          case "get_neural_briefing": {
             const { getNeuralBriefing } =
               await import("../../services/geminiService");
             const briefing = await getNeuralBriefing({
@@ -305,6 +314,7 @@ export function useToolExecutor({
             });
             speak(briefing);
             return { status: "success", briefing };
+          }
 
           // === CONVERSATION CONTROL ===
           case "stop_listening":

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Terminal, Cpu, ChevronRight } from "lucide-react";
 
@@ -14,6 +14,9 @@ interface NeuralFeedProps {
 }
 
 export const NeuralFeed: React.FC<NeuralFeedProps> = ({ messages }) => {
+  // PID stable généré une seule fois au montage
+  const [pid] = useState(() => Math.floor(Math.random() * 9000) + 1000);
+
   // Ordre inversé : Le plus récent en haut (Log Stream)
   const reversedMessages = [...messages].reverse();
 
@@ -41,7 +44,7 @@ export const NeuralFeed: React.FC<NeuralFeedProps> = ({ messages }) => {
               NEURAL_IO_STREAM
             </span>
             <span className="text-[8px] text-cyan-600 font-mono">
-              PID: {Math.floor(Math.random() * 9000) + 1000} // ACTIVE
+              PID: {pid} // ACTIVE
             </span>
           </div>
         </div>

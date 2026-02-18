@@ -19,11 +19,13 @@ export const handleConsultMemory = async (
 
     if (data.results && data.results.length > 0) {
       // Formater les résultats pour l'IA
-      const contextData = data.results.map((r: any) => ({
-        file: r.name,
-        path: r.path,
-        content: r.preview,
-      }));
+      const contextData = data.results.map(
+        (r: { name: string; path: string; preview: string }) => ({
+          file: r.name,
+          path: r.path,
+          content: r.preview,
+        }),
+      );
 
       return {
         status: "success",

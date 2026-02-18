@@ -50,17 +50,17 @@ class GridPoint {
     const currentZ = this.baseZ * radiusFactor;
 
     // Rotation Y (Principale)
-    let x1 = currentX * Math.cos(rotationY) - currentZ * Math.sin(rotationY);
-    let z1 = currentZ * Math.cos(rotationY) + currentX * Math.sin(rotationY);
+    const x1 = currentX * Math.cos(rotationY) - currentZ * Math.sin(rotationY);
+    const z1 = currentZ * Math.cos(rotationY) + currentX * Math.sin(rotationY);
 
     // Rotation X (Tilt fixe ~23deg)
     const tilt = (23 * Math.PI) / 180;
-    let y2 = currentY * Math.cos(tilt) - z1 * Math.sin(tilt);
-    let z2 = z1 * Math.cos(tilt) + currentY * Math.sin(tilt);
+    const y2 = currentY * Math.cos(tilt) - z1 * Math.sin(tilt);
+    const z2 = z1 * Math.cos(tilt) + currentY * Math.sin(tilt);
 
     // Oscillation additionnelle X
-    let y3 = y2 * Math.cos(rotationX) - z2 * Math.sin(rotationX);
-    let z3 = z2 * Math.cos(rotationX) + y2 * Math.sin(rotationX);
+    const y3 = y2 * Math.cos(rotationX) - z2 * Math.sin(rotationX);
+    const z3 = z2 * Math.cos(rotationX) + y2 * Math.sin(rotationX);
 
     this.x = x1;
     this.y = y3;
@@ -150,7 +150,7 @@ export const ParticleSphere: React.FC<ParticleSphereProps> = ({
         const py = centerY + p.y * scale;
 
         if (p.z > -radius * 1.5) {
-          let baseAlpha = (p.z + radius) / (2 * radius);
+          const baseAlpha = (p.z + radius) / (2 * radius);
 
           if (p.isLand) {
             ctx.fillStyle = isListening || isActive ? "#ffffff" : baseColor;

@@ -74,7 +74,7 @@ export const generateFaceMesh = (rows: number, cols: number): FaceMesh => {
     const yNorm = 1 - (i / rows) * 2;
 
     // Décalage Z de base (Profil)
-    let zBase = getCentralZ(yNorm);
+    const zBase = getCentralZ(yNorm);
 
     // Largeur max à cette hauteur
     const widthMax = getWidthScale(yNorm);
@@ -88,11 +88,11 @@ export const generateFaceMesh = (rows: number, cols: number): FaceMesh => {
       const sideFactor = Math.cos(angle); // 1 au centre, 0 aux oreilles
 
       // X suit un cylindre/ellipse
-      let x = Math.sin(angle) * widthMax;
+      const x = Math.sin(angle) * widthMax;
 
       // Z est une combinaison du profil central et de la courbure du crâne
       // Courbure crâne de base (Cylindre)
-      let zSkull = Math.cos(angle) * 0.5; // Base sphérique
+      const zSkull = Math.cos(angle) * 0.5; // Base sphérique
 
       // On applique le profil central purement au centre, et on fond vers la sphère sur les côtés
       let z = zSkull + (zBase - 0.5) * Math.pow(sideFactor, 2);
