@@ -1,13 +1,14 @@
 /**
  * Dashboard Fleet Manager - Vue enrichie
  * Affichage premium des 3 imprimantes avec thumbnails et stats détaillées
+ * + Ajout Mockup Webcam Feed
  */
 import { motion } from "framer-motion";
-import { Printer, Clock, Layers, Zap, Thermometer } from "lucide-react";
+import { Printer, Clock, Thermometer, Camera } from "lucide-react";
 import { usePrinterFleet } from "../hooks/usePrinterFleet";
 
 export default function PrinterFleetDashboard() {
-  const { printers, summary } = usePrinterFleet();
+  const { printers } = usePrinterFleet();
 
   // Formatage temps (secondes → HH:MM:SS ou MM:SS)
   const formatDuration = (seconds: number): string => {
@@ -57,12 +58,7 @@ export default function PrinterFleetDashboard() {
             animate={{ opacity: 1, scale: 1 }}
             className={`border-2 ${getBorderColor(printer.printerType)} rounded-lg p-3 bg-gradient-to-br ${getGradientColor(printer.printerType)} to-transparent relative group overflow-hidden`}
           >
-            {/* Background Glow */}
-            <div
-              className={`absolute inset-0 opacity-0 group-hover:opacity-20 transition-opacity bg-${printer.printerType === "bambu" ? "green" : "cyan"}-400 blur-xl`}
-            />
-
-            {/* Card Header */}
+            {/* Header */}
             <div className="flex justify-between items-start mb-2 relative z-10">
               <div className="flex items-center gap-2">
                 <Printer
@@ -79,21 +75,33 @@ export default function PrinterFleetDashboard() {
               </span>
             </div>
 
-            {/* Thumbnail */}
-            {printer.currentJob?.thumbnail && (
-              <div className="relative z-10">
+            {/* === CAMERA  / THUMBNAIL ZONE === */}
+            <div className="relative z-10 aspect-video bg-black/60 rounded mb-3 overflow-hidden border border-white/10 group-hover:border-white/20 transition-colors">
+              {/* On priorise le thumbnail du job en cours, sinon placeholder cam */}
+              {printer.currentJob?.thumbnail ? (
                 <img
                   src={printer.currentJob.thumbnail}
-                  alt={printer.currentJob.fileName}
-                  className="w-full h-32 object-cover rounded mb-2 border border-white/10"
+                  alt="Print Job"
+                  className="w-full h-full object-cover opacity-80"
                 />
+              ) : (
+                <div className="w-full h-full flex flex-col items-center justify-center text-gray-600">
+                  <Camera className="w-8 h-8 opacity-50 mb-1" />
+                  <span className="text-[9px] tracking-widest uppercase opacity-50">
+                    NO SIGNAL
+                  </span>
+                </div>
+              )}
+
+              {/* Overlay Cam Info */}
+              <div className="absolute top-1 left-1 bg-black/50 px-1 py-0.5 rounded text-[8px] text-white/70 font-mono">
+                CAM_LINK_ACTIVE
               </div>
-            )}
+            </div>
 
             {/* Printing Info */}
             {printer.status === "printing" && printer.currentJob ? (
               <div className="relative z-10">
-                {/* File Name */}
                 <div
                   className="text-white text-xs truncate mb-1 opacity-90"
                   title={printer.currentJob.fileName}
@@ -127,84 +135,36 @@ export default function PrinterFleetDashboard() {
 
                 {/* Stats Grid */}
                 <div className="grid grid-cols-2 gap-2 text-[10px]">
-                  {/* Nozzle Temp */}
+                  {/* Temps */}
                   <div className="flex items-center gap-2 bg-black/40 rounded p-2 border border-white/5">
                     <Thermometer className="w-3 h-3 text-red-400" />
-                    <div className="flex flex-col">
-                      <span className="text-gray-500 text-[9px]">NOZZLE</span>
+                    <div>
+                      <span className="text-gray-500 text-[9px] block">
+                        NOZZLE
+                      </span>
                       <span className="text-white font-medium">
-                        {printer.temps.nozzle.toFixed(0)}
-                        {printer.temps.nozzleTarget &&
-                          `/${printer.temps.nozzleTarget.toFixed(0)}`}
-                        °C
+                        {printer.temps.nozzle.toFixed(0)} /{" "}
+                        {printer.temps.nozzleTarget?.toFixed(0)}°C
                       </span>
                     </div>
                   </div>
-
-                  {/* Bed Temp */}
                   <div className="flex items-center gap-2 bg-black/40 rounded p-2 border border-white/5">
-                    <Thermometer className="w-3 h-3 text-orange-400" />
-                    <div className="flex flex-col">
-                      <span className="text-gray-500 text-[9px]">BED</span>
-                      <span className="text-white font-medium">
-                        {printer.temps.bed.toFixed(0)}
-                        {printer.temps.bedTarget &&
-                          `/${printer.temps.bedTarget.toFixed(0)}`}
-                        °C
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Time Remaining */}
-                  <div className="flex items-center gap-2 bg-black/40 rounded p-2 border border-white/5 col-span-2">
                     <Clock className="w-3 h-3 text-purple-400" />
-                    <div className="flex flex-col w-full">
-                      <div className="flex justify-between">
-                        <span className="text-gray-500 text-[9px]">
-                          ELAPSED
-                        </span>
-                        <span className="text-gray-500 text-[9px]">ETA</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-white font-medium">
-                          {formatDuration(
-                            printer.currentJob.printDuration || 0,
-                          )}
-                        </span>
-                        <span className="text-white font-medium">
-                          {formatDuration(printer.currentJob.eta || 0)}
-                        </span>
-                      </div>
+                    <div>
+                      <span className="text-gray-500 text-[9px] block">
+                        ETA
+                      </span>
+                      <span className="text-white font-medium">
+                        {formatDuration(printer.currentJob.eta || 0)}
+                      </span>
                     </div>
                   </div>
                 </div>
               </div>
             ) : (
               // Idle State
-              <div className="text-center py-8 relative z-10 flex flex-col items-center justify-center h-[180px]">
-                <div className="p-3 rounded-full bg-white/5 mb-3">
-                  <Printer className="w-6 h-6 text-gray-600" />
-                </div>
-                <div className="text-gray-400 text-sm font-medium">
-                  Ready to print
-                </div>
-                <div className="text-gray-600 text-xs mt-1">
-                  Waiting for job...
-                </div>
-              </div>
-            )}
-
-            {/* Footer */}
-            {printer.config.ip && (
-              <div className="mt-3 pt-2 border-t border-white/10 relative z-10 text-center">
-                <a
-                  href={`http://${printer.config.ip}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={`text-[10px] w-full block py-1 rounded hover:bg-white/5 ${printer.printerType === "bambu" ? "text-green-400" : "text-cyan-400"} transition-colors`}
-                >
-                  OPEN TERMINAL
-                </a>
+              <div className="text-center py-4 relative z-10 text-gray-500 text-xs italic">
+                Systeme prêt. Attente de job.
               </div>
             )}
           </motion.div>

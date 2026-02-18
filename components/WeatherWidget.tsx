@@ -7,7 +7,7 @@
  * - Vitesse du vent
  * - Probabilité de précipitations
  * - Localisation automatique
- * - Fonds dynamiques réalistes (Images Unsplash)
+ * - Fonds dynamiques réalistes (Images Unsplash) avec mode Nuit
  */
 
 import React, { useState, useEffect } from "react";
@@ -21,6 +21,7 @@ import {
   MapPin,
   Zap,
   CloudSnow,
+  Moon,
 } from "lucide-react";
 import {
   getCurrentWeather,
@@ -34,11 +35,21 @@ export const WeatherWidget: React.FC = () => {
   const [weather, setWeather] = useState<WeatherData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isNight, setIsNight] = useState(false);
 
   /**
-   * Récupère les données météo au montage du composant
-   * et les rafraîchit toutes les 10 minutes
+   * Calcul si c'est la nuit
    */
+  useEffect(() => {
+    const checkNight = () => {
+      const hour = new Date().getHours();
+      setIsNight(hour >= 20 || hour < 6); // Nuit entre 20h et 6h
+    };
+    checkNight();
+    const timer = setInterval(checkNight, 60000); // Check every minute
+    return () => clearInterval(timer);
+  }, []);
+
   /**
    * Récupère les données météo au montage du composant
    * et les rafraîchit toutes les 10 minutes
@@ -78,6 +89,7 @@ export const WeatherWidget: React.FC = () => {
 
     const condition = weather.condition.toLowerCase();
 
+    // Priorité à l'orage et conditions extrêmes
     if (condition.includes("orage") || condition.includes("thunder")) {
       return <Zap size={32} className="text-yellow-400 animate-pulse" />;
     } else if (condition.includes("pluie") || condition.includes("rain")) {
@@ -94,52 +106,54 @@ export const WeatherWidget: React.FC = () => {
       return <Droplets size={32} className="text-gray-400" />;
     }
 
-    return <Sun size={32} className="text-yellow-500" />;
+    // Gestion Jour / Nuit pour le ciel clair
+    if (isNight) {
+      return <Moon size={32} className="text-indigo-200" />;
+    }
+
+    return (
+      <Sun
+        size={32}
+        className="text-yellow-500 animate-[spin_10s_linear_infinite]"
+      />
+    );
   };
 
   /**
    * Retourne l'URL de l'image de fond locale (générée par IA)
    * Garantit une stabilité et un design premium JARVIS.
+   * Ajout logique Nuit.
    */
   const getBackgroundImage = () => {
+    // Si Nuit, on force une variante sombre ou une image spécifique nuit si dispo
+    // Pour l'instant on utilise "clouds" assombri par CSS ou une image spécifique si on en avait
+    // On va jouer avec l'opacité et le background noir pour simuler la nuit sur les mêmes assets
+
     if (!weather) return "/weather/clear.png";
 
     const condition = weather.condition.toLowerCase();
 
-    // ORAGE
+    // TODO: Avoir des assets spécifiques *_night.png idéalement
+    // Ici on mappe sur les existants
+
     if (condition.includes("orage") || condition.includes("thunder")) {
-      return "/weather/clouds.png"; // Fallback sur clouds si thunder manquant
+      return "/weather/clouds.png";
     }
-    // PLUIE
     if (condition.includes("pluie") || condition.includes("rain")) {
       return "/weather/rain.png";
     }
-    // NEIGE
     if (condition.includes("neige") || condition.includes("snow")) {
-      return "/weather/clouds.png"; // Fallback
+      return "/weather/clouds.png";
     }
-    // NUAGES
     if (condition.includes("nuage") || condition.includes("cloud")) {
       return "/weather/clouds.png";
     }
-    // BRUME / BROUILLARD
-    if (
-      condition.includes("brume") ||
-      condition.includes("mist") ||
-      condition.includes("fog")
-    ) {
+    if (condition.includes("brume") || condition.includes("mist")) {
       return "/weather/clouds.png";
     }
-    // SOLEIL / CLAIR
-    if (
-      condition.includes("ensoleillé") ||
-      condition.includes("clear") ||
-      condition.includes("sun")
-    ) {
-      return "/weather/clear.png";
-    }
 
-    return "/weather/clear.png"; // Par défaut
+    // Ciel clair
+    return "/weather/clear.png";
   };
 
   // ========================================
@@ -150,7 +164,9 @@ export const WeatherWidget: React.FC = () => {
       <div className="w-full relative overflow-hidden rounded-xl border border-cyan-400/30 bg-black/20 backdrop-blur-xl p-4 flex items-center justify-center group hover:border-cyan-400/50 transition-colors shadow-[0_0_15px_rgba(0,229,255,0.1)] h-full min-h-[100px]">
         <div className="flex items-center gap-2 text-cyan-400/70">
           <Loader size={20} className="animate-spin" />
-          <span className="text-xs tracking-wider">Chargement...</span>
+          <span className="text-xs tracking-wider">
+            ACQUIRING ATMOSPHERE DATA...
+          </span>
         </div>
       </div>
     );
@@ -167,7 +183,7 @@ export const WeatherWidget: React.FC = () => {
             <CloudRain size={24} />
           </div>
           <div>
-            <div className="text-xs font-light text-red-300">Indisponible</div>
+            <div className="text-xs font-light text-red-300">METEO OFFLINE</div>
           </div>
         </div>
       </div>
@@ -187,10 +203,12 @@ export const WeatherWidget: React.FC = () => {
         <img
           src={getBackgroundImage()}
           alt="Météo Background"
-          className="w-full h-full object-cover opacity-80 transition-opacity duration-700"
+          className={`w-full h-full object-cover transition-all duration-700 ${isNight ? "opacity-30 grayscale-[50%]" : "opacity-80"}`}
         />
-        {/* Gradient pour lisibilité texte */}
-        <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/50 to-transparent" />
+        {/* Gradient pour lisibilité texte + Simulation Nuit */}
+        <div
+          className={`absolute inset-0 bg-gradient-to-r ${isNight ? "from-black via-slate-900/80 to-indigo-900/40" : "from-black/80 via-black/50 to-transparent"}`}
+        />
       </div>
 
       {/* CONTENU */}
@@ -239,7 +257,7 @@ export const WeatherWidget: React.FC = () => {
           </span>
         </div>
 
-        {/* Probabilité de précipitations */}
+        {/* Humidité */}
         <div
           className="flex items-center justify-center gap-1.5 group/humidity"
           title="Humidité"

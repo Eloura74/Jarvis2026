@@ -1,5 +1,5 @@
-import React from "react";
-import { motion } from "framer-motion";
+import React, { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { NeuralFeed } from "../NeuralFeed";
 import { FingerprintScanner } from "../FingerprintScanner";
 
@@ -18,15 +18,26 @@ export const RightPanel: React.FC<RightPanelProps> = ({
   setIsAppPathsOpen,
   setIsFileExplorerOpen,
 }) => {
-  const currentTime = new Date().toLocaleTimeString("fr-FR", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-  const currentDate = new Date().toLocaleDateString("fr-FR", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-  });
+  // TIME STATE
+  const [time, setTime] = useState(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => setTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // FORMATS
+  const hours = time.getHours().toString().padStart(2, "0");
+  const minutes = time.getMinutes().toString().padStart(2, "0");
+  const seconds = time.getSeconds().toString().padStart(2, "0");
+
+  const dateStr = time
+    .toLocaleDateString("fr-FR", {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+    })
+    .toUpperCase();
 
   // Mock messages for Neural Feed demonstration (replace with real data later)
   const mockMessages = logs
@@ -34,7 +45,7 @@ export const RightPanel: React.FC<RightPanelProps> = ({
       id: `msg-${i}`,
       text: log.message,
       sender: log.source === "USER" ? "user" : "jarvis",
-      timestamp: new Date(),
+      timestamp: new Date(), // En prod date réelle
     }))
     .filter((m) => m.sender === "user" || m.sender === "jarvis"); // Filter only chat-like messages
 
@@ -45,29 +56,46 @@ export const RightPanel: React.FC<RightPanelProps> = ({
                     order-2 md:order-3
                     xl:order-3"
     >
-      {/* DATE & TIME PANEL */}
+      {/* DATE & TIME PANEL - REFONTE */}
       <motion.div
         initial={{ x: 100, opacity: 0 }}
         animate={{ x: 0, opacity: 1 }}
         transition={{ duration: 0.8 }}
-        className="jarvis-panel-glass p-6 rounded-2xl border border-cyan-400/30 bg-black/20 backdrop-blur-xl group hover:border-cyan-400/50 shadow-[0_0_20px_rgba(0,229,255,0.1)] relative overflow-hidden"
+        className="jarvis-panel-glass p-0 rounded-2xl border border-cyan-400/30 bg-black/20 backdrop-blur-xl group hover:border-cyan-400/50 shadow-[0_0_20px_rgba(0,229,255,0.1)] relative overflow-hidden min-h-[140px] flex flex-col items-center justify-center"
       >
         {/* BACKGROUND */}
         <div className="absolute inset-0 z-0">
           <img
             src="https://images.unsplash.com/photo-1516110833967-0b5716ca1387?q=80&w=1000&auto=format&fit=crop"
             alt="Time Background"
-            className="w-full h-full object-cover opacity-50 transition-transform duration-700 group-hover:scale-105"
+            className="w-full h-full object-cover opacity-40 transition-transform duration-700 group-hover:scale-105"
           />
-          <div className="absolute inset-0 bg-gradient-to-l from-black/80 via-black/40 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-br from-black/60 via-black/40 to-cyan-900/20" />
         </div>
 
-        <div className="relative z-10">
-          <div className="text-4xl font-light text-white mb-1 tracking-wider overflow-hidden drop-shadow-[0_0_8px_rgba(255,255,255,0.5)]">
-            {currentTime}
+        <div className="relative z-10 flex flex-col items-center">
+          {/* DIGITAL CLOCK WITH SECONDS */}
+          <div className="text-5xl font-light text-white mb-2 tracking-widest flex items-baseline gap-2 drop-shadow-[0_0_15px_rgba(255,255,255,0.6)] font-mono">
+            <span className="font-bold">{hours}</span>
+            <span className="animate-pulse text-cyan-400">:</span>
+            <span className="font-bold">{minutes}</span>
+            <span className="text-xl text-cyan-500/80 font-normal ml-1 w-8">
+              {seconds}
+            </span>
           </div>
-          <div className="text-sm text-cyan-300 tracking-widest uppercase opacity-90 drop-shadow-[0_0_5px_rgba(0,229,255,0.5)]">
-            {currentDate}
+
+          {/* DATE */}
+          <div className="flex items-center gap-2">
+            <div className="h-[1px] w-8 bg-cyan-500/50"></div>
+            <div className="text-xs text-cyan-300 tracking-[0.3em] uppercase opacity-90 drop-shadow-[0_0_5px_rgba(0,229,255,0.5)]">
+              {dateStr}
+            </div>
+            <div className="h-[1px] w-8 bg-cyan-500/50"></div>
+          </div>
+
+          {/* LOCATION (Static for now) */}
+          <div className="absolute top-2 right-3 text-[8px] text-cyan-500/50 tracking-widest uppercase">
+            PARIS, FR
           </div>
         </div>
       </motion.div>

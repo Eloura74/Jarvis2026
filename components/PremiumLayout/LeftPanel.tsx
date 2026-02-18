@@ -48,20 +48,18 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
         <MediaWidget />
       </motion.div>
 
-      {/* CAMERA WIDGET & HOME CONTROL */}
-      <motion.div
-        initial={{ x: -100, opacity: 0 }}
-        animate={{ x: 0, opacity: 1 }}
-        transition={{ delay: 0.5, duration: 0.8 }}
-        className="flex gap-4 h-64" // Fixed height to align both widgets
-      >
-        <div className="flex-1 h-full">
-          <CameraWidget />
-        </div>
-        <div className="h-full">
+      <div className="relative z-30">
+        {/* CAMERA WIDGET (Pleine largeur normale) */}
+        <CameraWidget />
+
+        {/* HOME CONTROL (Drawer flottant "hors-flux" à droite) */}
+        <div
+          className="absolute top-0 left-[100%] h-full pl-4 hidden md:block"
+          style={{ width: "max-content" }}
+        >
           <HomeControlWidget />
         </div>
-      </motion.div>
+      </div>
 
       {/* NETWORK WIDGET (NEW) */}
       <motion.div

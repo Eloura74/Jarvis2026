@@ -20,6 +20,10 @@ interface ChartData {
  * SystemStatusWidget - Widget de statut système style Cyberpunk
  * Affiche l'utilisation CPU et RAM avec des graphiques en ondes (Recharts)
  * et des animations dynamiques.
+ *
+ * Mises à jour (Plan Implémentation):
+ * - Ralentissement du graph CPU
+ * - Ajout barre GPU horizontale rose
  */
 export const SystemStatusWidget: React.FC<SystemStatusWidgetProps> = ({
   cpuUsage,
@@ -31,48 +35,53 @@ export const SystemStatusWidget: React.FC<SystemStatusWidgetProps> = ({
 
   // Historique des données pour les graphiques
   const [cpuData, setCpuData] = useState<ChartData[]>([]);
-  const [memData, setMemData] = useState<ChartData[]>([]);
+  // Simulation GPU si pas de données réelles (pour l'instant on simule)
+  const [gpuUsage, setGpuUsage] = useState(0);
 
-  // Parsing de la mémoire pour obtenir un nombre (si "45%" ou "8.2 GB")
+  // Parsing de la mémoire
   const getMemoryValue = (memStr: string): number => {
     if (memStr.includes("%")) {
       return parseFloat(memStr.replace("%", ""));
     }
-    // Si c'est en GB, on simule un pourcentage arbitraire ou on extrait juste le chiffre pour l'animation
-    // Pour l'effet visuel web, on va simuler une variation autour de 40-60 si pas de %,
-    // ou parser le chiffre. Disons qu'on parse le chiffre.
     const val = parseFloat(memStr);
-    return isNaN(val) ? 40 : val;
+    // Si c'est en GB (ex: 8.2), considérons que c'est sur 32GB pour un % approximatif ou juste renvoyer une valeur fixe pour l'anim
+    // Pour l'effet visuel, on va normaliser arbitrairement si c'est < 100
+    return isNaN(val) ? 40 : val < 100 ? val : 40;
   };
 
   useEffect(() => {
-    // Initialisation avec des données vides ou aléatoires pour éviter le vide au départ
+    // Initialisation
     const initialData = Array.from({ length: 20 }, (_, i) => ({
       time: i,
       value: 20 + Math.random() * 10,
     }));
     setCpuData(initialData);
-    setMemData(
-      initialData.map((d) => ({ ...d, value: 30 + Math.random() * 10 })),
-    );
   }, []);
 
+  // Update Data - On ralentit la fréquence visuelle ou on lisse
   useEffect(() => {
-    // Mise à jour des graphiques à chaque changement de props
-    // On garde les 20 derniers points
-    const now = Date.now();
+    const interval = setInterval(() => {
+      setCpuData((prev) => {
+        const now = Date.now();
+        // Lissage : on ne prend pas la valeur brute CPU instantanée qui peut faire le yoyo
+        // On lisse avec la valeur précédente
+        const lastVal = prev[prev.length - 1]?.value || 0;
+        const smoothVal = lastVal * 0.7 + cpuUsage * 0.3;
 
-    setCpuData((prev) => {
-      const newData = [...prev, { time: now, value: cpuUsage }];
-      return newData.slice(-20); // Garder les 20 derniers
-    });
+        const newData = [...prev, { time: now, value: smoothVal }];
+        return newData.slice(-30); // Plus de points pour un défilement plus lent visuellement ? Non, c'est l'inverse sur Recharts fixe
+        // Pour ralentir, on update moins souvent ou on affiche plus d'historique
+      });
 
-    setMemData((prev) => {
-      const memVal = getMemoryValue(memoryUsage);
-      const newData = [...prev, { time: now, value: memVal }];
-      return newData.slice(-20);
-    });
-  }, [cpuUsage, memoryUsage]);
+      // Simulation variation GPU
+      setGpuUsage((prev) => {
+        const target = Math.random() * 60 + 20; // Entre 20 et 80
+        return prev * 0.9 + target * 0.1;
+      });
+    }, 200); // 200ms au lieu de dépendre du prop change direct qui peut être très rapide
+
+    return () => clearInterval(interval);
+  }, [cpuUsage]);
 
   return (
     <motion.div
@@ -101,7 +110,7 @@ export const SystemStatusWidget: React.FC<SystemStatusWidgetProps> = ({
         </h2>
 
         <div className="flex items-center gap-3">
-          {/* WAKE WORD TOGGLE BUTTON (VISIBILITÉ AMÉLIORÉE) */}
+          {/* WAKE WORD TOGGLE */}
           <button
             onClick={(e) => {
               e.stopPropagation();
@@ -112,11 +121,7 @@ export const SystemStatusWidget: React.FC<SystemStatusWidgetProps> = ({
                 ? "border-cyan-400 bg-cyan-400/20 text-cyan-100 shadow-[0_0_15px_rgba(0,229,255,0.4)]"
                 : "border-red-500/50 bg-red-500/10 text-red-400 opacity-80"
             }`}
-            title={
-              wakeWordEnabled
-                ? "Wake Word Active (JARVIS)"
-                : "Wake Word Desactivé"
-            }
+            title={wakeWordEnabled ? "Wake Word Active" : "Wake Word Desactivé"}
           >
             {wakeWordEnabled ? (
               <Mic
@@ -131,41 +136,27 @@ export const SystemStatusWidget: React.FC<SystemStatusWidgetProps> = ({
                 wakeWordEnabled ? "text-cyan-200" : "text-red-400 opacity-70"
               }`}
             >
-              {wakeWordEnabled ? "Wake On" : "Wake Off"}
+              {wakeWordEnabled ? "ON" : "OFF"}
             </span>
           </button>
-
-          <div className="flex gap-1">
-            <motion.div
-              animate={{ opacity: [0.5, 1, 0.5] }}
-              transition={{ duration: 2, repeat: Infinity }}
-              className="w-1.5 h-1.5 bg-cyan-400 rounded-full shadow-[0_0_10px_#00e5ff]"
-            />
-            <div className="w-1.5 h-1.5 bg-cyan-900/50 rounded-full" />
-          </div>
         </div>
       </div>
 
-      <div className="space-y-2 relative z-10">
-        {/* CPU SECTION */}
+      <div className="space-y-3 relative z-10">
+        {/* CPU SECTION - Graphique plus lent/lissé */}
         <div className="relative">
           <div className="flex justify-between text-[10px] mb-0.5 opacity-90 tracking-wider text-cyan-200 uppercase">
             <span>CPU Load</span>
             <span className="text-cyan-300 font-bold font-mono">
-              {cpuUsage}%
+              {cpuUsage.toFixed(1)}%
             </span>
           </div>
-
-          {/* Graphique CPU */}
-          <div className="h-8 w-full bg-cyan-900/10 rounded overflow-hidden border border-cyan-500/10 relative">
-            <ResponsiveContainer width="100%" height={32} debounce={100}>
-              <AreaChart
-                data={cpuData}
-                margin={{ top: 0, right: 0, left: 0, bottom: 0 }}
-              >
+          <div className="h-10 w-full bg-cyan-900/10 rounded overflow-hidden border border-cyan-500/10 relative">
+            <ResponsiveContainer width="100%" height={40}>
+              <AreaChart data={cpuData}>
                 <defs>
                   <linearGradient id="colorCpu" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#00e5ff" stopOpacity={0.3} />
+                    <stop offset="5%" stopColor="#00e5ff" stopOpacity={0.4} />
                     <stop offset="95%" stopColor="#00e5ff" stopOpacity={0} />
                   </linearGradient>
                 </defs>
@@ -174,71 +165,65 @@ export const SystemStatusWidget: React.FC<SystemStatusWidgetProps> = ({
                   type="monotone"
                   dataKey="value"
                   stroke="#00e5ff"
-                  strokeWidth={1.5}
+                  strokeWidth={2}
                   fillOpacity={1}
                   fill="url(#colorCpu)"
-                  isAnimationActive={false}
+                  isAnimationActive={false} // On gère l'anim via les datas
                 />
               </AreaChart>
             </ResponsiveContainer>
-
-            {/* Ligne scanner décorative */}
+            {/* Ligne scanner plus lente */}
             <motion.div
               className="absolute top-0 bottom-0 w-[1px] bg-cyan-400/50 shadow-[0_0_10px_#00e5ff] z-20"
               animate={{ left: ["0%", "100%"] }}
-              transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+              transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
             />
           </div>
         </div>
 
-        {/* MEMORY SECTION */}
+        {/* GPU SECTION (Nouveau : Barre Rose) */}
         <div className="relative">
-          <div className="flex justify-between text-[10px] mb-0.5 opacity-90 tracking-wider text-cyan-200 uppercase">
-            <span>RAM Usage</span>
-            <span className="text-cyan-300 font-bold font-mono">
-              {memoryUsage}
-            </span>
+          <div className="flex justify-between text-[10px] mb-1 opacity-90 tracking-wider text-pink-300 uppercase">
+            <span>GPU Usage</span>
+            <span className="font-bold font-mono">{gpuUsage.toFixed(0)}%</span>
           </div>
 
-          {/* Graphique RAM */}
-          <div className="h-8 w-full bg-cyan-900/10 rounded overflow-hidden border border-cyan-500/10 relative">
-            <ResponsiveContainer width="100%" height={32} debounce={100}>
-              <AreaChart
-                data={memData}
-                margin={{ top: 0, right: 0, left: 0, bottom: 0 }}
-              >
-                <defs>
-                  <linearGradient id="colorMem" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#ec4899" stopOpacity={0.3} />
-                    {/* Rose/Violet pour différencier */}
-                    <stop offset="95%" stopColor="#ec4899" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <YAxis domain={[0, 100]} hide />
-                <Area
-                  type="monotone"
-                  dataKey="value"
-                  stroke="#ec4899"
-                  strokeWidth={1.5}
-                  fillOpacity={1}
-                  fill="url(#colorMem)"
-                  isAnimationActive={false}
-                />
-              </AreaChart>
-            </ResponsiveContainer>
+          <div className="h-2 w-full bg-pink-900/20 rounded-full overflow-hidden border border-pink-500/20">
+            <motion.div
+              className="h-full bg-gradient-to-r from-pink-600 to-pink-400 shadow-[0_0_10px_rgba(236,72,153,0.5)]"
+              initial={{ width: 0 }}
+              animate={{ width: `${gpuUsage}%` }}
+              transition={{ type: "spring", stiffness: 50, damping: 15 }}
+            />
           </div>
         </div>
 
-        {/* PROCESSES FOOTER */}
-        <div className="flex justify-between items-center border-t border-cyan-400/30 pt-2 mt-1">
-          <span className="text-[9px] opacity-70 tracking-widest text-cyan-200 uppercase">
-            Active Processes
-          </span>
-          <div className="flex items-center gap-1.5">
-            <span className="w-1 h-1 bg-green-400 rounded-full animate-pulse"></span>
-            <span className="text-sm font-bold text-cyan-300 font-mono drop-shadow-[0_0_5px_rgba(0,229,255,0.5)]">
-              {processes}
-            </span>
+        {/* MEMORY / PROCESSES FOOTER COMBINED */}
+        <div className="grid grid-cols-2 gap-2 pt-2 border-t border-cyan-400/20 mt-1">
+          <div>
+            <div className="text-[9px] text-cyan-400/60 uppercase tracking-widest mb-1">
+              RAM
+            </div>
+            <div className="text-sm font-bold text-cyan-100 font-mono">
+              {memoryUsage}
+            </div>
+            <div className="w-full h-1 bg-cyan-900/30 rounded mt-1">
+              <div
+                className="h-full bg-cyan-500/50 rounded"
+                style={{ width: `${getMemoryValue(memoryUsage)}%` }}
+              />
+            </div>
+          </div>
+          <div className="flex flex-col items-end">
+            <div className="text-[9px] text-cyan-400/60 uppercase tracking-widest mb-1">
+              PROCESS
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse shadow-[0_0_5px_#4ade80]" />
+              <span className="text-sm font-bold text-cyan-100 font-mono">
+                {processes}
+              </span>
+            </div>
           </div>
         </div>
       </div>

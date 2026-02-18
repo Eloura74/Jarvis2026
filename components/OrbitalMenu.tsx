@@ -30,32 +30,47 @@ export const OrbitalMenu: React.FC<OrbitalMenuProps> = ({
 }) => {
   const [isOpen, setIsOpen] = useState(false);
 
+  // Sound Effect Helper (via Web Audio API simple ou SpeechSynthesis trick silencieux pour le feedback)
+  // Ou simplement un click handler qui joue un son si on avait des assets.
+  // Pour l'instant, on n'a pas de fichiers mp3, on va trigger un micro-feedback haptique si mobile, ou rien.
+  const playClickSound = () => {
+    // Placeholder pour futur son UI
+    // new Audio('/sounds/click.mp3').play().catch(() => {});
+  };
+
+  const handleAction = (action: () => void) => {
+    playClickSound();
+    action();
+    setIsOpen(false);
+  };
+
   // Configuration des items du menu
+  // UPDATES: Couleurs ajustées, Profil Neural moins "IA Purple"
   const menuItems = [
     {
       id: "home",
       icon: <Zap size={24} />,
       label: "ENERGY",
-      action: onToggleHome,
-      color: "text-yellow-400",
-      bg: "bg-yellow-500/10",
-      border: "border-yellow-500/50 shadow-[0_0_10px_rgba(234,179,8,0.3)]",
+      action: () => handleAction(onToggleHome),
+      color: "text-amber-400", // Yellow -> Amber (plus chaud/premium)
+      bg: "bg-amber-500/10",
+      border: "border-amber-500/50 shadow-[0_0_10px_rgba(251,191,36,0.3)]",
     },
     {
       id: "psych",
       icon: <Brain size={24} />,
-      label: "PSYCH",
-      action: onTogglePsych,
-      color: "text-indigo-400",
-      bg: "bg-indigo-500/10",
-      border: "border-indigo-500/50 shadow-[0_0_10px_rgba(129,140,248,0.3)]",
+      label: "PSYCH", // Profil Neural
+      action: () => handleAction(onTogglePsych),
+      color: "text-slate-300", // "Visuel neutre" demandé -> Gris/Bleu pale
+      bg: "bg-slate-500/10",
+      border: "border-slate-400/50 shadow-[0_0_10px_rgba(148,163,184,0.3)]",
     },
     {
       id: "ghost",
       icon: <Eye size={24} />,
       label: "GHOST",
-      action: onToggleGhost,
-      color: "text-purple-400",
+      action: () => handleAction(onToggleGhost),
+      color: "text-purple-400", // Reste Purple pour Ghost/Mystère
       bg: "bg-purple-500/10",
       border: "border-purple-500/50 shadow-[0_0_10px_rgba(192,132,252,0.3)]",
     },
@@ -63,16 +78,16 @@ export const OrbitalMenu: React.FC<OrbitalMenuProps> = ({
       id: "workflow",
       icon: <Workflow size={24} />,
       label: "FLOW",
-      action: onToggleWorkflow,
-      color: "text-green-400",
-      bg: "bg-green-500/10",
-      border: "border-green-500/50 shadow-[0_0_10px_rgba(74,222,128,0.3)]",
+      action: () => handleAction(onToggleWorkflow),
+      color: "text-emerald-400", // Green -> Emerald
+      bg: "bg-emerald-500/10",
+      border: "border-emerald-500/50 shadow-[0_0_10px_rgba(52,211,153,0.3)]",
     },
     {
       id: "printer",
       icon: <Printer size={24} />,
       label: "FLEET",
-      action: onTogglePrinter,
+      action: () => handleAction(onTogglePrinter),
       color: "text-orange-400",
       bg: "bg-orange-500/10",
       border: "border-orange-500/50 shadow-[0_0_10px_rgba(251,146,60,0.3)]",
@@ -81,14 +96,13 @@ export const OrbitalMenu: React.FC<OrbitalMenuProps> = ({
       id: "gemini",
       icon: <Sparkles size={24} />,
       label: "GEMINI",
-      action: onToggleGemini,
+      action: () => handleAction(onToggleGemini),
       color: "text-cyan-400",
       bg: "bg-cyan-500/10",
       border: "border-cyan-500/50 shadow-[0_0_10px_rgba(34,211,238,0.3)]",
     },
   ];
 
-  // Rayon du menu (distance des items au centre)
   const radius = 160;
 
   return (
@@ -101,7 +115,10 @@ export const OrbitalMenu: React.FC<OrbitalMenuProps> = ({
 
         {/* Toggle Central Button */}
         <button
-          onClick={() => setIsOpen(!isOpen)}
+          onClick={() => {
+            playClickSound();
+            setIsOpen(!isOpen);
+          }}
           className={`relative z-50 w-16 h-16 rounded-full flex items-center justify-center transition-all duration-500 backdrop-blur-sm ${
             isOpen
               ? "bg-black/80 border border-red-500 shadow-[0_0_30px_rgba(239,68,68,0.4)]"
@@ -135,18 +152,14 @@ export const OrbitalMenu: React.FC<OrbitalMenuProps> = ({
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="fixed inset-0 bg-black/40 backdrop-blur-[2px] -z-10 pointer-events-auto"
+                className="fixed inset-0 bg-black/60 backdrop-blur-[2px] -z-10 pointer-events-auto"
                 onClick={() => setIsOpen(false)}
               />
 
               <div className="absolute inset-0 flex items-center justify-center">
                 {menuItems.map((item, index) => {
-                  // Calcul de la position trigonométrique
-                  // On répartit sur 360 deg, en commençant à -90 (haut)
                   const total = menuItems.length;
                   const angle = (index / total) * 2 * Math.PI - Math.PI / 2;
-
-                  // Coordonnées finales
                   const x = Math.cos(angle) * radius;
                   const y = Math.sin(angle) * radius;
 
@@ -199,10 +212,7 @@ export const OrbitalMenu: React.FC<OrbitalMenuProps> = ({
                       <motion.button
                         whileHover={{ scale: 1.15 }}
                         whileTap={{ scale: 0.95 }}
-                        onClick={() => {
-                          item.action();
-                          setIsOpen(false);
-                        }}
+                        onClick={item.action}
                         className={`relative z-20 w-16 h-16 rounded-full flex flex-col items-center justify-center backdrop-blur-md border bg-black/60 transition-colors ${item.border} hover:bg-white/10`}
                       >
                         <div
