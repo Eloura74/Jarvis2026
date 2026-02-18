@@ -23,5 +23,5 @@ export const isRichTool = (toolName: string): boolean => {
  * (ex: lire une page puis résumer/écrire).
  */
 export const isChainableTool = (toolName: string): boolean => {
-  return ["read_web_page", "analyze_screen", "gmail_read"].includes(toolName);
+  return ["read_web_page", "analyze_screen"].includes(toolName);
 };
