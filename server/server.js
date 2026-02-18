@@ -39,6 +39,7 @@ import memoryRoutes from "./routes/memory.js";
 import webRoutes from "./routes/web.js";
 import configRoutes from "./routes/config.js";
 import bambuRoutes from "./routes/bambu.js";
+import weatherRoutes from "./routes/weather.js";
 
 const app = express();
 const PORT = 3001;
@@ -59,6 +60,7 @@ app.use("/api/memory", memoryRoutes);
 app.use("/api/web", webRoutes);
 app.use("/api/config", configRoutes); // Config persistante
 app.use("/api/bambu", bambuRoutes); // Bambu MQTT proxy
+app.use("/api/weather", weatherRoutes); // Weather Proxy
 
 // Index des applications (chargé en mémoire)
 let appsIndex = [];

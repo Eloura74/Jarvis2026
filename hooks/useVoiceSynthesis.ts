@@ -160,8 +160,12 @@ export function useVoiceSynthesis({
 
       utterance.onend = () => handleEndOrError("End");
       utterance.onerror = (event) => {
+        if (event.error === "interrupted") {
+          // Interruption volontaire, on ignore
+          handleEndOrError("Interrupted");
+          return;
+        }
         console.error("Erreur synthèse vocale:", event.error);
-        // Si interrompu, c'est souvent volonaitre, on ne log pas en erreur critique
         handleEndOrError("Error");
       };
 

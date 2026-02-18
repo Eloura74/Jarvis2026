@@ -1,13 +1,5 @@
 import React, { useState, useEffect } from "react";
-import {
-  Video,
-  Maximize2,
-  Activity,
-  Wifi,
-  BatteryCharging,
-  Menu,
-  X,
-} from "lucide-react";
+import { Video, Maximize2, Activity, Menu, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 export const CameraWidget: React.FC = () => {
@@ -42,11 +34,16 @@ export const CameraWidget: React.FC = () => {
     },
   ] as const;
 
+  // -- STATES --
   const [activeCameraId, setActiveCameraId] = useState<string>(cameras[0].id);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [glitch, setGlitch] = useState(false);
   const [imgError, setImgError] = useState(false);
+  const [refreshTrigger, setRefreshTrigger] = useState(Date.now());
 
+  // -- EFFECTS --
+
+  // Glitch effect randomizer
   useEffect(() => {
     const interval = setInterval(() => {
       if (Math.random() > 0.95) {
@@ -57,29 +54,22 @@ export const CameraWidget: React.FC = () => {
     return () => clearInterval(interval);
   }, []);
 
-  const [refreshTrigger, setRefreshTrigger] = useState(Date.now());
-
+  // Reset img error on camera change
   useEffect(() => {
     setImgError(false);
   }, [activeCameraId]);
 
+  // Refresh trigger for snapshots
   useEffect(() => {
     const interval = setInterval(() => {
       setRefreshTrigger(Date.now());
-    }, 5000); // Ralenti un peu le refresh des thumbnails snapshot
+    }, 5000);
     return () => clearInterval(interval);
   }, []);
 
+  // -- HELPERS --
   const currentCam = cameras.find((c) => c.id === activeCameraId);
   const isSnapshot = currentCam?.mode === "snapshot";
-
-  const getStreamUrl = (camId: string, mode: string) => {
-    if (!HA_TOKEN) return "";
-    if (mode === "snapshot") {
-      return `/api/camera_proxy/${camId}?token=${HA_TOKEN}&t=${Date.now()}`;
-    }
-    return `/api/camera_proxy_stream/${camId}?token=${HA_TOKEN}`;
-  };
 
   const activeStreamUrl = HA_TOKEN
     ? isSnapshot
@@ -107,9 +97,9 @@ export const CameraWidget: React.FC = () => {
       </div>
 
       <div className="relative w-full group">
-        {/* Toggle Menu Button (Overlay) */}
+        {/* Toggle Menu Button (Overlay) - Utilisation sécurisée de setIsMenuOpen */}
         <button
-          onClick={() => setIsMenuOpen(!isMenuOpen)}
+          onClick={() => setIsMenuOpen((prev) => !prev)}
           className="absolute top-2 left-2 z-50 p-1.5 rounded-lg bg-black/60 border border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/20 hover:text-cyan-200 transition-all"
         >
           {isMenuOpen ? <X size={16} /> : <Menu size={16} />}
@@ -148,18 +138,18 @@ export const CameraWidget: React.FC = () => {
           )}
         </AnimatePresence>
 
-        {/* MAIN VIEWER (Hauteur définie par l'image) */}
+        {/* MAIN VIEWER */}
         <div className="relative bg-black/50 w-full">
           {HA_TOKEN && !imgError ? (
             <img
               key={activeCameraId + (isSnapshot ? "snap" : "stream")}
               src={activeStreamUrl}
               alt={currentCam?.label}
-              className="w-full h-auto block" // h-auto pour ratio natif
+              className="w-full h-auto block"
               onError={() => setImgError(true)}
             />
           ) : (
-            <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-4">
+            <div className="min-h-[200px] flex flex-col items-center justify-center text-center p-4">
               <span className="text-cyan-500/50 text-[10px] tracking-widest uppercase mb-2">
                 SIGNAL LOST / NO AUTH
               </span>
