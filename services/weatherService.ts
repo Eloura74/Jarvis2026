@@ -177,7 +177,32 @@ export const fetchWeatherData = async (
   }
 };
 
-// ... (getCurrentWeather inchangée) ...
+/**
+ * Récupère la météo pour la position actuelle de l'utilisateur
+ *
+ * Combine la géolocalisation et l'appel API météo.
+ * Fonction principale à utiliser dans les composants.
+ *
+ * @returns Promise avec les données météo
+ * @throws Error si la géolocalisation ou l'API échoue
+ *
+ * @example
+ * ```typescript
+ * const weather = await getCurrentWeather();
+ * console.log(`${weather.temperature}° à ${weather.city}`);
+ * ```
+ */
+export const getCurrentWeather = async (): Promise<WeatherData> => {
+  try {
+    // 1. Tenter la géolocalisation
+    const position = await getUserPosition();
+    return await fetchWeatherData(position.latitude, position.longitude);
+  } catch (error) {
+    // 2. Fallback sur une ville par défaut (ou IP-based si on avait le service)
+    // On utilise Paris par défaut pour ne pas laisser le widget vide
+    return await getWeatherByCity("Paris");
+  }
+};
 
 /**
  * Récupère la météo pour une ville spécifique
