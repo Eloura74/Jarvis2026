@@ -4,7 +4,11 @@
  */
 
 import { useState, useCallback } from "react";
-import { analyzeScreen, getAnalysisHistory, GhostAnalysis } from "../services/ghostMode";
+import {
+  analyzeScreen,
+  getAnalysisHistory,
+  GhostAnalysis,
+} from "../services/ghostMode";
 
 export function useGhostMode() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -13,12 +17,12 @@ export function useGhostMode() {
   const [history, setHistory] = useState<GhostAnalysis[]>([]);
 
   // Déclenche analyse
-  const analyze = useCallback(async () => {
+  const analyze = useCallback(async (imageData?: string) => {
     setIsAnalyzing(true);
     setError(null);
 
     try {
-      const result = await analyzeScreen();
+      const result = await analyzeScreen(imageData);
       if (result) {
         setLastAnalysis(result);
         setHistory(getAnalysisHistory());

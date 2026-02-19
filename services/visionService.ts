@@ -170,7 +170,7 @@ export const analyzeImage = async (
 
     // Appel API Gemini Vision avec 2.5 Flash
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash-preview-09-2025", // Gemini 2.5 Flash supporte Vision (images + vidéos)
+      model: "gemini-2.5-flash", // Gemini 2.5 Flash supporte Vision (images + vidéos)
       contents: [
         {
           role: "user",

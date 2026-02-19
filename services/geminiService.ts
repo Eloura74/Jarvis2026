@@ -300,6 +300,15 @@ const toolDeclarations: FunctionDeclaration[] = [
     },
   },
   {
+    name: "activate_ghost_mode",
+    description:
+      "Activate/Open 'Ghost Mode' (Visual Analysis Protocol). Use when user says 'Active le mode Ghost', 'Ghost Mode', 'Analyse cet objet', 'Regarde ça'.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {},
+    },
+  },
+  {
     name: "get_travel_time",
     description: "Get travel duration and traffic info to a destination.",
     parameters: {
@@ -409,8 +418,8 @@ async function generateContentWithFallback(
   delay = INITIAL_RETRY_DELAY,
   useFallback = false,
 ): Promise<any> {
-  // Stratégie : D'abord 2.0-flash, si 429/500 -> 1.5-flash (plus stable)
-  const currentModel = useFallback ? "gemini-1.5-flash" : "gemini-2.0-flash";
+  // Stratégie : D'abord 2.5-flash, si 429/500 -> 1.5-flash (plus stable)
+  const currentModel = useFallback ? "gemini-1.5-flash" : "gemini-2.5-flash";
 
   try {
     return await ai.models.generateContent({

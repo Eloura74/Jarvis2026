@@ -145,10 +145,26 @@ export function useToolExecutor({
           case "close_current_overlay":
             if (ctx.setStatusOverlay) {
               ctx.setStatusOverlay(null);
+              // Si c'est un panel overlay (GHOST, HOME, etc)
+              if (additionalDeps.setActiveOverlay) {
+                additionalDeps.setActiveOverlay(null);
+              }
               speak("Affichage fermé.");
               return { status: "success", message: "Overlay closed" };
             }
             return { status: "error", message: "No overlay controller" };
+
+          case "activate_ghost_mode":
+            if (additionalDeps.setActiveOverlay) {
+              additionalDeps.setActiveOverlay("GHOST");
+              speak("Mode Ghost activé. Analyse visuelle prête.");
+              return { status: "success", message: "Ghost Mode activated" };
+            }
+            return {
+              status: "error",
+              message:
+                "Impossible d'activer le mode Ghost (dépendance manquante)",
+            };
 
           // === GOOGLE SERVICES ===
           case "gmail_read":

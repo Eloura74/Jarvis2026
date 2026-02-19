@@ -51,14 +51,19 @@ export default function GhostModePanel() {
     // Feedback Sonore (si dispo)
     // new Audio('/sounds/scan_start.mp3').play().catch(() => {});
 
-    // Capture d'image
+    // Capture d'image depuis la WEBCAM (et non l'écran)
     if (videoRef.current && canvasRef.current) {
       const context = canvasRef.current.getContext("2d");
       if (context) {
         canvasRef.current.width = videoRef.current.videoWidth;
         canvasRef.current.height = videoRef.current.videoHeight;
         context.drawImage(videoRef.current, 0, 0);
-        await analyze();
+
+        // Convert to Base64 JPEG
+        const imageData = canvasRef.current.toDataURL("image/jpeg", 0.8);
+
+        // Envoi à l'analyseur (Vision)
+        await analyze(imageData);
       }
     }
   };
