@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include <LovyanGFX.hpp>
+#include <vector>
 
 // ================== CONFIG GC9A01 ==================
 class LGFX : public lgfx::LGFX_Device {
@@ -12,7 +13,7 @@ public:
       auto cfg = _bus.config();
       cfg.spi_host   = SPI2_HOST;
       cfg.spi_mode   = 0;
-      cfg.freq_write = 40000000;
+      cfg.freq_write = 80000000;
       cfg.freq_read  = 0;
       cfg.spi_3wire  = true;
       cfg.use_lock   = true;
@@ -46,7 +47,6 @@ public:
 
       _panel.config(cfg);
     }
-
     setPanel(&_panel);
   }
 };
@@ -54,24 +54,60 @@ public:
 LGFX display;
 static lgfx::LGFX_Sprite spr(&display);
 
-// ================== ORB STATES ==================
+// ================== TYPES & CONSTANTS ==================
 enum class OrbState : uint8_t { IDLE, LISTENING, SPEAKING, ERROR };
 static OrbState g_state = OrbState::IDLE;
+static OrbState g_lastState = OrbState::IDLE;
 
 static char g_text[64] = "JARVIS";
 static uint32_t g_lastFrame = 0;
 static float g_phase = 0.0f;
 
-// util: clamp
-static int clampi(int v, int lo, int hi) { return v < lo ? lo : (v > hi ? hi : v); }
+// Colors
+const uint16_t COL_CYAN   = display.color888(0, 255, 255);
+const uint16_t COL_BLUE   = display.color888(0, 100, 255);
+const uint16_t COL_ORANGE = display.color888(255, 140, 0);
+const uint16_t COL_RED    = display.color888(255, 50, 50);
+const uint16_t COL_WHITE  = display.color888(255, 255, 255);
+const uint16_t COL_GREEN  = display.color888(50, 255, 50);
 
-// ================== SERIAL PROTOCOL ==================
-// Commands (one per line):
-//  STATE IDLE|LISTENING|SPEAKING|ERROR
-//  TEXT <message...>
-//  PING
-//  HELP
+// Animation Variables (Smooth Transitions)
+float currentAmplitude = 10.0f;
+float targetAmplitude = 10.0f;
+float currentSpeed = 0.05f;
+float targetSpeed = 0.05f;
+uint16_t currentColor = COL_BLUE;
+
+// Particles
+struct Particle {
+  float x, y;
+  float vx, vy;
+  uint8_t life;
+  uint8_t size;
+};
+std::vector<Particle> particles;
+const int MAX_PARTICLES = 30;
+
+// ================== UTILS ==================
+uint16_t lerpColor(uint16_t c1, uint16_t c2, float t) {
+  int r1 = (c1 >> 11) & 0x1F;
+  int g1 = (c1 >> 5) & 0x3F;
+  int b1 = c1 & 0x1F;
+  
+  int r2 = (c2 >> 11) & 0x1F;
+  int g2 = (c2 >> 5) & 0x3F;
+  int b2 = c2 & 0x1F;
+  
+  int r = r1 + (int)((r2 - r1) * t);
+  int g = g1 + (int)((g2 - g1) * t);
+  int b = b1 + (int)((b2 - b1) * t);
+  
+  return (r << 11) | (g << 5) | b;
+}
+
+// ================== SERIAL ==================
 static void setStateFromStr(const String& s) {
+  g_lastState = g_state;
   if (s == "IDLE") g_state = OrbState::IDLE;
   else if (s == "LISTENING") g_state = OrbState::LISTENING;
   else if (s == "SPEAKING") g_state = OrbState::SPEAKING;
@@ -81,24 +117,15 @@ static void setStateFromStr(const String& s) {
 static void handleLine(String line) {
   line.trim();
   if (!line.length()) return;
-
   if (line == "PING") { Serial.println("PONG"); return; }
-  if (line == "HELP") {
-    Serial.println("CMD: STATE IDLE|LISTENING|SPEAKING|ERROR");
-    Serial.println("CMD: TEXT <message>");
-    Serial.println("CMD: PING");
-    return;
-  }
-
+  
   if (line.startsWith("STATE ")) {
-    String s = line.substring(6);
-    s.trim();
-    s.toUpperCase();
+    String s = line.substring(6); 
+    s.trim(); s.toUpperCase();
     setStateFromStr(s);
-    Serial.print("OK STATE "); Serial.println(s);
+    Serial.println("OK STATE");
     return;
   }
-
   if (line.startsWith("TEXT ")) {
     String msg = line.substring(5);
     msg.trim();
@@ -107,91 +134,156 @@ static void handleLine(String line) {
     Serial.println("OK TEXT");
     return;
   }
-
-  Serial.println("ERR UNKNOWN");
 }
 
-// ================== RENDER ==================
-static uint16_t colorForState(OrbState st) {
-  switch (st) {
-    case OrbState::IDLE:      return display.color888(40, 160, 255); // bleu
-    case OrbState::LISTENING: return display.color888(60, 255, 140); // vert
-    case OrbState::SPEAKING:  return display.color888(255, 120, 40); // orange
-    case OrbState::ERROR:     return display.color888(255, 60, 60);  // rouge
+// ================== LOGIC UPDATE ==================
+void updateLogic() {
+  // 1. Target Setting
+  switch (g_state) {
+    case OrbState::IDLE:
+      targetAmplitude = 10.0f;
+      targetSpeed = 0.04f;
+      // Interpolation lente vers bleu/cyan
+      currentColor = lerpColor(currentColor, COL_CYAN, 0.05f);
+      break;
+    case OrbState::LISTENING:
+      targetAmplitude = 20.0f;
+      targetSpeed = 0.12f;
+      currentColor = lerpColor(currentColor, COL_GREEN, 0.1f);
+      break;
+    case OrbState::SPEAKING:
+      targetAmplitude = 50.0f + (sin(millis() * 0.01) * 20.0f); // Variation dynamique
+      targetSpeed = 0.25f;
+      currentColor = lerpColor(currentColor, COL_ORANGE, 0.1f);
+      break;
+    case OrbState::ERROR:
+      targetAmplitude = 5.0f;
+      targetSpeed = 0.0f;
+      currentColor = lerpColor(currentColor, COL_RED, 0.2f);
+      break;
   }
-  return TFT_WHITE;
+
+  // 2. Smooth Interpolation (LERP)
+  currentAmplitude += (targetAmplitude - currentAmplitude) * 0.1f;
+  currentSpeed += (targetSpeed - currentSpeed) * 0.05f;
+  
+  g_phase += currentSpeed;
+
+  // 3. Particles Logic (Background)
+  if (particles.size() < MAX_PARTICLES && rand() % 10 == 0) {
+    particles.push_back({
+      120.0f, 120.0f,
+      (float)(rand()%100 - 50) * 0.05f, (float)(rand()%100 - 50) * 0.05f,
+      255,
+      (uint8_t)(rand()%3 + 1)
+    });
+  }
+
+  for (auto it = particles.begin(); it != particles.end();) {
+    it->x += it->vx;
+    it->y += it->vy;
+    it->life -= 2;
+    
+    // Attraction vers le centre si SPEAKING
+    if (g_state == OrbState::SPEAKING) {
+        it->x += (120 - it->x) * 0.01f;
+        it->y += (120 - it->y) * 0.01f;
+    }
+
+    if (it->life <= 0 || it->x < 0 || it->x > 240 || it->y < 0 || it->y > 240) {
+      it = particles.erase(it);
+    } else {
+      ++it;
+    }
+  }
 }
 
-static void drawOrbFrame() {
-  const int cx = 120, cy = 120;
-  const uint16_t base = colorForState(g_state);
-
-  // animation : pulsation + légère onde
-  float speed = 0.06f;
-  if (g_state == OrbState::LISTENING) speed = 0.10f;
-  if (g_state == OrbState::SPEAKING)  speed = 0.16f;
-  if (g_state == OrbState::ERROR)     speed = 0.08f;
-
-  g_phase += speed;
-  if (g_phase > 100000.0f) g_phase = 0.0f;
-
-  float pulse = 0.5f + 0.5f * sinf(g_phase);
-  int r0 = 58 + (int)(pulse * 10.0f);        // rayon orb
-  int glow = 22 + (int)(pulse * 12.0f);      // halo
-
+// ================== DRAWING ==================
+void draw() {
   spr.fillScreen(TFT_BLACK);
 
-  // halo (plusieurs cercles alpha-like via dégradé)
-  for (int i = glow; i >= 1; --i) {
-    int a = (i * 220) / glow;                // pseudo alpha
-    int rr = r0 + i;
-
-    int cr = clampi(((base >> 11) & 0x1F) * 8, 0, 255);
-    int cg = clampi(((base >> 5)  & 0x3F) * 4, 0, 255);
-    int cb = clampi(( base        & 0x1F) * 8, 0, 255);
-
-    // atténuation
-    cr = (cr * a) / 255;
-    cg = (cg * a) / 255;
-    cb = (cb * a) / 255;
-
-    spr.drawCircle(cx, cy, rr, spr.color888(cr, cg, cb));
+  // 1. Draw Particles (Background depth)
+  for (const auto& p : particles) {
+    uint16_t pCol = spr.color888(
+      (p.life), 
+      (p.life * (currentColor >> 5 & 0x3F)) / 64, 
+      (p.life * (currentColor & 0x1F)) / 32
+    );
+    spr.fillRect((int)p.x, (int)p.y, p.size, p.size, pCol);
   }
 
-  // orb pleine
-  spr.fillCircle(cx, cy, r0, base);
+  // 2. Draw Waveform
+  int centerY = 120;
+  int numLines = (g_state == OrbState::SPEAKING) ? 5 : 3;
 
-  // “reflet” pour effet sphère
-  spr.fillCircle(cx - 18, cy - 20, 14, spr.color888(255, 255, 255));
-  spr.fillCircle(cx - 18, cy - 20, 14, TFT_WHITE);
-  spr.fillCircle(cx - 18, cy - 20, 12, spr.color888(220, 220, 220));
+  for (int l = 0; l < numLines; l++) {
+    float offset = l * 0.5f;
+    uint16_t col = currentColor;
+    if (l > 0) col = display.color888(
+       (col >> 11 & 0x1F) * 4, 
+       (col >> 5 & 0x3F) * 4, 
+       (col & 0x1F) * 4
+    ); // Darker copies
 
-  // texte
+    for (int x = 0; x < 240; x+=2) {
+      float nx = (x - 120) / 120.0f;
+      float envelope = 1.0f - (nx * nx); // Start/End at 0
+      
+      float wave = sin(g_phase + x * 0.03f + offset) 
+                 + sin(g_phase * 0.5f + x * 0.08f) * 0.5f;
+      
+      int y = centerY + (int)(wave * currentAmplitude * envelope);
+      
+      // Draw vertical segment (Bar style) or Line style
+      // Let's do connected lines for smoother look would need prevX/prevY
+      // Pixel style is faster and looks "digital"
+      spr.drawPixel(x, y, col);
+      spr.drawPixel(x+1, y, col);
+      if (g_state == OrbState::SPEAKING) {
+         spr.drawPixel(x, y+1, col); // Thicker line
+      }
+    }
+  }
+
+  // 3. Glitch Effect (Random displacement)
+  if (g_state == OrbState::SPEAKING && rand() % 50 == 0) {
+      int y = rand() % 240;
+      int h = rand() % 20 + 5;
+      int shift = rand() % 10 - 5;
+      spr.setScrollRect(0, y, 240, h);
+      spr.scroll(shift, 0);
+      spr.setScrollRect(0, 0, 240, 240); // Reset
+  }
+
+  // 4. UI Elements
   spr.setTextDatum(MC_DATUM);
   spr.setTextColor(TFT_WHITE, TFT_BLACK);
-  spr.setTextSize(1);
-  spr.drawString(g_text, cx, 200);
+  
+  // Status Text
+  spr.drawString(g_text, 120, 200);
+
+  // Small Top Indicator
+  if (g_state == OrbState::LISTENING) {
+    spr.fillCircle(120, 15, 3, COL_RED);
+  }
 
   spr.pushSprite(0, 0);
 }
 
-// ================== SETUP/LOOP ==================
 void setup() {
   Serial.begin(115200);
-  delay(400);
-
+  delay(200);
+  
   display.init();
   display.setRotation(0);
-
   spr.createSprite(240, 240);
   spr.setSwapBytes(true);
-
+  
   Serial.println("READY");
-  Serial.println("Type HELP");
 }
 
 void loop() {
-  // lecture série non bloquante
+  // Serial Read
   static String line;
   while (Serial.available()) {
     char c = (char)Serial.read();
@@ -199,10 +291,11 @@ void loop() {
     else if (c != '\r') { line += c; if (line.length() > 200) line = ""; }
   }
 
-  // rendu ~60 FPS
+  // Render loop
   uint32_t now = millis();
   if (now - g_lastFrame >= 16) {
     g_lastFrame = now;
-    drawOrbFrame();
+    updateLogic();
+    draw();
   }
 }
