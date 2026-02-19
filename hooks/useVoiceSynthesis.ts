@@ -145,11 +145,24 @@ export function useVoiceSynthesis({
       utterance.onstart = () => {
         console.log("🔊 TTS Start:", text.substring(0, 20) + "...");
         onStart?.();
+        // 🟣 SPHERE: SPEAKING
+        fetch("http://localhost:3001/api/sphere/state", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ state: "SPEAKING" }),
+        }).catch(() => {});
       };
 
       const handleEndOrError = (type: string) => {
         console.log(`🔊 TTS ${type}`);
         onEnd?.(); // Signal fin à l'UI
+        // 🟣 SPHERE: IDLE
+        fetch("http://localhost:3001/api/sphere/state", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ state: "IDLE" }),
+        }).catch(() => {});
+
         currentUtteranceRef.current = null;
 
         // Délai avant le prochain message

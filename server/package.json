@@ -25,6 +25,7 @@
     "googleapis": "^171.4.0",
     "puppeteer-core": "^24.37.3",
     "screenshot-desktop": "^1.15.0",
+    "serialport": "^13.0.0",
     "systeminformation": "^5.22.0"
   },
   "devDependencies": {

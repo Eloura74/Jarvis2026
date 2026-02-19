@@ -123,13 +123,13 @@ const dataUrlToGeminiImage = (dataUrl: string) => {
 /** Prompts système selon le type d'analyse */
 const ANALYSIS_PROMPTS: Record<AnalysisType, string> = {
   general:
-    "Analyse cette image et décris ce que tu vois de manière détaillée. Identifie les éléments principaux, les couleurs, le contexte et tout ce qui semble important.",
+    "Analyse image. SOIS BREF ET CONCIS. Une seule phrase pour décrire l'essentiel de l'action ou du contexte. Pas de détails superflus.",
 
-  ocr: "Extrais tout le texte visible dans cette image. Présente-le de manière structurée et lisible. Si du code est présent, conserve sa mise en forme.",
+  ocr: "Extrais le texte visible. Résultat brut uniquement.",
 
-  code: "Analyse ce code visible dans l'image. Identifie le langage, explique ce qu'il fait, détecte les erreurs potentielles, et propose des améliorations.",
+  code: "Analyse ce code. Bref résumé du but + 1 amélioration clé. Concision maximale.",
 
-  ui: "Analyse cette interface utilisateur. Décris les éléments visuels, l'organisation, l'ergonomie, et propose des améliorations UX/UI si pertinent.",
+  ui: "Analyse l'UI. Points clés d'ergonomie en 3 points max. Bref.",
 
   error:
     "Recherche des erreurs dans cette image (messages d'erreur, bugs visuels, problèmes de code). Liste chaque erreur trouvée et propose des solutions.",

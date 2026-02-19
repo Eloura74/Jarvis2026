@@ -154,11 +154,19 @@ process.on("unhandledRejection", (reason) => {
 
 // Import Bambu MQTT service
 import { initBambuMqtt } from "./services/bambuMqtt.js";
+// Import Sphere Service
+import { initSphereService } from "./services/sphereService.js";
+import sphereRoutes from "./routes/sphere.js";
 
 // START
 initializeIndex().then(() => {
   // Init Bambu MQTT connection
   initBambuMqtt();
+  // Init Sphere Serial connection
+  initSphereService();
+
+  // Register Sphere Routes
+  app.use("/api/sphere", sphereRoutes);
 
   app.listen(PORT, () => {
     console.log(`✅ J.A.R.V.I.S. Core running on http://localhost:${PORT}`);

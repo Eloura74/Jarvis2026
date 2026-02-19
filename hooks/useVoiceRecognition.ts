@@ -128,6 +128,12 @@ export function useVoiceRecognition(
             if (onStatusChangeRef.current) {
               onStatusChangeRef.current(true);
             }
+            // 🟣 SPHERE: LISTENING
+            fetch("http://localhost:3001/api/sphere/state", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ state: "LISTENING" }),
+            }).catch(() => {});
           };
 
           // Événement : fin de l'écoute (automatique ou manuelle)
@@ -139,6 +145,12 @@ export function useVoiceRecognition(
             if (onStatusChangeRef.current) {
               onStatusChangeRef.current(false);
             }
+            // 🟣 SPHERE: IDLE
+            fetch("http://localhost:3001/api/sphere/state", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ state: "IDLE" }),
+            }).catch(() => {});
           };
 
           // ========================================

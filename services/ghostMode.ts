@@ -81,14 +81,14 @@ async function analyzeWithGemini(base64Image: string): Promise<GhostAnalysis> {
 
   const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
-  const prompt = `Analyse cette image capturée par ta caméra (Ghost Mode).
-Identifie les éléments visuels, le contexte global et ce qui se passe.
-Si c'est un écran, lis le code ou le texte. Si c'est une pièce, décris l'environnement.
+  const prompt = `Analyse cette image (Ghost Mode). Soyez BREF, DIRECT et CONCIS.
+Contexte: 1 phrase max pour décrire l'essentiel.
+Action: Ce que l'utilisateur fait (1 phrase).
 
 Réponds STRICTEMENT en JSON :
 {
-  "context": "Description visuelle détaillée de ce que tu vois (ex: Une personne tenant une tasse, un écran affichant du code React...)",
-  "suggestions": ["Action proposée 1", "Action proposée 2", "Action proposée 3"],
+  "context": "Description ultra-courte et factuelle (ex: Homme fumant devant un établi, écran avec code React).",
+  "suggestions": ["Action 1", "Action 2", "Action 3"],
   "detectedTask": "Tâche supposée (ex: Coding, Reading, Drinking Coffee)",
   "detectedLanguage": "Langage informatique si visible (sinon null)"
 }`;
