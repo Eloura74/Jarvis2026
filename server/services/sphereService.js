@@ -9,42 +9,26 @@ let reconnectInterval;
 const BAUD_RATE = 115200;
 const RECONNECT_DELAY = 5000;
 
-/**
- * Détecte le port série de l'ESP32 (CH340/CP210x)
- */
-async function detectPort() {
-  const ports = await SerialPort.list();
-
-  // Filtrer pour trouver l'ESP32
-  const espPort = ports.find(
-    (p) =>
-      (p.manufacturer &&
-        (p.manufacturer.includes("Espressif") ||
-          p.manufacturer.includes("wch.cn") || // CH340
-          p.manufacturer.includes("Silicon Labs"))) || // CP210x
-      (p.pnpId &&
-        (p.pnpId.includes("VID_1A86") || p.pnpId.includes("VID_10C4"))), // Fallback PnpId
-  );
-
-  if (espPort) {
-    console.log(`🔌 [Sphere] Port détecté: ${espPort.path}`);
-    return espPort.path;
-  }
-
-  return null;
-}
-
-/**
- * Initialise la connexion série
- */
 export async function initSphereService() {
   connect();
 }
 
-async function connect() {
-  // Eviter connexion double
-  if (isConnected || (port && port.isOpen)) return;
+async function detectPort() {
+  const ports = await SerialPort.list();
+  const espPort = ports.find(
+    (p) =>
+      (p.manufacturer &&
+        (p.manufacturer.includes("Espressif") ||
+          p.manufacturer.includes("wch.cn") ||
+          p.manufacturer.includes("Silicon Labs"))) ||
+      (p.pnpId &&
+        (p.pnpId.includes("VID_1A86") || p.pnpId.includes("VID_10C4"))),
+  );
+  return espPort ? espPort.path : null;
+}
 
+async function connect() {
+  if (isConnected || (port && port.isOpen)) return;
   const portPath = await detectPort();
 
   if (!portPath) {
@@ -66,12 +50,10 @@ async function connect() {
         clearInterval(reconnectInterval);
         reconnectInterval = null;
       }
-
-      // Reset state on connect
       setTimeout(() => {
         setSphereState("IDLE");
         setSphereText("JARVIS ONLINE");
-      }, 2000); // Attendre le boot de l'ESP
+      }, 2000);
     });
 
     port.on("close", () => {
@@ -100,34 +82,31 @@ function scheduleReconnect() {
 }
 
 /**
- * Change l'état visuel de la sphère
- * @param {"IDLE" | "LISTENING" | "SPEAKING" | "ERROR"} state
+ * Change l'état ou le mode de la sphère
+ * @param {string} state - IDLE, LISTENING, SPEAKING, ERROR, WEATHER, HOME, SYSTEM, SEARCH, MATRIX
  */
 export function setSphereState(state) {
   if (!isConnected || !port) return;
   try {
-    const cmd = `STATE ${state.toUpperCase()}\n`;
+    // Allow both STATE and MODE keyword, but main.cpp handles both via "STATE X" or "MODE X" logic?
+    // Actually main.cpp implementation I wrote handles both if line.startsWith("STATE ") || line.startsWith("MODE ")
+    // Let's stick to MODE for semantic modes, but STATE is fine too.
+    const cmd = `MODE ${state.toUpperCase()}\n`;
     port.write(cmd);
   } catch (error) {
     console.error("Error writing to sphere:", error);
   }
 }
 
-/**
- * Affiche du texte sur la sphère
- * @param {string} text
- */
 export function setSphereText(text) {
   if (!isConnected || !port) return;
   try {
-    // Nettoyage basique pour éviter caractères non supportés par l'ESP
     const cleanText = text
       .substring(0, 60)
       .replace(/[\n\r]/g, " ")
       .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "") // Enlever accents si besoin (optionnel)
+      .replace(/[\u0300-\u036f]/g, "")
       .trim();
-
     const cmd = `TEXT ${cleanText}\n`;
     port.write(cmd);
   } catch (error) {

@@ -118,6 +118,11 @@ export function useJarvisBrain(props: UseJarvisBrainProps) {
       setStatus(SystemStatus.PROCESSING);
       addLog(`Analyzing: "${text}"`, "USER", "info");
 
+      // 🟣 SPHERE VISUAL CONTEXT
+      const visualMode = detectVisualMode(text);
+      if (visualMode) {
+        setSphereMode(visualMode);
+      }
       try {
         const conversationContext =
           manualContext ||
@@ -146,6 +151,10 @@ export function useJarvisBrain(props: UseJarvisBrainProps) {
               "KERNEL",
               "warning",
             );
+
+            // 🟣 SPHERE: Trigger visual mode based on tool
+            const toolMode = modeFromTool(toolCall.name);
+            if (toolMode) setSphereMode(toolMode);
 
             try {
               const toolResult = await executeTool(
@@ -246,11 +255,18 @@ export function useJarvisBrain(props: UseJarvisBrainProps) {
           setStatus(SystemStatus.IDLE);
           speak("Entendu.");
         }
+
+        // Reset Sphere to IDLE after a short delay (unless it's a long task?)
+        // For now, let it stay in mode or reset?
+        // Better to reset to standard animation after interaction is done.
+        setTimeout(() => setSphereMode("IDLE"), 5000);
       } catch {
         setStatus(SystemStatus.ERROR);
         addLog("Erreur traitement", "SYSTEM", "error");
         speak("Désolé, une erreur est survenue.");
         setTimeout(() => setStatus(SystemStatus.IDLE), 2000);
+        setSphereMode("ERROR");
+        setTimeout(() => setSphereMode("IDLE"), 4000);
       }
     },
     [
@@ -272,4 +288,54 @@ export function useJarvisBrain(props: UseJarvisBrainProps) {
     lastTokenUsage,
     hudNotifications,
   };
+}
+
+// 🟣 HELPER SPHERE
+function setSphereMode(mode: string) {
+  fetch("http://localhost:3001/api/sphere/mode", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ mode }),
+  }).catch((err) => console.warn("Sphere API Error:", err));
+}
+
+function detectVisualMode(text: string): string | null {
+  const t = text.toLowerCase();
+
+  // High priority specific keywords
+  if (t.match(/timer|minuteur|compte à rebours|chrono/)) return "TIMER";
+  if (t.match(/impression|imprimante|bambu|filament|buse/)) return "PRINT";
+  if (t.match(/musique|spotify|volume|son|joue|play|pause/)) return "MEDIA";
+  if (t.match(/succès|réussi|terminé|bravo/)) return "SUCCESS";
+  if (t.match(/notif|message|alerte/)) return "NOTIFICATION";
+
+  if (t.match(/météo|weather|temps|pleuvoir|soleil/)) return "WEATHER";
+  if (t.match(/maison|home|lumière|salon|cuisine|étage|garage|domotique/))
+    return "HOME";
+  if (t.match(/système|system|cpu|ram|stockage|pc|ordinateur|performance/))
+    return "SYSTEM";
+  if (t.match(/matrice|matrix|code|hack|terminal|débug|debug/)) return "MATRIX";
+  if (t.match(/cherche|search|trouve|google|internet|web/)) return "SEARCH";
+  return null;
+}
+
+function modeFromTool(toolName: string): string | null {
+  if (toolName.includes("timer") || toolName.includes("alarm")) return "TIMER";
+  if (toolName.includes("bambu") || toolName.includes("print")) return "PRINT";
+  if (
+    toolName.includes("music") ||
+    toolName.includes("media") ||
+    toolName.includes("volume")
+  )
+    return "MEDIA";
+  if (
+    toolName.includes("home") ||
+    toolName.includes("light") ||
+    toolName.includes("switch")
+  )
+    return "HOME";
+  if (toolName.includes("search") || toolName.includes("browser"))
+    return "SEARCH";
+  if (toolName.includes("weather")) return "WEATHER";
+  return null;
 }

@@ -3,24 +3,21 @@ import { setSphereState, setSphereText } from "../services/sphereService.js";
 
 const router = express.Router();
 
-// POST /api/sphere/state
-// Body: { state: "IDLE" | "LISTENING" | "SPEAKING" | "ERROR" }
-router.post("/state", (req, res) => {
-  const { state } = req.body;
-  if (["IDLE", "LISTENING", "SPEAKING", "ERROR"].includes(state)) {
-    setSphereState(state);
-    res.json({ success: true, state });
+// POST /api/sphere/state OR /api/sphere/mode
+// Body: { state: "IDLE" | "LISTENING" | "SPEAKING" | "ERROR" | "WEATHER" | "HOME" | "SYSTEM" | "MATRIX" | "SEARCH" }
+router.post(["/state", "/mode"], (req, res) => {
+  const { state, mode } = req.body;
+  const target = state || mode;
+
+  if (target) {
+    setSphereState(target);
+    res.json({ success: true, state: target });
   } else {
-    res
-      .status(400)
-      .json({
-        error: "Invalid state. Must be IDLE, LISTENING, SPEAKING, or ERROR.",
-      });
+    res.status(400).json({ error: "Invalid state/mode." });
   }
 });
 
 // POST /api/sphere/text
-// Body: { text: "Hello world" }
 router.post("/text", (req, res) => {
   const { text } = req.body;
   if (text) {
