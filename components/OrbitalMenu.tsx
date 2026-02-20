@@ -1,15 +1,6 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import {
-  Zap,
-  Brain,
-  Eye,
-  Workflow,
-  Printer,
-  Sparkles,
-  Menu,
-  X,
-} from "lucide-react";
+import { Zap, Brain, Eye, Workflow, Printer, Sparkles, X } from "lucide-react";
 
 interface OrbitalMenuProps {
   onToggleHome: () => void;
@@ -119,26 +110,22 @@ export const OrbitalMenu: React.FC<OrbitalMenuProps> = ({
             playClickSound();
             setIsOpen(!isOpen);
           }}
-          className={`relative z-50 w-16 h-16 rounded-full flex items-center justify-center transition-all duration-500 backdrop-blur-sm ${
+          className={`relative z-50 flex items-center justify-center transition-all duration-500 ${
             isOpen
-              ? "bg-black/80 border border-red-500 shadow-[0_0_30px_rgba(239,68,68,0.4)]"
-              : "bg-black/20 border border-cyan-500/20 hover:border-cyan-400 hover:shadow-[0_0_20px_rgba(0,229,255,0.3)] hover:bg-cyan-900/20"
+              ? "w-16 h-16 rounded-full bg-black/80 border border-red-500 shadow-[0_0_30px_rgba(239,68,68,0.4)] backdrop-blur-sm"
+              : "w-64 h-64 rounded-full bg-transparent cursor-pointer"
           }`}
+          title={isOpen ? "Fermer le menu" : "Ouvrir le menu"}
         >
-          {/* Animated Rings inside button */}
-          <div
-            className={`absolute inset-0 rounded-full border border-dashed border-cyan-500/30 animate-[spin_4s_linear_infinite] ${isOpen ? "opacity-0" : "opacity-100"}`}
-          />
-
-          {isOpen ? (
+          {/* 
+            On n'affiche le bouton central (la croix) et son style que lorsque le menu est ouvert.
+            Quand il est fermé, le bouton prend une plus grande taille (w-64 h-64) et devient totalement transparent
+            pour permettre d'admirer la "wave" tout en gardant toute la zone visuelle de la wave cliquable.
+          */}
+          {isOpen && (
             <X
               size={24}
               className="text-red-500 drop-shadow-[0_0_5px_rgba(239,68,68,0.8)]"
-            />
-          ) : (
-            <Menu
-              size={24}
-              className="text-cyan-400 drop-shadow-[0_0_5px_rgba(0,229,255,0.8)]"
             />
           )}
         </button>
