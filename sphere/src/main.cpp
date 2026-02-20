@@ -72,7 +72,7 @@ enum class OrbState : uint8_t {
   IDLE, LISTENING, SPEAKING, ERROR,
   MODE_WEATHER, MODE_HOME, MODE_SYSTEM, MODE_MATRIX, MODE_SEARCH,
   MODE_MEDIA, MODE_TIMER, MODE_PRINT, MODE_NOTIFICATION, MODE_SUCCESS,
-  MODE_APPS, MODE_VISION, MODE_GHOST, MODE_SECURITY
+  MODE_APPS, MODE_VISION, MODE_GHOST, MODE_SECURITY, MODE_SCREENSAVER
 };
 
 struct JarvisState {
@@ -175,9 +175,7 @@ static void setStateFromStr(String s) {
   portENTER_CRITICAL(&jarvisData.spinlock);
   if (jarvisData.currentState != newState) {
     jarvisData.currentState = newState;
-    // Effacer le texte quand on change de mode, sauf si le nouveau mode est SPEAKING ou LISTENING 
-    // pour éviter de clignoter, ou simplement toujours effacer pour éviter la persistance (WEATHER -> IDLE etc)
-    if (newState != OrbState::SPEAKING && newState != OrbState::LISTENING) {
+    if (newState != OrbState::SPEAKING && newState != OrbState::LISTENING && newState != OrbState::IDLE) {
       strcpy(jarvisData.textLabel, "");
     }
   }
@@ -230,6 +228,7 @@ void commTask(void *pvParameters) {
 // ================== CORE 1 : MOTEUR GRAPHIQUE ==================
 static OrbState local_state = OrbState::IDLE;
 static char local_text[64] = "STANDBY";
+static unsigned long idleStartTime = 0; // Timer pour le screensaver
 
 void drawGlow(int x, int y, int radius, uint16_t color, int intensity) {
   for (int r = radius + intensity; r > radius; r -= 2) {
@@ -264,9 +263,21 @@ void drawSegmentedRing(int x, int y, int r, int thickness, int segments, float p
 
 void updateLogic() {
   portENTER_CRITICAL(&jarvisData.spinlock);
+  OrbState previous_state = local_state;
   local_state = jarvisData.currentState;
   strncpy(local_text, jarvisData.textLabel, sizeof(local_text));
   portEXIT_CRITICAL(&jarvisData.spinlock);
+
+  // Gestion du Screensaver
+  if (local_state == OrbState::IDLE) {
+    if (previous_state != OrbState::IDLE && previous_state != OrbState::MODE_SCREENSAVER) {
+      idleStartTime = millis(); // Reset timer quand on repasse en IDLE depuis un autre état actif
+    } else if (millis() - idleStartTime > 30000) {
+      local_state = OrbState::MODE_SCREENSAVER; // Force localement le rendu Screensaver après 30s
+    }
+  } else {
+    idleStartTime = millis(); // Reset si on n'est ni en IDLE ni en SCREENSAVER
+  }
 
   float target_radius = 65.0f;
   float target_speed = 0.03f;
@@ -292,6 +303,7 @@ void updateLogic() {
         case OrbState::MODE_GHOST: target_radius= 10.0f; target_speed = 0.01f; target_color = COL_GREY; break;
         case OrbState::MODE_MEDIA: target_radius= 20.0f; target_speed = 0.10f; target_color = COL_PINK; break;
         case OrbState::MODE_SUCCESS:target_radius=0.0f;  target_speed = 0.05f; target_color = COL_GREEN; break;
+        case OrbState::MODE_SCREENSAVER: target_radius= 0.0f; target_speed = 0.015f; target_color = COL_CYAN; break;
         default:                  target_radius = 30.0f; target_speed = 0.05f; target_color = COL_CYAN; break;
       }
   }
@@ -520,6 +532,24 @@ void renderModeMatrix() {
   }
 }
 
+void renderModeScreensaver() {
+  // Screensaver extrêmement zen : un petit cercle très lent au centre, presque éteint, sans HUD
+  float s_phase = g_phase * 0.3f;
+  float pulse = (sin(s_phase) + 1.0f) * 0.5f; // 0 à 1
+  uint16_t calmColor = lerpColor(COL_BG, COL_CYAN, 0.15f + pulse * 0.1f);
+  
+  // Quelques étoiles lointaines qui tournent doucement
+  for (int i=0; i<8; i++) {
+    float a = i * 45 * DEG_TO_RAD + (s_phase * 0.5f);
+    float r = 70 + sin(a * 3 + s_phase) * 15;
+    spr.drawPixel(CX + cos(a)*r, CY + sin(a)*r, rgb565(30, 50, 70));
+  }
+  
+  // Halo central très doux
+  drawGlow(CX, CY, 15 + pulse * 10, calmColor, 20);
+  spr.drawCircle(CX, CY, 15 + pulse * 10, lerpColor(calmColor, COL_WHITE, 0.2f));
+}
+
 void renderModeGhost() {
   spr.fillCircle(CX, CY, 55 + sin(g_phase)*5, COL_DARK); spr.drawArc(CX, CY, 110, 108, 0, 360, rgb565(30,30,30));
   for(int x=-60; x<60; x+=3) { int y = CY + sin(x*0.2f + g_phase)*15; spr.drawPixel(CX+x, y, COL_GREY); }
@@ -571,10 +601,13 @@ void renderTask(void *pvParameters) {
         case OrbState::MODE_TIMER:  renderModeTimer(); break;
         case OrbState::MODE_PRINT:  renderModePrint(); break;
         case OrbState::MODE_MATRIX: renderModeMatrix(); break;
+        case OrbState::MODE_SCREENSAVER: renderModeScreensaver(); break;
         default:                    renderDefaultLocked(); break;
       }
       
-      renderPersistentHUD();
+      if (local_state != OrbState::MODE_SCREENSAVER) {
+         renderPersistentHUD();
+      }
       spr.pushSprite(0, 0);
     }
     vTaskDelay(pdMS_TO_TICKS(1)); 
