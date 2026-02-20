@@ -231,6 +231,29 @@ const toolDeclarations: FunctionDeclaration[] = [
     },
   },
   {
+    name: "get_weather",
+    description:
+      "Obtenir la météo (actuelle ou prévisions) pour une localisation donnée.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        city: {
+          type: Type.STRING,
+          description: "Nom de la ville (ex: 'Paris', 'Marseille'). Optionnel.",
+        },
+        dateTime: {
+          type: Type.STRING,
+          description: "Date/heure pour les prévisions. Optionnel.",
+        },
+        needsForecast: {
+          type: Type.BOOLEAN,
+          description: "Vrai si l'utilisateur demande des prévisions.",
+        },
+      },
+      required: [],
+    },
+  },
+  {
     name: "calendar_create",
     description: "Create a calendar event.",
     parameters: {
