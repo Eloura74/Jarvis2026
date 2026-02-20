@@ -688,3 +688,155 @@ export const getNeuralBriefing = async ({
     return "Briefing indisponible momentanément, Monsieur.";
   }
 };
+
+// ============================================================================
+// NO NOUVEAU FLUX DE STREAMING (ASYNC & PARALLEL)
+// ============================================================================
+
+export interface StreamCallbacks {
+  onTextChunk?: (text: string) => void;
+  onToolCall?: (tool: { name: string; args: Record<string, unknown> }) => void;
+  onComplete?: (finalDecision: OmniDecision) => void;
+  onError?: (error: string) => void;
+}
+
+export const streamCommand = async (
+  input: string,
+  memories: AppMemory[],
+  conversationContext: string = "",
+  callbacks: StreamCallbacks,
+) => {
+  await waitIfNecessary();
+
+  try {
+    console.log(`Appel Gemini STREAM pour "${input}"`);
+
+    let memSum = "No prior usage.";
+    if (memories.length > 0) {
+      memSum =
+        "Frequent Apps: " +
+        memories.map((m) => m.appName + " (" + m.launchCount + ")").join(", ");
+    }
+
+    const haContext = await getHAContext();
+
+    const config = {
+      systemInstruction:
+        generateSystemInstruction(memSum, conversationContext) + haContext,
+      tools: [{ functionDeclarations: toolDeclarations }],
+      temperature: 0.1,
+    };
+
+    let responseStream;
+    try {
+      responseStream = await ai.models.generateContentStream({
+        model: "gemini-2.5-flash",
+        contents: input,
+        config: config,
+      });
+    } catch (e: any) {
+      console.warn(
+        "🛡️ FALLBACK STREAMING (Gemini 1.5 Flash) suite à erreur:",
+        e.message,
+      );
+      responseStream = await ai.models.generateContentStream({
+        model: "gemini-1.5-flash",
+        contents: input,
+        config: config,
+      });
+    }
+
+    let fullText = "";
+    let accumulatedTextChunk = "";
+    const allToolCalls: Array<{ name: string; args: Record<string, unknown> }> =
+      [];
+
+    // On consomme le flux au fur et à mesure avec for await
+    for await (const chunk of responseStream) {
+      const parts = chunk.candidates?.[0]?.content?.parts || [];
+
+      // Extraction des appels d'outils
+      const functionCalls = parts
+        .filter((p: any) => p.functionCall)
+        .map((p: any) => p.functionCall);
+      if (functionCalls.length > 0) {
+        for (const call of functionCalls) {
+          if (call.name && call.args) {
+            const validCall = {
+              name: call.name,
+              args: call.args as Record<string, unknown>,
+            };
+            allToolCalls.push(validCall);
+            if (callbacks.onToolCall) callbacks.onToolCall(validCall);
+          }
+        }
+      }
+
+      // Extraction et accumulation du texte
+      const textPart = parts
+        .filter((p: any) => p.text)
+        .map((p: any) => p.text)
+        .join("");
+      if (textPart) {
+        fullText += textPart;
+        accumulatedTextChunk += textPart;
+
+        // Découper la phrase lorsqu'une ponctuation forte ou moyenne est rencontrée
+        const match = accumulatedTextChunk.match(/([.!?\n,:;]+)/);
+        if (match && match.index !== undefined) {
+          const splitPos = match.index + match[0].length;
+          const chunkToSpeak = accumulatedTextChunk
+            .substring(0, splitPos)
+            .trim();
+
+          if (chunkToSpeak && callbacks.onTextChunk) {
+            callbacks.onTextChunk(chunkToSpeak);
+          }
+          accumulatedTextChunk = accumulatedTextChunk.substring(splitPos);
+        }
+      }
+    }
+
+    // Flush de ce qui reste s'il n'y a pas de ponctuation à la fin
+    if (accumulatedTextChunk.trim() && callbacks.onTextChunk) {
+      callbacks.onTextChunk(accumulatedTextChunk.trim());
+    }
+
+    let decision: OmniDecision;
+    if (allToolCalls.length > 0 && fullText.trim()) {
+      decision = {
+        type: "MIXED_RESPONSE",
+        toolCalls: allToolCalls,
+        text: fullText,
+        confidence: 0.99,
+      };
+    } else if (allToolCalls.length > 0) {
+      decision = {
+        type: "TOOL_CALL",
+        toolCalls: allToolCalls,
+        confidence: 0.99,
+      };
+    } else {
+      decision = {
+        type: "TEXT_RESPONSE",
+        text: fullText || "Standing by.",
+        confidence: 0.8,
+      };
+    }
+
+    console.log(
+      "🎯 STREAM DECISION:",
+      decision.type,
+      allToolCalls.length > 0 ? allToolCalls[0].name : "",
+    );
+    if (callbacks.onComplete) callbacks.onComplete(decision);
+  } catch (error: any) {
+    console.error("OMNI Core STREAM Error:", error);
+    const errorMessage =
+      error instanceof Error ? error.message : "Erreur inconnue";
+    if (callbacks.onError)
+      callbacks.onError(
+        `⚠️ ALERTE SYSTÈME : ${errorMessage}. (Code: ERR_CORE_FAIL)`,
+      );
+  }
+};

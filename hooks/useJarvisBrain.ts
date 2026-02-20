@@ -3,7 +3,7 @@
  */
 
 import React, { useState, useCallback } from "react";
-import { parseCommand } from "../services/geminiService";
+import { streamCommand } from "../services/geminiService";
 import { trackCommand } from "../services/predictionEngine";
 import {
   CommandInfo,
@@ -181,80 +181,62 @@ export function useJarvisBrain(props: UseJarvisBrainProps) {
         const conversationContext =
           manualContext ||
           (getConversationContext ? getConversationContext() : "");
-        const result = await parseCommand(text, appMemory, conversationContext);
 
-        if (result.tokenUsage) setLastTokenUsage(result.tokenUsage);
+        let hasSpokenSummary = false;
+        let toolCount = 0;
 
-        // CASE 1 & 2: TOOL CALLS (Direct or Mixed)
-        if (result.toolCalls && result.toolCalls.length > 0) {
-          const toolCount = result.toolCalls.length;
-          addLog(`Intent: ${toolCount} tool(s) to execute`, "OMNI", "info");
-          if (result.type === "MIXED_RESPONSE" && result.text) {
-            speak(result.text);
-            if (addConversationMessage)
-              addConversationMessage("model", result.text);
-          }
-          trackCommand(text);
-
-          let hasSpokenSummary = false;
-
-          for (let i = 0; i < result.toolCalls.length; i++) {
-            const toolCall = result.toolCalls[i];
-            addLog(
-              `[${i + 1}/${toolCount}] Executing: ${toolCall.name}`,
-              "KERNEL",
-              "warning",
-            );
+        await streamCommand(text, appMemory, conversationContext, {
+          onTextChunk: (chunk) => {
+            speak(chunk, true); // true = append to queue for seamless playback
+            if (addConversationMessage) addConversationMessage("model", chunk);
+            setStatus(SystemStatus.PROCESSING);
+          },
+          onToolCall: async (toolCall) => {
+            toolCount++;
+            addLog(`[Tool] Executing: ${toolCall.name}`, "KERNEL", "warning");
 
             // 🟣 SPHERE: Trigger visual mode based on tool
             const toolMode = modeFromTool(toolCall.name);
             if (toolMode) setSphereMode(toolMode);
 
             try {
-              const toolResult = await executeTool(
+              const toolResult = (await executeTool(
                 toolCall.name,
                 toolCall.args,
-              );
-
-              const tResult = toolResult as ToolResult;
-
-              if (toolCall.name === "show_status_overlay") {
-                console.log(
-                  "🌌 BRAIN: toolResult for show_status_overlay:",
-                  tResult,
-                );
-              }
+              )) as ToolResult;
 
               // Chainable tools (autonomous loop)
               if (
-                tResult &&
-                tResult.status === "success" &&
+                toolResult &&
+                toolResult.status === "success" &&
                 isChainableTool(toolCall.name)
               ) {
-                const dataStr = JSON.stringify(tResult.data || "");
+                const dataStr = JSON.stringify(toolResult.data || "");
                 const toolResultMsg = `[RÉSULTAT ${toolCall.name.toUpperCase()}] : ${dataStr.substring(0, 5000)}...`;
                 if (addConversationMessage)
-                  addConversationMessage("model", toolResultMsg);
+                  addConversationMessage(
+                    "model",
+                    `(Internal context) ${toolResultMsg}`,
+                  );
 
-                if (i === result.toolCalls!.length - 1) {
-                  await new Promise((r) => setTimeout(r, 1000));
-                  return processCommand(
+                setTimeout(() => {
+                  processCommand(
                     "IMPORTANT : L'action est TERMINÉE. Utilisez ces données pour compléter l'objectif de Monsieur. Agissez immédiatement.",
                     `${conversationContext}\nJARVIS: ${toolResultMsg}`,
                   );
-                }
+                }, 1000);
               }
 
               // Rich tools (intelligent summary)
               if (
-                tResult &&
-                tResult.data &&
+                toolResult &&
+                toolResult.data &&
                 isRichTool(toolCall.name) &&
                 !hasSpokenSummary
               ) {
                 let summary: string;
                 if (toolCall.name === "show_status_overlay") {
-                  const data = tResult.data as { title?: string };
+                  const data = toolResult.data as { title?: string };
                   summary = `Affichage du rapport pour ${data.title || "le dispositif"}, Monsieur.`;
                   console.log("🌌 BRAIN: Using static summary for overlay.");
                 } else {
@@ -262,61 +244,56 @@ export function useJarvisBrain(props: UseJarvisBrainProps) {
                     await import("../services/geminiService");
                   summary = await summarizeToolResults(
                     toolCall.name,
-                    tResult.data,
+                    toolResult.data,
                   );
                 }
-                speak(summary, result.type === "MIXED_RESPONSE");
+                speak(summary, true);
                 hasSpokenSummary = true;
                 if (addConversationMessage)
                   addConversationMessage("model", summary);
               }
-            } catch {
-              /* handled in executor */
+            } catch (e) {
+              console.error("Executor error:", e);
             }
-          }
+          },
+          onComplete: (decision) => {
+            if (decision.toolCalls && decision.toolCalls.length > 0)
+              trackCommand(text);
+            if (decision.tokenUsage) setLastTokenUsage(decision.tokenUsage);
+            setSuccessTrigger(Date.now());
+            setCommandHistory((prev) =>
+              prev.map((c) =>
+                c.timestamp === newCommand.timestamp
+                  ? { ...c, status: "success", result: decision.text }
+                  : c,
+              ),
+            );
 
-          setSuccessTrigger(Date.now());
-          setCommandHistory((prev) =>
-            prev.map((c) =>
-              c.timestamp === newCommand.timestamp
-                ? { ...c, status: "success" }
-                : c,
-            ),
-          );
-          if (!hasSpokenSummary && result.type !== "MIXED_RESPONSE") {
-            const msg =
-              toolCount > 1 ? `${toolCount} actions exécutées.` : "Exécuté.";
-            speak(msg);
-            if (addConversationMessage) addConversationMessage("model", msg);
-          }
-          setStatus(SystemStatus.IDLE);
-        }
-        // CASE 3: TEXT ONLY
-        else if (result.type === "TEXT_RESPONSE" && result.text) {
-          addLog(`Intent: Conversation`, "OMNI", "info");
-          speak(result.text);
-          if (addConversationMessage)
-            addConversationMessage("model", result.text);
-          setCommandHistory((prev) =>
-            prev.map((c) =>
-              c.timestamp === newCommand.timestamp
-                ? { ...c, status: "success", result: result.text }
-                : c,
-            ),
-          );
-          setStatus(SystemStatus.IDLE);
-        } else {
-          setStatus(SystemStatus.IDLE);
-          speak("Entendu.");
-        }
+            if (!hasSpokenSummary && decision.type !== "MIXED_RESPONSE") {
+              const msg =
+                toolCount > 1 ? `${toolCount} actions exécutées.` : "Exécuté.";
+              if (toolCount > 0) {
+                speak(msg, true);
+                if (addConversationMessage)
+                  addConversationMessage("model", msg);
+              }
+            }
 
-        // PERSISTENCE: No timeout reset. The visual mode stays until next command.
-        // setTimeout(() => setSphereMode("IDLE"), 15000);
-      } catch {
+            setStatus(SystemStatus.IDLE);
+          },
+          onError: (errorMsg) => {
+            setStatus(SystemStatus.ERROR);
+            addLog(errorMsg, "SYSTEM", "error");
+            speak("Désolé, une erreur technique est survenue.");
+            setSphereMode("ERROR");
+            setTimeout(() => setSphereMode("IDLE"), 4000);
+          },
+        });
+      } catch (e) {
+        console.error("Brain outer error:", e);
         setStatus(SystemStatus.ERROR);
-        addLog("Erreur traitement", "SYSTEM", "error");
-        speak("Désolé, une erreur est survenue.");
-        setTimeout(() => setStatus(SystemStatus.IDLE), 2000);
+        addLog("Erreur traitement global", "SYSTEM", "error");
+        speak("Désolé, le noyau neuronal est indisponible.");
         setSphereMode("ERROR");
         setTimeout(() => setSphereMode("IDLE"), 4000);
       }

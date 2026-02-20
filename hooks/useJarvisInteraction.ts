@@ -101,8 +101,8 @@ export function useJarvisInteraction({
 
   // Synthèse vocale standard (Gemini TTS désactivé car instable)
   const speak = useCallback(
-    (text: string) => {
-      rawSpeak(text);
+    (text: string, queue: boolean = false) => {
+      rawSpeak(text, queue);
     },
     [rawSpeak],
   );
