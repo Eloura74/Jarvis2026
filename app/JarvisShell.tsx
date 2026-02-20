@@ -17,6 +17,7 @@ import { useShellShortcuts } from "../hooks/useShellShortcuts";
 
 import ShellOverlays from "./overlays/ShellOverlays";
 import ShellPanels from "./overlays/ShellPanels";
+import { useProactiveEvents } from "../hooks/useProactiveEvents";
 
 export interface JarvisShellProps {
   shouldGreet?: boolean;
@@ -113,6 +114,12 @@ export default function JarvisShell({ shouldGreet }: JarvisShellProps) {
     enabled: !!shouldGreet,
     systemStats,
     interaction,
+  });
+
+  useProactiveEvents({
+    speak: interaction.speak,
+    addLog,
+    setStatusOverlay,
   });
 
   useShellShortcuts({

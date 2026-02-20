@@ -46,8 +46,6 @@ export async function listWindows() {
     // Forcer l'encodage UTF8 pour PowerShell pour éviter les problèmes de caractères spéciaux
     const psCommand = `[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; Get-Process | Where-Object {$_.MainWindowTitle} | Select-Object Id,ProcessName,MainWindowTitle | ConvertTo-Json -Compress`;
 
-    console.log(`[listWindows] Executing PowerShell command...`);
-
     const { stdout, stderr } = await execAsync(
       `powershell.exe -ExecutionPolicy Bypass -NoProfile -NonInteractive -Command "${psCommand}"`,
       {
@@ -58,24 +56,15 @@ export async function listWindows() {
       },
     );
 
-    console.log(
-      `[listWindows] stdout length: ${stdout.length} chars, stderr length: ${stderr?.length || 0} chars`,
-    );
-
     if (stderr && stderr.trim().length > 0) {
       console.log(`[listWindows] ⚠️ PowerShell stderr:`, stderr.trim());
     }
 
-    if (stdout.length > 0 && stdout.length < 1000) {
-      console.log(`[listWindows] Raw output:`, stdout.trim());
-    } else if (stdout.length >= 1000) {
-      console.log(
-        `[listWindows] Got ${stdout.length} chars of output (too long to display)`,
-      );
+    if (stderr && stderr.trim().length > 0) {
+      console.warn(`[listWindows] ⚠️ PowerShell stderr:`, stderr.trim());
     }
 
     if (!stdout.trim()) {
-      console.log(`[listWindows] ❌ Empty output from PowerShell`);
       return [];
     }
 
@@ -119,10 +108,6 @@ export async function listWindows() {
 async function findWindow(partialTitle, maxRetries = 5) {
   const query = partialTitle.toLowerCase();
   const queryWords = query.split(/[\s\-_]+/).filter((w) => w.length >= 2);
-
-  console.log(
-    `🔍 [findWindow] Searching for: "${query}" (words: ${queryWords.join(", ")})`,
-  );
 
   for (let attempt = 0; attempt < maxRetries; attempt++) {
     const windows = await listWindows();

@@ -24,10 +24,10 @@ router.get("/", (req, res) => {
     res,
   };
   clients.push(newClient);
-  console.log(`[SSE] Client connecté : ${clientId} (${clients.length} total)`);
+  // console.log(`[SSE] Client connecté : ${clientId} (${clients.length} total)`);
 
   req.on("close", () => {
-    console.log(`[SSE] Client déconnecté : ${clientId}`);
+    // console.log(`[SSE] Client déconnecté : ${clientId}`);
     clients = clients.filter((client) => client.id !== clientId);
   });
 });
