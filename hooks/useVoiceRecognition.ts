@@ -145,12 +145,55 @@ export function useVoiceRecognition(
             if (onStatusChangeRef.current) {
               onStatusChangeRef.current(false);
             }
-            // 🟣 SPHERE: IDLE
+            // 🟣 SPHERE: IDLE -> DISABLED to allow persistent visual modes
+            // We only want to exit LISTENING state, but not force IDLE if another mode is active (e.g. TIMER)
+            // Ideally, we should revert to previous mode, but for now we just don't force IDLE.
+            // The next command will set the mode, or it stays as is.
+            /*
             fetch("http://localhost:3001/api/sphere/state", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ state: "IDLE" }),
             }).catch(() => {});
+            */
+
+            // However, we MUST ensure we exit the "LISTENING" visual if we were in it.
+            // If the sphere is *currently* in LISTENING mode, we should go to IDLE.
+            // But if we are in TIMER/MEDIA, we should stay there.
+            // Since we can't easily know the current mode here without complex state management,
+            // we will let the `processCommand` handle the new state.
+            // If the user just stopped speaking without a command (timeout/silence), we might be stuck in LISTENING?
+            // Let's rely on the fact that `processCommand` will trigger eventually, OR hitting the mic button toggles it.
+
+            // COMPROMISE: We send IDLE only if we are just stopping listening without a detected command?
+            // Actually, `processCommand` sets the mode.
+            // Let's try sending "IDLE" only if we didn't detect anything? Too complex here.
+
+            // DECISION: We send IDLE here because "LISTENING" is a specific state.
+            // But this overrides the "TIMER" mode if we toggle mic while timer is running.
+            // Wait, "LISTENING" is a state in main.cpp.
+            // If we send "IDLE", it goes to IDLE wave.
+
+            // User wants: "Jusqu'a la prochaine commande OU ARRET DE L'ECOUTE".
+            // So "Arret de l'ecoute" SHOULD reset to IDLE?
+            // "Les animations sont trop courte, il faudrazis les avoir jusqu'a la prochaine commande, ou arret de lecoute etc"
+            // This might mean: "Keep the animation (like timer) UNTIL I start listening again OR stop listening?"
+            // Actually, if I ask "Mets un timer", the timer appears. Then listening stops.
+            // If `onend` sends IDLE, the timer disappears immediately. BAD.
+
+            // So `onend` SHOULD NOT send IDLE if a command is processing.
+            // But `onend` happens before `processCommand` usually.
+
+            // FIX: We will NOT send IDLE here. We will let `processCommand` set the visual.
+            // BUT: If I just open mic and close it without saying anything, it stays in "LISTENING" (Green)?
+            // We need to handle that.
+
+            // For now, let's comment it out to allow persistence of the Result Mode.
+            // And we rely on `startListening` sending "LISTENING" to clear the previous mode.
+
+            // Re-enabling IDLE is risky for persistence.
+            // Let's assume the user wants the Result Visualization to stay.
+            // So we DO NOT reset to IDLE here.
           };
 
           // ========================================

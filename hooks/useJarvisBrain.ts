@@ -256,10 +256,8 @@ export function useJarvisBrain(props: UseJarvisBrainProps) {
           speak("Entendu.");
         }
 
-        // Reset Sphere to IDLE after a short delay (unless it's a long task?)
-        // For now, let it stay in mode or reset?
-        // Better to reset to standard animation after interaction is done.
-        setTimeout(() => setSphereMode("IDLE"), 5000);
+        // PERSISTENCE: No timeout reset. The visual mode stays until next command.
+        // setTimeout(() => setSphereMode("IDLE"), 15000);
       } catch {
         setStatus(SystemStatus.ERROR);
         addLog("Erreur traitement", "SYSTEM", "error");
