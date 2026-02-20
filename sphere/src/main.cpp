@@ -462,7 +462,10 @@ void renderModeWeather() {
   drawGlow(CX, CY, 40, COL_YELLOW, 20); spr.fillCircle(CX, CY, 40, COL_YELLOW);
   drawSegmentedRing(CX, CY, 60, 4, 8, g_phase * 20.0f, 0.4f, COL_YELLOW);
   spr.setFont(&fonts::FreeSans12pt7b); spr.setTextColor(COL_BG); 
-  spr.drawString("24 C", CX - (spr.textWidth("24 C")/2), CY);
+  
+  // Dynamic text centering based on local_text instead of hardcoded '24 C'
+  int textWidth = spr.textWidth(local_text);
+  spr.drawString(local_text, CX - (textWidth/2), CY - 10);
 }
 
 void renderModePrint() {

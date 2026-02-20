@@ -29,6 +29,19 @@ export async function handleGetWeather(
       data = await weatherService.getCurrentWeather();
     }
 
+    // Call Sphere API to display the temperature
+    if (data && data.temperature !== undefined) {
+      try {
+        fetch("http://localhost:3001/api/sphere/text", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: `${data.temperature} C` }),
+        }).catch((err) => console.warn("Sphere API Error (text):", err));
+      } catch (err) {
+        console.warn("Failed to send weather text to sphere:", err);
+      }
+    }
+
     // Note: Pour l'instant on utilise le service actuel.
     // Si needsForecast est vrai, on pourrait appeler un futur service forecast.
 
