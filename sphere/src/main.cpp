@@ -1,50 +1,60 @@
 #include <Arduino.h>
 #include <LovyanGFX.hpp>
 #include <vector>
+#include <cmath>
 
-// ================== CONFIG GC9A01 ==================
+#ifndef PI
+#define PI 3.14159265358979323846f
+#endif
+
+#ifndef DEG_TO_RAD
+#define DEG_TO_RAD 0.0174532925f
+#endif
+
+// ==============================================================================
+// 🌟 JARVIS OS - CORE RENDERER V4.1 (ESP32-S3 + GC9A01)
+// ------------------------------------------------------------------------------
+// Architecture modulaire.
+// Améliorations : Voix réaliste lente (Bleue) & Impression 3D (CoreXY).
+// ==============================================================================
+
+// ================== CLASSE ÉCRAN GC9A01 (ESP32-S3) ==================
 class LGFX : public lgfx::LGFX_Device {
   lgfx::Panel_GC9A01 _panel;
   lgfx::Bus_SPI      _bus;
 
 public:
   LGFX() {
-    { // BUS
+    {
       auto cfg = _bus.config();
-      cfg.spi_host   = SPI2_HOST;
-      cfg.spi_mode   = 0;
-      cfg.freq_write = 80000000;
-      cfg.freq_read  = 0;
-      cfg.spi_3wire  = true;
-      cfg.use_lock   = true;
+      cfg.spi_host    = SPI2_HOST; 
+      cfg.spi_mode    = 0;
+      cfg.freq_write  = 80000000; // 80 MHz
+      cfg.spi_3wire   = true;
+      cfg.use_lock    = true;
       cfg.dma_channel = SPI_DMA_CH_AUTO;
 
-      cfg.pin_sclk = 12;
-      cfg.pin_mosi = 11;
-      cfg.pin_miso = -1;
-      cfg.pin_dc   = 9;
-
+      // PINS SPI 
+      cfg.pin_sclk = 12; 
+      cfg.pin_mosi = 11; 
+      cfg.pin_miso = -1; 
+      cfg.pin_dc   = 9;  
       _bus.config(cfg);
       _panel.setBus(&_bus);
     }
-
-    { // PANEL
+    {
       auto cfg = _panel.config();
-      cfg.pin_cs   = 10;
-      cfg.pin_rst  = 8;
+      cfg.pin_cs   = 10; 
+      cfg.pin_rst  = 8;  
       cfg.pin_busy = -1;
-
       cfg.memory_width  = 240;
       cfg.memory_height = 240;
       cfg.panel_width   = 240;
       cfg.panel_height  = 240;
-
       cfg.offset_x = 0;
       cfg.offset_y = 0;
-
       cfg.invert    = true;
       cfg.rgb_order = false;
-
       _panel.config(cfg);
     }
     setPanel(&_panel);
@@ -52,68 +62,74 @@ public:
 };
 
 LGFX display;
-static lgfx::LGFX_Sprite spr(&display);
+static lgfx::LGFX_Sprite spr(&display); 
 
-// ================== TYPES & CONSTANTS ==================
+// ================== ÉTATS GLOBAUX DU NOYAU ==================
 enum class OrbState : uint8_t { 
   IDLE, LISTENING, SPEAKING, ERROR,
   MODE_WEATHER, MODE_HOME, MODE_SYSTEM, MODE_MATRIX, MODE_SEARCH,
-  MODE_MEDIA, MODE_TIMER, MODE_PRINT, MODE_NOTIFICATION, MODE_SUCCESS
+  MODE_MEDIA, MODE_TIMER, MODE_PRINT, MODE_NOTIFICATION, MODE_SUCCESS,
+  MODE_APPS, MODE_VISION, MODE_GHOST, MODE_SECURITY
 };
+
 static OrbState g_state = OrbState::IDLE;
 static OrbState g_lastState = OrbState::IDLE;
+static char g_text[64] = "SYS_READY";
 
-static char g_text[64] = "JARVIS";
+// Chronométrie et cinématique
 static uint32_t g_lastFrame = 0;
 static float g_phase = 0.0f;
+static uint32_t ms_time = 0;
 
-// ================== UTILS ==================
+const int CX = 120;
+const int CY = 120;
+
+// ================== OUTILS COULEURS / MATHS ==================
 uint16_t rgb565(uint8_t r, uint8_t g, uint8_t b) {
   return ((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3);
 }
 
 uint16_t lerpColor(uint16_t c1, uint16_t c2, float t) {
+  if (t <= 0.0f) return c1;
+  if (t >= 1.0f) return c2;
   int r1 = (c1 >> 11) & 0x1F; int g1 = (c1 >> 5) & 0x3F; int b1 = c1 & 0x1F;
   int r2 = (c2 >> 11) & 0x1F; int g2 = (c2 >> 5) & 0x3F; int b2 = c2 & 0x1F;
-  int r = r1 + (int)((r2 - r1) * t);
-  int g = g1 + (int)((g2 - g1) * t);
-  int b = b1 + (int)((b2 - b1) * t);
-  return (r << 11) | (g << 5) | b;
+  return (((r1 + (int)((r2 - r1) * t)) & 0x1F) << 11) | 
+         (((g1 + (int)((g2 - g1) * t)) & 0x3F) << 5) | 
+          ((b1 + (int)((b2 - b1) * t)) & 0x1F);
 }
 
-// Colors
-const uint16_t COL_CYAN   = rgb565(0, 255, 255);
-const uint16_t COL_BLUE   = rgb565(0, 100, 255);
-const uint16_t COL_ORANGE = rgb565(255, 140, 0);
-const uint16_t COL_RED    = rgb565(255, 50, 50);
-const uint16_t COL_WHITE  = rgb565(255, 255, 255);
-const uint16_t COL_GREEN  = rgb565(50, 255, 50);
-const uint16_t COL_YELLOW = rgb565(255, 255, 0);
-const uint16_t COL_PURPLE = rgb565(180, 0, 255);
-const uint16_t COL_PINK   = rgb565(255, 0, 127);
+// Palette Cyberpunk
+const uint16_t COL_CYAN      = rgb565(0, 240, 255);
+const uint16_t COL_BLUE      = rgb565(0, 100, 255);
+const uint16_t COL_AI_VOICE  = rgb565(0, 150, 255); // Bleu clair profond pour la voix
+const uint16_t COL_DEEP_BLUE = rgb565(10, 30, 80);
+const uint16_t COL_ORANGE    = rgb565(255, 120, 0);
+const uint16_t COL_RED       = rgb565(255, 40, 60);
+const uint16_t COL_WHITE     = rgb565(240, 248, 255);
+const uint16_t COL_GREEN     = rgb565(0, 255, 120);
+const uint16_t COL_YELLOW    = rgb565(255, 200, 0);
+const uint16_t COL_PURPLE    = rgb565(180, 50, 255);
+const uint16_t COL_PINK      = rgb565(255, 0, 127);
+const uint16_t COL_GREY      = rgb565(100, 110, 120);
+const uint16_t COL_DARK      = rgb565(20, 25, 30);
+const uint16_t COL_BG        = rgb565(4, 6, 10);
 
-// Animation Variables
-float currentAmplitude = 10.0f;
-float targetAmplitude = 10.0f;
-float currentSpeed = 0.05f;
-float targetSpeed = 0.05f;
-uint16_t currentColor = COL_BLUE;
+// Variables dynamiques lissées pour le noyau
+float dyn_radius = 10.0f;
+float dyn_speed = 0.05f;
+uint16_t dyn_color = COL_CYAN;
 
-// Particles
+// Système de particules
 struct Particle {
-  float x, y;
-  float vx, vy;
-  uint8_t life;
-  uint8_t size;
+  float x, y, vx, vy;
+  int life;
   uint16_t color;
-  
-  Particle(float _x, float _y, float _vx, float _vy, uint8_t _life, uint8_t _size, uint16_t _color)
-    : x(_x), y(_y), vx(_vx), vy(_vy), life(_life), size(_size), color(_color) {}
 };
 std::vector<Particle> particles;
-const int MAX_PARTICLES = 40;
+const int MAX_PARTICLES = 35;
 
-// ================== SERIAL ==================
+// ================== PARSEUR SÉRIE (UART) ==================
 static void setStateFromStr(const String& s) {
   g_lastState = g_state;
   if (s == "IDLE") g_state = OrbState::IDLE;
@@ -130,6 +146,10 @@ static void setStateFromStr(const String& s) {
   else if (s == "PRINT") g_state = OrbState::MODE_PRINT;
   else if (s == "NOTIF") g_state = OrbState::MODE_NOTIFICATION;
   else if (s == "SUCCESS") g_state = OrbState::MODE_SUCCESS;
+  else if (s == "APPS") g_state = OrbState::MODE_APPS;
+  else if (s == "VISION") g_state = OrbState::MODE_VISION;
+  else if (s == "GHOST") g_state = OrbState::MODE_GHOST;
+  else if (s == "SECURITY") g_state = OrbState::MODE_SECURITY;
 }
 
 static void handleLine(String line) {
@@ -154,111 +174,88 @@ static void handleLine(String line) {
   }
 }
 
-// ================== LOGIC UPDATE ==================
+// ================== PRIMITIVES VECTORIELLES AVANCÉES ==================
+
+void drawGlow(int x, int y, int radius, uint16_t color, int intensity) {
+  for (int r = radius + intensity; r > radius; r -= 2) {
+    float factor = 1.0f - ((float)(r - radius) / intensity);
+    uint16_t fadeCol = lerpColor(COL_BG, color, factor * factor); 
+    spr.drawCircle(x, y, r, fadeCol);
+  }
+}
+
+void drawSegmentedRing(int x, int y, int r, int thickness, int segments, float phase, float gapRatio, uint16_t color) {
+  float angleStep = 360.0f / segments;
+  float gap = angleStep * gapRatio;
+  for (int i = 0; i < segments; i++) {
+    float startAngle = i * angleStep + phase;
+    float endAngle = startAngle + angleStep - gap;
+    spr.drawArc(x, y, r, r - thickness, startAngle, endAngle, color);
+  }
+}
+
+// ================== MOTEUR PHYSIQUE & LOGIQUE ==================
 void updateLogic() {
+  float target_radius = 35.0f;
+  float target_speed = 0.03f;
+  uint16_t target_color = COL_CYAN;
+
   switch (g_state) {
-    case OrbState::IDLE:
-      targetAmplitude = 10.0f; targetSpeed = 0.04f; currentColor = lerpColor(currentColor, COL_CYAN, 0.05f);
-      break;
-    case OrbState::LISTENING:
-      targetAmplitude = 20.0f; targetSpeed = 0.12f; currentColor = lerpColor(currentColor, COL_GREEN, 0.1f);
-      break;
-    case OrbState::SPEAKING:
-      targetAmplitude = 50.0f + (sin(millis() * 0.01) * 20.0f); targetSpeed = 0.25f; currentColor = lerpColor(currentColor, COL_ORANGE, 0.1f);
-      break;
-    case OrbState::ERROR:
-      targetAmplitude = 5.0f; targetSpeed = 0.0f; currentColor = lerpColor(currentColor, COL_RED, 0.2f);
-      break;
-    case OrbState::MODE_WEATHER:
-      targetAmplitude = 15.0f; targetSpeed = 0.02f; currentColor = lerpColor(currentColor, COL_YELLOW, 0.05f);
-      break;
-    case OrbState::MODE_HOME:
-      targetAmplitude = 10.0f; targetSpeed = 0.05f; currentColor = lerpColor(currentColor, COL_PURPLE, 0.05f);
-      break;
-    case OrbState::MODE_SYSTEM:
-      targetAmplitude = 5.0f; targetSpeed = 0.5f; currentColor = lerpColor(currentColor, COL_WHITE, 0.05f);
-      break;
-    case OrbState::MODE_MATRIX:
-      targetAmplitude = 0.0f; targetSpeed = 0.0f; currentColor = lerpColor(currentColor, COL_GREEN, 0.1f);
-      break;
-    case OrbState::MODE_SEARCH:
-      targetAmplitude = 25.0f; targetSpeed = 0.1f; currentColor = lerpColor(currentColor, COL_BLUE, 0.1f);
-      break;
-    case OrbState::MODE_MEDIA:
-      targetAmplitude = 40.0f; targetSpeed = 0.15f; currentColor = lerpColor(currentColor, COL_PINK, 0.1f);
-      break;
-    case OrbState::MODE_TIMER:
-      targetAmplitude = 5.0f; targetSpeed = 0.1f; currentColor = lerpColor(currentColor, COL_YELLOW, 0.1f);
-      break;
-    case OrbState::MODE_PRINT:
-      targetAmplitude = 10.0f; targetSpeed = 0.02f; currentColor = lerpColor(currentColor, COL_GREEN, 0.1f);
-      break;
-    case OrbState::MODE_NOTIFICATION:
-      targetAmplitude = 30.0f; targetSpeed = 0.2f; currentColor = lerpColor(currentColor, COL_CYAN, 0.2f);
-      break;
-    case OrbState::MODE_SUCCESS:
-      targetAmplitude = 0.0f; targetSpeed = 0.0f; currentColor = lerpColor(currentColor, COL_GREEN, 0.2f);
-      break;
+    case OrbState::IDLE:      
+        target_radius = 35.0f; 
+        target_speed = 0.02f; 
+        target_color = COL_CYAN; 
+        break;
+    case OrbState::LISTENING: 
+        target_radius = 45.0f; 
+        target_speed = 0.05f; 
+        target_color = COL_GREEN; 
+        break;
+    case OrbState::SPEAKING:  
+        // Respiration organique ample et très lente
+        target_radius = 42.0f + (sin(ms_time * 0.002f) * 6.0f); 
+        target_speed = 0.04f; // Vitesse d'évolution drastiquement ralentie
+        target_color = COL_AI_VOICE; // Bleu IA holographique au lieu de orange
+        break;
+    case OrbState::ERROR:     target_radius = 20.0f; target_speed = 0.0f;  target_color = COL_RED; break;
+    case OrbState::MODE_HOME: target_radius = 0.0f;  target_speed = 0.08f; target_color = COL_BLUE; break;
+    case OrbState::MODE_VISION:target_radius= 0.0f;  target_speed = 0.10f; target_color = COL_RED; break;
+    case OrbState::MODE_GHOST: target_radius= 10.0f; target_speed = 0.01f; target_color = COL_GREY; break;
+    case OrbState::MODE_MEDIA: target_radius= 20.0f; target_speed = 0.10f; target_color = COL_PINK; break;
+    case OrbState::MODE_SUCCESS:target_radius=0.0f;  target_speed = 0.05f; target_color = COL_GREEN; break;
+    default:                  target_radius = 30.0f; target_speed = 0.05f; target_color = COL_CYAN; break;
   }
 
-  currentAmplitude += (targetAmplitude - currentAmplitude) * 0.1f;
-  currentSpeed += (targetSpeed - currentSpeed) * 0.05f;
-  g_phase += currentSpeed;
+  // Application de l'accélération inertielle (Smoothing)
+  dyn_radius += (target_radius - dyn_radius) * 0.1f;
+  dyn_speed += (target_speed - dyn_speed) * 0.05f;
+  dyn_color = lerpColor(dyn_color, target_color, 0.1f);
+  g_phase += dyn_speed;
 
-  // Particle Logic per mode
-  float cx = 120, cy = 120;
-  
-  if (g_state == OrbState::MODE_MATRIX) {
-      if (particles.size() < MAX_PARTICLES && rand() % 5 == 0) 
-        particles.push_back(Particle((float)(rand() % 240), 0, 0, (float)(rand()%3 + 2), 255, 2, COL_GREEN));
-  } 
-  else if (g_state == OrbState::MODE_WEATHER) {
-      if (particles.size() < MAX_PARTICLES && rand() % 10 == 0) 
-        particles.push_back(Particle((float)(rand() % 240), 0, 0, 2.0f, 255, 2, COL_WHITE));
-  }
-  else if (g_state == OrbState::MODE_MEDIA) {
-      // Particles emitting from center
-      if (particles.size() < MAX_PARTICLES && rand() % 5 == 0) {
-        float angle = (float)(rand()%360) * PI / 180.0f;
-        float speed = 2.0f + (rand()%10)*0.2f;
-        particles.push_back(Particle(cx, cy, cos(angle)*speed, sin(angle)*speed, 255, 3, COL_PINK));
-      }
-  }
-  else if (g_state == OrbState::MODE_NOTIFICATION) {
-       // Pulsing burst logic could go here, for now simple ambient
-  }
-  else if (g_state == OrbState::MODE_SUCCESS) {
-       // Starburst
-       if (particles.size() < 20 && rand() % 2 == 0) {
-           float angle = (float)(rand()%360) * PI / 180.0f;
-           float speed = 4.0f;
-           particles.push_back(Particle(cx, cy, cos(angle)*speed, sin(angle)*speed, 200, 4, COL_GREEN));
-       }
-  }
-  else {
-    // Ambient floating particles
-    if (particles.size() < MAX_PARTICLES && rand() % 10 == 0) {
-      particles.push_back(Particle(
-        120.0f, 120.0f,
-        (float)(rand()%100 - 50) * 0.05f, (float)(rand()%100 - 50) * 0.05f,
-        255, (uint8_t)(rand()%3 + 1), currentColor
-      ));
+  // Gestion des Particules
+  if (g_state == OrbState::IDLE || g_state == OrbState::LISTENING || g_state == OrbState::SPEAKING) {
+    if (particles.size() < MAX_PARTICLES && rand() % 3 == 0) {
+      float angle = (float)(rand() % 360) * DEG_TO_RAD;
+      float speed = (float)(rand() % 20 + 5) * 0.05f;
+      float spawn_r = 115.0f;
+      particles.push_back({CX + cos(angle)*spawn_r, CY + sin(angle)*spawn_r, 
+                           cos(angle + PI)*speed, sin(angle + PI)*speed, 
+                           255, dyn_color});
     }
   }
 
   for (auto it = particles.begin(); it != particles.end();) {
-    it->x += it->vx;
+    it->x += it->vx; 
     it->y += it->vy;
-    it->life -= 2;
+    it->life -= 4;
 
-    // Attraction specific logic
-    if (g_state == OrbState::SPEAKING) {
-        it->x += (120 - it->x) * 0.02f;
-        it->y += (120 - it->y) * 0.02f;
+    if (g_state == OrbState::SPEAKING || g_state == OrbState::LISTENING) {
+        float pull = (g_state == OrbState::SPEAKING) ? 0.015f : 0.01f; // Aspiration plus douce en mode Voix
+        it->x += (CX - it->x) * pull;
+        it->y += (CY - it->y) * pull;
     }
-    
-    // Bounds check
-    if (it->life <= 0 || it->x < 0 || it->x > 240 || it->y < 0 || it->y > 240) {
+
+    if (it->life <= 0 || (pow(it->x - CX, 2) + pow(it->y - CY, 2) < dyn_radius*dyn_radius)) {
       it = particles.erase(it);
     } else {
       ++it;
@@ -266,190 +263,304 @@ void updateLogic() {
   }
 }
 
-// ================== DRAWING ==================
-void draw() {
-  spr.fillScreen(TFT_BLACK);
+// ================== MODULES DE RENDU VISUEL ==================
 
-  // 1. Draw Particles
-  for (const auto& p : particles) {
-    uint16_t pCol = p.color;
-    if (g_state == OrbState::MODE_MATRIX) pCol = COL_GREEN;
-    else if (g_state == OrbState::MODE_WEATHER) pCol = COL_WHITE;
-    // Fade out
-    pCol = rgb565(
-       ((pCol >> 11) & 0x1F) * p.life / 255 * 8,
-       ((pCol >> 5) & 0x3F) * p.life / 255 * 4,
-       (pCol & 0x1F) * p.life / 255 * 8
-    );
-    spr.fillRect((int)p.x, (int)p.y, p.size, p.size, pCol);
-  }
-
-  // 2. Main Visual Element
-  int cx = 120, cy = 120;
+void renderPersistentHUD() {
+  spr.drawArc(CX, CY, 119, 118, 0, 360, COL_DEEP_BLUE);
   
-  if (g_state == OrbState::MODE_SYSTEM) {
-    // Rotating Gear / Rings
-    int r = 40;
-    for (int i=0; i<3; i++) {
-        int radius = r + i*15;
-        float ang = g_phase * (i%2==0 ? 1 : -1) + i;
-        int x = cx + cos(ang)*radius;
-        int y = cy + sin(ang)*radius;
-        spr.drawCircle(cx, cy, radius, currentColor);
-        spr.fillCircle(x, y, 4, COL_WHITE);
-    }
-  } 
-  else if (g_state == OrbState::MODE_HOME) {
-    // House shape pulsing
-    int size = 40 + (int)(sin(g_phase)*5);
-    spr.drawRect(cx-size, cy-size/2, size*2, size*2, currentColor);
-    spr.drawTriangle(cx-size, cy-size/2, cx+size, cy-size/2, cx, cy-size*1.5, currentColor);
-  }
-  else if (g_state == OrbState::MODE_WEATHER) {
-    // Sun
-    spr.fillCircle(cx, cy, 30, COL_YELLOW);
-    for (int i=0; i<8; i++) {
-        float a = g_phase + i * (PI/4);
-        spr.drawLine(cx + cos(a)*35, cy + sin(a)*35, cx + cos(a)*50, cy + sin(a)*50, COL_YELLOW);
-    }
-  }
-  else if (g_state == OrbState::MODE_MEDIA) {
-    // Audio Visualizer (Circular Spectrum)
-    int bars = 24;
-    float radius = 40;
-    for (int i = 0; i < bars; i++) {
-       float angle = (i * 360.0f / bars) * DEG_TO_RAD + g_phase;
-       float val = 10 + abs(sin(g_phase * 3.0f + i * 0.5f) * 30.0f) + (sin(i*132.0f)*5.0f);
-       
-       float x1 = cx + cos(angle) * radius;
-       float y1 = cy + sin(angle) * radius;
-       float x2 = cx + cos(angle) * (radius + val);
-       float y2 = cy + sin(angle) * (radius + val);
-       
-       uint16_t col = lerpColor(COL_PINK, COL_PURPLE, (float)i/bars);
-       spr.drawLine((int)x1, (int)y1, (int)x2, (int)y2, col);
-       spr.drawLine((int)x1+1, (int)y1+1, (int)x2+1, (int)y2+1, col); // Thicker
-    }
-    // Pulsing center core
-    spr.fillCircle(cx, cy, 10 + sin(g_phase*5)*3, COL_WHITE);
-  }
-  else if (g_state == OrbState::MODE_TIMER) {
-     // Sci-Fi Countdown Ring
-     int r = 60;
-     int angleEnd = (int)((millis() % 60000) / 60000.0f * 360.0f);
-     
-     // Background ring (dim)
-     spr.drawCircle(cx, cy, r, rgb565(50, 50, 0));
-     spr.drawCircle(cx, cy, r-5, rgb565(50, 50, 0));
+  spr.fillRect(CX - 1, 0, 2, 6, COL_GREY);
+  spr.fillRect(CX - 1, 234, 2, 6, COL_GREY);
+  spr.fillRect(0, CY - 1, 6, 2, COL_GREY);
+  spr.fillRect(234, CY - 1, 6, 2, COL_GREY);
 
-     // Progress Arc
-     spr.drawArc(cx, cy, r, r-5, 0, angleEnd, COL_YELLOW);
-     
-     // Digital ticks
-     for(int i=0; i<12; i++) {
-       float a = i * 30 * DEG_TO_RAD;
-       int tx = cx + cos(a)*(r+10);
-       int ty = cy + sin(a)*(r+10);
-       spr.fillCircle(tx, ty, 2, COL_ORANGE);
-     }
-     
-     spr.setTextColor(COL_WHITE);
-     spr.setTextSize(2);
-     spr.setTextDatum(MC_DATUM);
-     spr.drawString("TIMER", cx, cy); 
-  }
-  else if (g_state == OrbState::MODE_PRINT) {
-     // 3D Printer Animation
-     // Nozzle moving
-     float nozzleX = cx + sin(g_phase*2.0f) * 30;
-     spr.fillTriangle(nozzleX-10, cy-30, nozzleX+10, cy-30, nozzleX, cy, COL_ORANGE);
-     
-     // Layer being printed
-     int layerY = cy + 10;
-     spr.fillRect(cx-40, layerY, 80, 5, COL_BLUE); // Bed
-     
-     // Object growing
-     int height = 10 + (int)(abs(sin(g_phase*0.5f))*20);
-     spr.fillRect(cx-15, layerY-height, 30, height, COL_GREEN);
-     
-     // Sparks
-     if (rand()%10==0) spr.drawPixel(nozzleX, cy, COL_WHITE);
-  }
-  else if (g_state == OrbState::MODE_NOTIFICATION) {
-      // Hexagon Alert
-      int r = 50 + sin(g_phase*10)*5;
-      for(int i=0; i<6; i++) {
-         float a1 = i * 60 * DEG_TO_RAD + g_phase;
-         float a2 = (i+1) * 60 * DEG_TO_RAD + g_phase;
-         spr.drawLine(cx + cos(a1)*r, cy + sin(a1)*r, cx + cos(a2)*r, cy + sin(a2)*r, COL_CYAN);
-      }
-      spr.setTextSize(3);
-      spr.setTextColor(COL_WHITE);
-      spr.setTextDatum(MC_DATUM);
-      spr.drawString("!", cx, cy);
-  }
-  else if (g_state == OrbState::MODE_SUCCESS) {
-     // Victory Burst
-     float progress = fmod(g_phase, 4.0f) / 4.0f; // 0 to 1 loop
-     int r = (int)(progress * 100);
-     spr.drawCircle(cx, cy, r, COL_GREEN);
-     spr.drawCircle(cx, cy, r/2, COL_WHITE);
-     
-     // Checkmark static
-     spr.drawLine(cx-20, cy, cx-5, cy+20, COL_GREEN);
-     spr.drawLine(cx-21, cy, cx-6, cy+20, COL_GREEN); // Thicker
-     spr.drawLine(cx-5, cy+20, cx+30, cy-15, COL_GREEN);
-     spr.drawLine(cx-6, cy+20, cx+29, cy-15, COL_GREEN); // Thicker
-  }
-  else {
-    // Default Waveform (IDLE, SPEAKING, LISTENING, SEARCH)
-    int centerY = 120;
-    int numLines = (g_state == OrbState::SPEAKING) ? 5 : 3;
+  bool blink = (sin(g_phase * 5.0f) > 0);
+  uint16_t ledCol = blink ? COL_GREEN : rgb565(0, 40, 0);
+  spr.fillRect(115, 6, 4, 3, ledCol);
+  spr.fillRect(121, 6, 4, 3, ledCol);
+  spr.fillRect(127, 6, 4, 3, rgb565(20, 20, 20));
 
-    for (int l = 0; l < numLines; l++) {
-      float offset = l * 0.5f;
-      uint16_t col = currentColor;
-      if (l > 0) col = rgb565(
-         (col >> 11 & 0x1F) * 4, 
-         (col >> 5 & 0x3F) * 4, 
-         (col & 0x1F) * 4
-      );
-
-      for (int x = 0; x < 240; x+=3) {
-        float nx = (x - 120) / 120.0f;
-        float envelope = 1.0f - (nx * nx);
-        
-        float wave = sin(g_phase + x * 0.03f + offset) 
-                   + sin(g_phase * 0.5f + x * 0.08f) * 0.5f;
-        
-        int y = centerY + (int)(wave * currentAmplitude * envelope);
-        spr.drawPixel(x, y, col);
-        spr.drawPixel(x+1, y, col);
-        if (g_state == OrbState::SPEAKING) spr.drawPixel(x, y+1, col); 
-      }
-    }
-  }
-
-  // 3. UI
   spr.setTextDatum(MC_DATUM);
-  spr.setTextColor(TFT_WHITE, TFT_BLACK);
-  spr.drawString(g_text, 120, 200);
+  spr.setTextColor(COL_CYAN, COL_BG);
+  spr.setFont(&fonts::FreeSans9pt7b); 
+  spr.drawString(g_text, CX, 210);
+}
 
-  if (g_state == OrbState::LISTENING) {
-     spr.fillCircle(120, 15, 3, COL_RED);
+void renderCoreJarvis() {
+  for (const auto& p : particles) {
+    spr.drawLine(p.x, p.y, p.x - p.vx*2, p.y - p.vy*2, p.color);
+    spr.drawPixel(p.x, p.y, COL_WHITE);
+  }
+
+  drawGlow(CX, CY, dyn_radius, dyn_color, 15);
+  spr.fillCircle(CX, CY, dyn_radius, dyn_color);
+  spr.fillCircle(CX, CY, dyn_radius * 0.4f, COL_WHITE); 
+
+  float a1 = g_phase * 100.0f;
+  float a2 = -g_phase * 120.0f;
+  
+  drawSegmentedRing(CX, CY, dyn_radius + 15, 3, 3, a1, 0.4f, dyn_color);
+  drawSegmentedRing(CX, CY, dyn_radius + 25, 1, 12, a2, 0.5f, COL_WHITE);
+  
+  if (g_state == OrbState::SPEAKING) {
+    // Rendu Onde Vocale Fluide et Réaliste (Type Cortana/Siri)
+    int points = 72;
+    float base_r = dyn_radius + 20.0f;
+    float last_x = -1, last_y = -1;
+    
+    for (int i = 0; i <= points; i++) {
+        float a = (i % points) * (PI * 2.0f) / points;
+        
+        // Déformation mathématique fluide combinant 2 fréquences
+        float wave = sin(a * 4.0f + g_phase * 2.5f) * 8.0f + 
+                     cos(a * 6.0f - g_phase * 1.5f) * 4.0f;
+                     
+        float r = base_r + wave;
+        float x = CX + cos(a) * r;
+        float y = CY + sin(a) * r;
+        
+        if (i > 0) {
+            spr.drawLine(last_x, last_y, x, y, dyn_color);
+            spr.drawLine(last_x+1, last_y, x+1, y, dyn_color); // Antialiasing / Épaisseur
+        }
+        last_x = x; last_y = y;
+    }
+  } else {
+    drawSegmentedRing(CX, CY, dyn_radius + 40, 1, 36, g_phase * 30.0f, 0.8f, dyn_color);
+  }
+}
+
+void renderModeSystem() {
+  drawSegmentedRing(CX, CY, 110, 8, 8, g_phase * 50.0f, 0.1f, COL_CYAN);
+  drawSegmentedRing(CX, CY, 95, 2, 36, -g_phase * 80.0f, 0.5f, COL_BLUE);
+  
+  spr.setFont(&fonts::FreeSans12pt7b);
+  spr.setTextColor(COL_WHITE);
+  spr.drawString("SYS.OPT", CX, CY - 25);
+  
+  int load = 40 + sin(g_phase*5.0f)*20;
+  spr.drawRect(CX - 40, CY, 80, 12, COL_CYAN);
+  spr.fillRect(CX - 38, CY + 2, (76 * load)/100, 8, COL_CYAN);
+
+  spr.setFont(&fonts::FreeSans9pt7b);
+  spr.setTextColor(COL_GREEN); 
+  spr.drawString("RAM: 1.2G", CX, CY + 30);
+}
+
+void renderModeVision() {
+  for(int i=-120; i<=120; i+=25) {
+     spr.drawFastVLine(CX+i, 0, 240, rgb565(40,0,0));
+     spr.drawFastHLine(0, CY+i, 240, rgb565(40,0,0));
+  }
+  
+  int tr = 90 + sin(g_phase*10.0f)*5;
+  spr.drawLine(CX-tr, CY-tr/2, CX-tr, CY-tr, COL_RED); spr.drawLine(CX-tr, CY-tr, CX-tr/2, CY-tr, COL_RED);
+  spr.drawLine(CX+tr, CY-tr/2, CX+tr, CY-tr, COL_RED); spr.drawLine(CX+tr, CY-tr, CX+tr/2, CY-tr, COL_RED);
+  spr.drawLine(CX-tr, CY+tr/2, CX-tr, CY+tr, COL_RED); spr.drawLine(CX-tr, CY+tr, CX-tr/2, CY+tr, COL_RED);
+  spr.drawLine(CX+tr, CY+tr/2, CX+tr, CY+tr, COL_RED); spr.drawLine(CX+tr, CY+tr, CX+tr/2, CY+tr, COL_RED);
+
+  int scanY = CY + sin(g_phase * 4.0f) * 115;
+  spr.fillRect(CX-110, scanY-2, 220, 4, COL_RED);
+  
+  spr.setFont(&fonts::FreeSans9pt7b);
+  spr.setTextColor(COL_RED);
+  spr.drawString("AI_LOCK", CX, CY - 40);
+}
+
+void renderModeHome() {
+  spr.drawArc(CX, CY, 50, 49, 0, 360, COL_BLUE);
+  spr.drawArc(CX, CY, 100, 99, 0, 360, COL_BLUE);
+
+  float scanA = g_phase * 2.0f;
+  spr.fillTriangle(CX, CY, CX + cos(scanA)*120, CY + sin(scanA)*120, CX + cos(scanA - 0.2f)*120, CY + sin(scanA - 0.2f)*120, rgb565(0, 50, 100));
+  spr.drawLine(CX, CY, CX + cos(scanA)*120, CY + sin(scanA)*120, COL_CYAN);
+  
+  struct Pt { float a; float d; const char* nm; };
+  Pt nodes[] = { {0.5, 55, "LIV"}, {2.1, 95, "KIT"}, {4.8, 80, "BED"} };
+  
+  spr.setFont(&fonts::FreeSans9pt7b);
+  for(int i=0; i<3; i++) {
+      float x = CX + cos(nodes[i].a)*nodes[i].d;
+      float y = CY + sin(nodes[i].a)*nodes[i].d;
+      spr.fillCircle(x, y, 4, COL_CYAN);
+      spr.setTextColor(COL_WHITE); 
+      spr.drawString(nodes[i].nm, x, y - 15);
+  }
+}
+
+void renderModeMedia() {
+  int bars = 45;
+  float radius = 55;
+  for (int i = 0; i < bars; i++) {
+     float angle = (i * 360.0f / bars) * DEG_TO_RAD + g_phase;
+     float val = 10 + abs(sin(g_phase * 4.0f + i * 0.4f) * 45.0f) + (sin(i*132.0f)*5.0f);
+     
+     float x1 = CX + cos(angle) * radius;
+     float y1 = CY + sin(angle) * radius;
+     float x2 = CX + cos(angle) * (radius + val);
+     float y2 = CY + sin(angle) * (radius + val);
+     
+     uint16_t col = lerpColor(COL_PINK, COL_PURPLE, (float)i/bars);
+     spr.drawLine((int)x1, (int)y1, (int)x2, (int)y2, col);
+     spr.drawLine((int)x1+1, (int)y1+1, (int)x2+1, (int)y2+1, col); 
+  }
+  drawGlow(CX, CY, 25 + sin(g_phase*5.0f)*5.0f, COL_PINK, 15);
+  spr.fillCircle(CX, CY, 20 + sin(g_phase*5.0f)*5.0f, COL_WHITE);
+}
+
+void renderModeTimer() {
+  int r = 80;
+  int angleEnd = (int)((ms_time % 60000) / 60000.0f * 360.0f);
+  
+  spr.drawArc(CX, CY, r, r-5, 0, 360, rgb565(50, 50, 0));
+  spr.drawArc(CX, CY, r, r-5, 0, angleEnd, COL_YELLOW);
+  
+  for(int i=0; i<12; i++) {
+    float a = i * 30 * DEG_TO_RAD;
+    spr.fillCircle(CX + cos(a)*(r+15), CY + sin(a)*(r+15), 3, COL_ORANGE);
+  }
+  
+  spr.setFont(&fonts::FreeSans18pt7b);
+  spr.setTextColor(COL_WHITE);
+  spr.drawString("TIMER", CX, CY); 
+}
+
+void renderModeWeather() {
+  drawGlow(CX, CY, 40, COL_YELLOW, 20);
+  spr.fillCircle(CX, CY, 40, COL_YELLOW);
+  drawSegmentedRing(CX, CY, 60, 4, 8, g_phase * 20.0f, 0.4f, COL_YELLOW);
+
+  spr.setFont(&fonts::FreeSans12pt7b);
+  spr.setTextColor(COL_BG); 
+  spr.drawString("24 C", CX, CY);
+}
+
+void renderModePrint() {
+  // 1. Cadre Klipper / CoreXY
+  spr.drawRect(CX - 70, CY - 50, 140, 120, rgb565(40, 45, 50));
+  
+  // Axe X mobile (Gantry)
+  int currentY = CY + 30 - (int)(((sin(g_phase * 0.2f) + 1.0f) / 2.0f) * 60.0f); 
+  spr.drawFastHLine(CX - 68, currentY - 20, 136, rgb565(70, 75, 80));
+
+  // 2. Plateau chauffant avec effet thermique
+  int bedY = CY + 40;
+  drawGlow(CX, bedY, 50, COL_RED, 10);
+  spr.fillRect(CX - 60, bedY, 120, 6, rgb565(120, 120, 120));
+
+  // 3. Rendu d'objet par couches striées (Slicer effect)
+  for (int y = bedY - 2; y >= currentY; y -= 3) {
+      spr.drawFastHLine(CX - 25, y, 50, COL_GREEN);
+  }
+
+  // 4. Bloc Hotend / Buse
+  float nozzleX = CX + sin(g_phase * 2.5f) * 35.0f; // Balayage fluide X
+  spr.fillRect(nozzleX - 10, currentY - 25, 20, 15, rgb565(180, 180, 190)); // Radiateur
+  spr.fillTriangle(nozzleX - 4, currentY - 10, nozzleX + 4, currentY - 10, nozzleX, currentY, COL_ORANGE); // Buse
+  spr.drawLine(nozzleX, CY - 50, nozzleX, currentY - 25, COL_WHITE); // Filament PTFE
+
+  // 5. Télémétrie HUD
+  spr.setFont(&fonts::FreeSans9pt7b);
+  spr.setTextDatum(ML_DATUM);
+  spr.setTextColor(COL_ORANGE);
+  spr.drawString("T: 220C", CX - 65, CY - 65);
+  
+  spr.setTextDatum(MR_DATUM);
+  spr.setTextColor(COL_RED);
+  spr.drawString("B: 60C", CX + 65, CY - 65);
+
+  spr.setTextDatum(MC_DATUM);
+  spr.setTextColor(COL_CYAN);
+  int percent = (int)(((sin(g_phase * 0.2f) + 1.0f) / 2.0f) * 100);
+  spr.drawString(String(percent) + "%", CX, CY + 60);
+}
+
+void renderModeMatrix() {
+  spr.setFont(&fonts::FreeSans12pt7b);
+  spr.setTextColor(COL_GREEN); 
+  for(int i=0; i<18; i++) {
+      int x = (i * 20) % 240;
+      int y = ((ms_time/15 + i*40) % 240);
+      spr.drawString(String((char)('0' + rand()%2)), x, y);
+  }
+}
+
+void renderModeGhost() {
+  spr.fillCircle(CX, CY, 55 + sin(g_phase)*5, COL_DARK);
+  spr.drawArc(CX, CY, 110, 108, 0, 360, rgb565(30,30,30));
+  for(int x=-60; x<60; x+=3) {
+      int y = CY + sin(x*0.2f + g_phase)*15;
+      spr.drawPixel(CX+x, y, COL_GREY);
+  }
+}
+
+void renderModeError() {
+  int shiftX = (rand()%10) - 5;
+  int shiftY = (rand()%10) - 5;
+  spr.setFont(&fonts::FreeSans18pt7b);
+  spr.setTextColor(COL_RED); 
+  spr.drawString("ERROR", CX + shiftX, CY + shiftY);
+  
+  for(int i=0; i<8; i++) {
+    int y = rand() % 240;
+    spr.fillRect(0, y, 240, 4, rgb565(150,0,0));
+  }
+}
+
+void renderModeSuccess() {
+  drawSegmentedRing(CX, CY, 85, 4, 1, 0, 0, COL_GREEN);
+  spr.drawLine(CX-30, CY, CX-5, CY+25, COL_GREEN);
+  spr.drawLine(CX-29, CY, CX-4, CY+25, COL_WHITE);
+  spr.drawLine(CX-5, CY+25, CX+40, CY-30, COL_GREEN);
+  spr.drawLine(CX-4, CY+25, CX+41, CY-30, COL_WHITE);
+}
+
+void renderDefaultLocked() {
+  drawSegmentedRing(CX, CY, 100, 5, 4, g_phase*50.0f, 0.2f, dyn_color);
+  drawSegmentedRing(CX, CY, 80, 3, 8, -g_phase*70.0f, 0.4f, COL_WHITE);
+  spr.setFont(&fonts::FreeSans12pt7b);
+  spr.setTextColor(COL_WHITE);
+  spr.drawString("LOCKED", CX, CY);
+}
+
+// ================== MOTEUR DE DESSIN PRINCIPAL ==================
+void draw() {
+  spr.fillScreen(COL_BG); 
+
+  renderPersistentHUD();
+
+  switch (g_state) {
+    case OrbState::IDLE:
+    case OrbState::LISTENING:
+    case OrbState::SPEAKING:  renderCoreJarvis(); break;
+    case OrbState::MODE_SYSTEM: renderModeSystem(); break;
+    case OrbState::MODE_VISION: renderModeVision(); break;
+    case OrbState::MODE_HOME:   renderModeHome(); break;
+    case OrbState::MODE_GHOST:  renderModeGhost(); break;
+    case OrbState::ERROR:       renderModeError(); break;
+    case OrbState::MODE_SUCCESS:renderModeSuccess(); break;
+    case OrbState::MODE_MEDIA:  renderModeMedia(); break;
+    case OrbState::MODE_WEATHER:renderModeWeather(); break;
+    case OrbState::MODE_TIMER:  renderModeTimer(); break;
+    case OrbState::MODE_PRINT:  renderModePrint(); break;
+    case OrbState::MODE_MATRIX: renderModeMatrix(); break;
+    default:                    renderDefaultLocked(); break;
   }
 
   spr.pushSprite(0, 0);
 }
 
+// ================== BOOT & LOOP ==================
 void setup() {
   Serial.begin(115200);
-  delay(200);
+  delay(200); 
+  
   display.init();
-  display.setRotation(0);
+  display.setRotation(0); 
+
   spr.createSprite(240, 240);
-  spr.setSwapBytes(true);
-  Serial.println("READY");
+  spr.setSwapBytes(true); 
+  
+  Serial.println("JARVIS OS V4.1 - ONLINE");
 }
 
 void loop() {
@@ -459,9 +570,12 @@ void loop() {
     if (c == '\n') { handleLine(line); line = ""; }
     else if (c != '\r') { line += c; if (line.length() > 200) line = ""; }
   }
+  
   uint32_t now = millis();
   if (now - g_lastFrame >= 16) {
+    ms_time = now;
     g_lastFrame = now;
+    
     updateLogic();
     draw();
   }
