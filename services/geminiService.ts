@@ -307,7 +307,8 @@ const toolDeclarations: FunctionDeclaration[] = [
       properties: {
         target: {
           type: Type.STRING,
-          description: "Device name (e.g. 'VZ330').",
+          description:
+            "Device name (e.g. 'VZ330'). To show all 3D printers at once, use 'fleet'.",
         },
       },
       required: ["target"],
