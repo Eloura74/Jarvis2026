@@ -58,7 +58,61 @@ export function useJarvisBrain(props: UseJarvisBrainProps) {
   const [hudNotifications, setHudNotifications] = useState<TechNotification[]>(
     [],
   );
+  // 🔔 NOTIFICATIONS PROACTIVES (SSE)
+  React.useEffect(() => {
+    const sseUrl = "http://localhost:3001/api/events";
+    console.log("[JARVIS BRAIN] Connexion aux évènements proactifs (SSE)...");
+    const eventSource = new EventSource(sseUrl);
 
+    eventSource.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.type === "CONNECTED") {
+          console.log("[JARVIS BRAIN] SSE Connecté :", data.message);
+          return;
+        }
+
+        console.log("🔔 [JARVIS PUSH NOTIFICATION]", data);
+
+        // Si le backend a fourni une phrase précise à prononcer (ex: "Impression terminée")
+        if (data.messageToSpeak) {
+          speak(data.messageToSpeak, false); // On force la parole (queue=false)
+          addLog(`Proactive: ${data.messageToSpeak}`, "SYSTEM", "warning");
+
+          if (addConversationMessage) {
+            addConversationMessage(
+              "model",
+              `(Notification Proactive) ${data.messageToSpeak}`,
+            );
+          }
+        }
+
+        // Ajouter au HUD
+        const newNotif: TechNotification = {
+          id: `push-${Date.now()}`,
+          title: `Alerte ${data.type}`,
+          message: data.messageToSpeak || "Nouvel évènement reçu.",
+          type: "info",
+          timestamp: new Date(),
+        };
+        setHudNotifications((prev) => [...prev, newNotif]);
+      } catch (err) {
+        console.error("Erreur parsing SSE:", err);
+      }
+    };
+
+    eventSource.onerror = (err) => {
+      console.warn(
+        "[JARVIS BRAIN] Erreur connexion SSE, tentative de reconnexion...",
+        err,
+      );
+    };
+
+    return () => {
+      eventSource.close();
+      console.log("[JARVIS BRAIN] SSE Déconnecté.");
+    };
+  }, [speak, addLog, addConversationMessage]);
   // 🌌 QUANTUM OBSERVER (Analyse proactive + Ghost Mode)
   // On ne passe que les commandes réelles de l'utilisateur (pas les prompts internes de bouclage)
   const realUserCommands = React.useMemo(() => {

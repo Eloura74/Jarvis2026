@@ -7,6 +7,7 @@
 
 import mqtt from "mqtt";
 import dotenv from "dotenv";
+import { broadcastEvent } from "../routes/events.js";
 
 // Charger les env vars AVANT d'utiliser process.env (chemin relatif au CWD!)
 dotenv.config({ path: "../.env.local" });
@@ -94,9 +95,38 @@ export function initBambuMqtt() {
       const print = data.print || {};
       const temps = print.temp || {};
 
-      // Mise à jour état
+      // Détection des changements d'état pour Notifications Proactives (Push)
+      const isNowPrinting = print.gcode_state === "RUNNING";
+      if (
+        currentStatus.printing === true &&
+        isNowPrinting === false &&
+        print.mc_percent === 100
+      ) {
+        broadcastEvent(
+          "PRINTER_BAMBU",
+          { event: "PRINT_FINISHED", printer: "Bambu A1 Mini" },
+          "Monsieur, l'impression sur la Bambu Lab A1 Mini est terminée avec succès.",
+        );
+      } else if (
+        print.gcode_state === "FAILED" ||
+        print.gcode_state === "PAUSED"
+      ) {
+        // Optionnel : Alerte si erreur
+        if (currentStatus.printing === true) {
+          broadcastEvent(
+            "PRINTER_BAMBU",
+            {
+              event: "PRINT_INTERRUPTED",
+              state: print.gcode_state,
+              printer: "Bambu A1 Mini",
+            },
+            `Monsieur, attention, l'impression sur la Bambu A1 Mini est actuellement en état ${print.gcode_state}.`,
+          );
+        }
+      }
+
       currentStatus.connected = true;
-      currentStatus.printing = print.gcode_state === "RUNNING";
+      currentStatus.printing = isNowPrinting;
       currentStatus.progress = print.mc_percent || 0;
       currentStatus.fileName = print.subtask_name || "";
       currentStatus.temps.bed = temps.bed_temp || 0;

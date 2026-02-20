@@ -173,7 +173,14 @@ static void setStateFromStr(String s) {
   else if (s == "SECURITY") newState = OrbState::MODE_SECURITY;
   
   portENTER_CRITICAL(&jarvisData.spinlock);
-  jarvisData.currentState = newState;
+  if (jarvisData.currentState != newState) {
+    jarvisData.currentState = newState;
+    // Effacer le texte quand on change de mode, sauf si le nouveau mode est SPEAKING ou LISTENING 
+    // pour éviter de clignoter, ou simplement toujours effacer pour éviter la persistance (WEATHER -> IDLE etc)
+    if (newState != OrbState::SPEAKING && newState != OrbState::LISTENING) {
+      strcpy(jarvisData.textLabel, "");
+    }
+  }
   portEXIT_CRITICAL(&jarvisData.spinlock);
 }
 
@@ -478,15 +485,30 @@ void renderModePrint() {
   spr.fillRect(nozzleX - 10, currentY - 25, 20, 15, rgb565(180, 180, 190));
   spr.fillTriangle(nozzleX - 4, currentY - 10, nozzleX + 4, currentY - 10, nozzleX, currentY, COL_ORANGE); 
   spr.drawLine(nozzleX, CY - 50, nozzleX, currentY - 25, COL_WHITE); 
+
+  // Parse local_text: "T|B|P" e.g "220|60|45"
+  String text = String(local_text);
+  String t = "--"; String b = "--"; String p = "--";
+  if (text.length() > 0 && text.indexOf('|') != -1) {
+    int firstPipe = text.indexOf('|');
+    int secondPipe = text.indexOf('|', firstPipe + 1);
+    if (firstPipe != -1 && secondPipe != -1) {
+      t = text.substring(0, firstPipe);
+      b = text.substring(firstPipe + 1, secondPipe);
+      p = text.substring(secondPipe + 1);
+    }
+  } else if (text == "FLOTTE") {
+    t = "N/A"; b = "N/A"; p = "FLOTTE";
+  }
   
   spr.setFont(&fonts::FreeSans9pt7b); spr.setTextColor(COL_ORANGE); 
-  spr.drawString("T: 220C", CX - 65, CY - 65); 
+  spr.drawString("T: " + t + "C", CX - 65, CY - 65); 
   spr.setTextColor(COL_RED); 
-  spr.drawString("B: 60C", CX + 15, CY - 65); 
+  spr.drawString("B: " + b + "C", CX + 15, CY - 65); 
   
   spr.setTextColor(COL_CYAN);
-  int percent = (int)(((sin(g_phase * 0.2f) + 1.0f) / 2.0f) * 100); 
-  String pc = String(percent) + "%";
+  String pc = p;
+  if (p != "--" && p != "FLOTTE") pc += "%";
   spr.drawString(pc, CX - (spr.textWidth(pc.c_str())/2), CY + 60);
 }
 

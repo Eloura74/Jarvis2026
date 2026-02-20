@@ -98,9 +98,15 @@ export function useVoiceRecognition(
   useEffect(() => {
     // Vérification du support de la Web Speech API (avec préfixe webkit)
     if ("SpeechRecognition" in window || "webkitSpeechRecognition" in window) {
-      // Demander la permission microphone dès le chargement
+      // Demander la permission microphone dès le chargement avec annulation d'écho
       navigator.mediaDevices
-        .getUserMedia({ audio: true })
+        .getUserMedia({
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+          },
+        })
         .then((stream) => {
           stream.getTracks().forEach((track) => track.stop());
 

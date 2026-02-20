@@ -211,6 +211,16 @@ export const handleShowStatusOverlay = async (
         } as StatusOverlayData;
       });
 
+      try {
+        fetch("http://localhost:3001/api/sphere/text", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: "FLOTTE" }),
+        }).catch((err) => console.warn("Sphere API Error (text):", err));
+      } catch (err) {
+        console.warn("Failed to send fleet text to sphere:", err);
+      }
+
       return {
         status: "success",
         data: {
@@ -277,6 +287,18 @@ export const handleShowStatusOverlay = async (
       console.log(
         `[HA_HANDLER] Success: Prepared printer data for ${printer.name}`,
       );
+
+      try {
+        const textStr = `${ext}|${bed}|${prog}`;
+        fetch("http://localhost:3001/api/sphere/text", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: textStr }),
+        }).catch((err) => console.warn("Sphere API Error (text):", err));
+      } catch (err) {
+        console.warn("Failed to send printer text to sphere:", err);
+      }
+
       return {
         status: "success",
         data: printerData,

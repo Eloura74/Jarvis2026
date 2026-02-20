@@ -40,6 +40,7 @@ import webRoutes from "./routes/web.js";
 import configRoutes from "./routes/config.js";
 import bambuRoutes from "./routes/bambu.js";
 import weatherRoutes from "./routes/weather.js";
+import eventsRoutes from "./routes/events.js";
 
 const app = express();
 const PORT = 3001;
@@ -61,6 +62,7 @@ app.use("/api/web", webRoutes);
 app.use("/api/config", configRoutes); // Config persistante
 app.use("/api/bambu", bambuRoutes); // Bambu MQTT proxy
 app.use("/api/weather", weatherRoutes); // Weather Proxy
+app.use("/api/events", eventsRoutes); // Jarvis Push Notifications
 
 // Index des applications (chargé en mémoire)
 let appsIndex = [];
