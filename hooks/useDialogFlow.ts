@@ -359,6 +359,13 @@ export function useDialogFlow({
     startWhatsAppFlowRef.current = startWhatsAppFlow;
   }, [startWhatsAppFlow]);
 
+  // Ref synchrone vers isDialogActive — utilisée par useJarvisInteraction
+  // pour réduire le délai anti-écho à 800ms quand un dialogue est en cours
+  const isDialogActiveRef = useRef(dialogState.step !== "idle");
+  useEffect(() => {
+    isDialogActiveRef.current = dialogState.step !== "idle";
+  }, [dialogState.step]);
+
   return {
     dialogState,
     startWhatsAppFlow,
@@ -367,5 +374,6 @@ export function useDialogFlow({
     interceptCommandRef,
     resetFlow,
     isDialogActive: dialogState.step !== "idle",
+    isDialogActiveRef,
   };
 }

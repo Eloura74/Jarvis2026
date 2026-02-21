@@ -84,6 +84,10 @@ export default function JarvisShell({ shouldGreet }: JarvisShellProps) {
     processCommand: (cmd: string) => Promise<void>;
   } | null>(null);
 
+  // Ref partagée : true quand un dialog flow est actif (ex: composition WhatsApp)
+  // Passée à useJarvisInteraction pour réduire le délai anti-écho à 800ms
+  const isDialogActiveRef = useRef(false);
+
   const interaction = useJarvisInteraction({
     status,
     setStatus,
@@ -91,6 +95,7 @@ export default function JarvisShell({ shouldGreet }: JarvisShellProps) {
     onCommandReceived: (text) => {
       brainRef.current?.processCommand(text);
     },
+    isDialogActiveRef,
   });
 
   // ============================================================
@@ -121,6 +126,12 @@ export default function JarvisShell({ shouldGreet }: JarvisShellProps) {
       }).catch(() => {});
     },
   });
+
+  // Synchroniser la ref partagée avec l'état réel du dialog flow
+  // Permet à useJarvisInteraction de réduire le délai anti-écho à 800ms
+  useEffect(() => {
+    isDialogActiveRef.current = dialogFlow.isDialogActive;
+  }, [dialogFlow.isDialogActive]);
 
   const brain = useJarvisBrain({
     appMemory,

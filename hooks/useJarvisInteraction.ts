@@ -8,7 +8,7 @@
  * 4. Détection Wake Word
  */
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import { useVoiceRecognition } from "./useVoiceRecognition";
 import { useVoiceSynthesis } from "./useVoiceSynthesis";
 import { useWakeWord } from "./useWakeWord";
@@ -24,6 +24,8 @@ interface UseJarvisInteractionProps {
     type?: LogEntry["type"],
   ) => void;
   onCommandReceived: (text: string) => void;
+  /** Ref vers l'état actif d'un dialog flow — réduit le délai anti-écho à 800ms si true */
+  isDialogActiveRef?: React.RefObject<boolean>;
 }
 
 export function useJarvisInteraction({
@@ -31,6 +33,7 @@ export function useJarvisInteraction({
   setStatus,
   addLog,
   onCommandReceived,
+  isDialogActiveRef,
 }: UseJarvisInteractionProps) {
   const [conversationMode, setConversationMode] = useState(false);
   const { voiceSettings, wakeWordEnabled } = useKernel();
@@ -236,15 +239,16 @@ export function useJarvisInteraction({
 
       isSpeakingRef.current = false;
 
-      // Réactivation micro alignée sur la période de sécurité (3500ms)
-      // Cela évite que les échos de la voix de Jarvis soient captés
+      // Réactivation micro : délai réduit à 800ms si un dialog flow est actif
+      // (l'utilisateur doit répondre rapidement), sinon 3500ms anti-écho standard
+      const resumeDelay = isDialogActiveRef?.current ? 800 : 3500;
       if (conversationModeRef.current && !isExitingRef.current) {
         setTimeout(() => {
           // Vérifier une dernière fois qu'on n'est pas en train de parler
           if (window.speechSynthesis.speaking) return;
 
           console.log(
-            "🎤 Mode conversation : Réactivation micro après délai sécurité (3.5s)",
+            `🎤 Mode conversation : Réactivation micro après délai sécurité (${resumeDelay}ms)`,
           );
           lastMicActivationTime.current = Date.now();
           startListening();
@@ -264,7 +268,7 @@ export function useJarvisInteraction({
               stopListening();
             }
           }, 15000);
-        }, 3500); // Aligné sur la période de sécurité anti-écho
+        }, resumeDelay); // 800ms si dialog flow actif, 3500ms sinon (anti-écho)
       } else if (isExitingRef.current) {
         console.log("👋 Fin de session confirmée, micro reste coupé.");
         isExitingRef.current = false; // Reset pour la prochaine fois
