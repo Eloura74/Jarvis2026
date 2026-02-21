@@ -3,946 +3,958 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Jarvis Orb - High Fidelity UI</title>
+    <title>JARVIS OS - Simulateur Physique V7.2</title>
     <style>
       :root {
-        --bg-color: #050914;
-        --panel-bg: #0a1128;
-        --text-color: #e2e8f0;
-        --accent: #00f0ff;
+        --bg-color: #050a10;
+        --panel-bg: #0a111c;
+        --primary: #00f0ff;
+        --text-main: #e0f8ff;
+        --font-stack: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
       }
 
       body {
-        margin: 0;
-        padding: 2rem;
         background-color: var(--bg-color);
-        color: var(--text-color);
-        font-family: "Segoe UI", system-ui, sans-serif;
+        color: var(--text-main);
+        font-family: var(--font-stack);
+        margin: 0;
+        padding: 20px;
+        display: flex;
+        justify-content: center;
+        align-items: flex-start;
+        gap: 40px;
+        height: 100vh;
+        box-sizing: border-box;
+      }
+
+      /* --- HARDWARE SIMULATION --- */
+      .hardware-wrapper {
         display: flex;
         flex-direction: column;
         align-items: center;
-        min-height: 100vh;
+        gap: 20px;
       }
 
-      .container {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 4rem;
-        justify-content: center;
-        max-width: 1200px;
-        width: 100%;
-      }
-
-      /* Cadre matériel simulé de haute qualité */
-      .hardware-bezel {
-        width: 290px;
-        height: 290px;
-        background: radial-gradient(circle at 30% 30%, #2a2a35, #0a0a0f);
+      .bezel {
+        width: 280px;
+        height: 280px;
+        background: radial-gradient(circle, #2a2a2a 0%, #111 70%, #000 100%);
         border-radius: 50%;
         display: flex;
+        justify-content: center;
         align-items: center;
-        justify-content: center;
         box-shadow:
-          0 30px 60px rgba(0, 0, 0, 0.8),
-          inset 0 2px 4px rgba(255, 255, 255, 0.1),
-          inset 0 -4px 10px rgba(0, 0, 0, 0.9);
-        position: relative;
-        border: 2px solid #111;
+          0 15px 35px rgba(0, 0, 0, 0.8),
+          inset 0 2px 5px rgba(255, 255, 255, 0.1);
       }
 
-      /* Reflet de la lentille en verre */
-      .hardware-bezel::after {
-        content: "";
-        position: absolute;
-        top: 2%;
-        left: 5%;
-        width: 90%;
-        height: 90%;
+      .screen {
+        width: 240px;
+        height: 240px;
+        background-color: #020305;
         border-radius: 50%;
-        background: linear-gradient(
-          135deg,
-          rgba(255, 255, 255, 0.15) 0%,
-          rgba(255, 255, 255, 0) 40%
-        );
-        pointer-events: none;
-        z-index: 20;
+        overflow: hidden; /* Masque matériel GC9A01 */
+        box-shadow: inset 0 0 15px rgba(0, 0, 0, 0.9);
+        position: relative;
       }
 
       canvas {
-        width: 240px;
-        height: 240px;
-        border-radius: 50%;
-        background-color: #02050a;
-        box-shadow: inset 0 0 30px rgba(0, 200, 255, 0.05);
-        image-rendering: pixelated; /* Simule la netteté des pixels TFT */
+        display: block;
       }
 
-      /* Panneau de contrôle industriel */
-      .controls {
+      /* --- CONTROL PANEL --- */
+      .control-panel {
         background-color: var(--panel-bg);
-        padding: 2rem;
-        border-radius: 12px;
-        flex: 1;
-        min-width: 340px;
-        border: 1px solid #1e293b;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        border: 1px solid #1a2b45;
+        border-radius: 8px;
+        padding: 20px;
+        width: 400px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+        max-height: 90vh;
+        overflow-y: auto;
       }
 
       h2 {
-        font-weight: 400;
-        color: var(--accent);
-        border-bottom: 1px solid #1e293b;
-        padding-bottom: 0.8rem;
-        font-size: 1.2rem;
-        letter-spacing: 2px;
+        margin-top: 0;
+        font-size: 1rem;
+        color: var(--primary);
         text-transform: uppercase;
+        letter-spacing: 1px;
+        border-bottom: 1px solid #1a2b45;
+        padding-bottom: 8px;
       }
 
-      .button-grid {
+      .btn-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-        gap: 0.5rem;
-        margin-bottom: 1.5rem;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        margin-bottom: 25px;
       }
 
       button {
-        background-color: #0f172a;
-        color: #94a3b8;
-        border: 1px solid #334155;
-        padding: 0.6rem;
-        border-radius: 4px;
+        background: transparent;
+        color: var(--primary);
+        border: 1px solid var(--primary);
+        padding: 8px;
         cursor: pointer;
-        font-family: monospace;
-        font-size: 0.8rem;
+        font-family: var(--font-stack);
+        font-size: 0.75rem;
+        font-weight: bold;
         text-transform: uppercase;
-        letter-spacing: 1px;
-        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        border-radius: 4px;
+        transition: all 0.2s ease;
       }
 
-      button:hover,
+      button:hover {
+        background: rgba(0, 240, 255, 0.1);
+      }
       button.active {
-        background-color: rgba(0, 240, 255, 0.1);
-        border-color: var(--accent);
-        color: var(--accent);
-        box-shadow: 0 0 15px rgba(0, 240, 255, 0.2) inset;
+        background: var(--primary);
+        color: var(--bg-color);
       }
 
-      .serial-input {
-        display: flex;
-        gap: 0.5rem;
+      .btn-danger {
+        color: #ff283c;
+        border-color: #ff283c;
+      }
+      .btn-danger:hover {
+        background: rgba(255, 40, 60, 0.1);
+      }
+      .btn-success {
+        color: #00ff78;
+        border-color: #00ff78;
+      }
+      .btn-success:hover {
+        background: rgba(0, 255, 120, 0.1);
       }
 
       input[type="text"] {
-        flex: 1;
-        padding: 0.8rem;
-        background: #02050a;
-        border: 1px solid #334155;
-        color: var(--accent);
+        width: calc(100% - 22px);
+        background: #0d1826;
+        border: 1px solid #0064ff;
+        color: white;
+        padding: 10px;
         font-family: monospace;
         border-radius: 4px;
-      }
-
-      input[type="text"]:focus {
         outline: none;
-        border-color: var(--accent);
-      }
-
-      #btn-send {
-        background-color: var(--accent);
-        color: #000;
-        font-weight: bold;
-      }
-
-      .log {
-        font-family: monospace;
-        font-size: 0.75rem;
-        color: #10b981;
-        background: #02050a;
-        padding: 1rem;
-        border-radius: 4px;
-        height: 120px;
-        overflow-y: auto;
-        margin-top: 1rem;
-        border: 1px solid #1e293b;
+        margin-bottom: 10px;
       }
     </style>
   </head>
   <body>
-    <div class="container">
-      <div class="hardware-bezel">
-        <canvas id="display" width="240" height="240"></canvas>
+    <div class="hardware-wrapper">
+      <div class="bezel">
+        <div class="screen">
+          <canvas id="display" width="240" height="240"></canvas>
+        </div>
+      </div>
+      <div style="color: #666; font-family: monospace">
+        Simulation GC9A01 - V7.2
+      </div>
+    </div>
+
+    <div class="control-panel">
+      <h2>Données Locales (local_text)</h2>
+      <input
+        type="text"
+        id="textInput"
+        placeholder="Ex: 220|60|45 ou STANDBY"
+        value="STANDBY"
+      />
+      <button style="width: 100%; margin-bottom: 20px" onclick="updateText()">
+        Mettre à jour le texte
+      </button>
+
+      <h2>Noyau & Modes Généraux</h2>
+      <div class="btn-grid" id="core-btns">
+        <button onclick="setMode('IDLE')" class="active">IDLE (Standby)</button>
+        <button onclick="setMode('LISTENING')">Listening</button>
+        <button onclick="setMode('SPEAKING')">Speaking</button>
+        <button onclick="setMode('SCREENSAVER')">Screensaver</button>
+        <button onclick="setMode('SEARCH')">Search</button>
+        <button onclick="setMode('GHOST')">Ghost</button>
+        <button class="btn-danger" onclick="setMode('ERROR')">Error</button>
+        <button class="btn-success" onclick="setMode('SUCCESS')">
+          Success
+        </button>
       </div>
 
-      <div class="controls">
-        <h2>Telemetry Control Unit</h2>
-        <div class="button-grid" id="state-buttons"></div>
-        <div class="serial-input">
-          <input
-            type="text"
-            id="serial-cmd"
-            placeholder="> AWAITING COMMAND..."
-            autocomplete="off"
-          />
-          <button id="btn-send">EXEC</button>
-        </div>
-        <div class="log" id="serial-log">
-          > CORE SYSTEM INITIALIZED...<br />> GC9A01 DISPLAY PROTOCOL
-          ACTIVE...<br />
-        </div>
+      <h2>Applications & Domotique</h2>
+      <div class="btn-grid" id="app-btns">
+        <button onclick="setMode('SYSTEM')">System</button>
+        <button onclick="setMode('HOME')">Home</button>
+        <button onclick="setMode('VISION')">Vision AI</button>
+        <button onclick="setMode('MATRIX')">Matrix</button>
+        <button onclick="setMode('MEDIA')">Media</button>
+        <button onclick="setMode('TIMER')">Timer</button>
+        <button onclick="setMode('WEATHER')">Weather</button>
+        <button onclick="setMode('PRINT')">3D Print</button>
+        <button onclick="setMode('APPS')">Apps (Lock)</button>
+        <button class="btn-success" onclick="setMode('WHATSAPP')">
+          WhatsApp
+        </button>
+        <button class="btn-danger" onclick="setMode('SECURITY')">
+          Security
+        </button>
       </div>
     </div>
 
     <script>
-      // ==========================================
-      // MOTEUR DE RENDU HAUTE FIDÉLITÉ (SIMULATION)
-      // ==========================================
+      // ==============================================================================
+      // MOTEUR DE RENDU JS (PORTAGE EXACT DU CODE C++ ESP32 V7.2)
+      // ==============================================================================
       const canvas = document.getElementById("display");
       const ctx = canvas.getContext("2d", { alpha: false });
 
-      const OrbState = {
-        IDLE: 0,
-        LISTENING: 1,
-        SPEAKING: 2,
-        ERROR: 3,
-        MODE_WEATHER: 4,
-        MODE_HOME: 5,
-        MODE_SYSTEM: 6,
-        MODE_MATRIX: 7,
-        MODE_SEARCH: 8,
-        MODE_MEDIA: 9,
-        MODE_TIMER: 10,
-        MODE_PRINT: 11,
-        MODE_NOTIFICATION: 12,
-        MODE_SUCCESS: 13,
-        // New High Fidelity Modes
-        MODE_APPS: 14,
-        MODE_VISION: 15,
-        MODE_GHOST: 16,
-        MODE_SECURITY: 17,
-      };
+      const CX = 120;
+      const CY = 120;
+      const DEG_TO_RAD = 0.0174532925;
 
-      let g_state = OrbState.IDLE;
-      let g_text = "SYS.ONLINE";
+      let local_state = "IDLE";
+      let local_text = "STANDBY";
       let g_phase = 0.0;
-      let lastTime = performance.now();
+      let ms_time = 0;
 
-      // Palettes de couleurs industrielles/Sci-Fi (Valeurs RGB)
-      const PALETTE = {
-        CYAN: [0, 240, 255],
-        BLUE: [0, 100, 255],
-        DEEP_BLUE: [10, 30, 80],
-        ORANGE: [255, 120, 0],
-        RED: [255, 40, 60],
-        WHITE: [240, 248, 255],
-        GREEN: [0, 255, 120],
-        PURPLE: [180, 50, 255],
-        YELLOW: [255, 200, 0],
-        GREY: [100, 110, 120],
-        DARK_GREY: [40, 45, 50],
+      const COLORS = {
+        BG: { r: 2, g: 3, b: 5 },
+        CYAN: { r: 0, g: 240, b: 255 },
+        BLUE: { r: 0, g: 100, b: 255 },
+        OMNI_BLUE: { r: 0, g: 140, b: 255 },
+        OMNI_RED: { r: 255, g: 10, b: 30 },
+        WHITE: { r: 240, g: 248, b: 255 },
+        GREEN: { r: 0, g: 255, b: 120 },
+        YELLOW: { r: 255, g: 200, b: 0 },
+        ORANGE: { r: 255, g: 120, b: 0 },
+        PURPLE: { r: 180, g: 50, b: 255 },
+        PINK: { r: 255, g: 0, b: 127 },
+        RED: { r: 255, g: 40, b: 60 },
+        DEEP_BLUE: { r: 5, g: 15, b: 30 },
+        GREY: { r: 100, g: 110, b: 120 },
+        DARK: { r: 10, g: 15, b: 20 },
       };
 
-      // --- UTILS GRAPHIQUES ---
-      function rgb(c, alpha = 1) {
-        return `rgba(${c[0]}, ${c[1]}, ${c[2]}, ${alpha})`;
+      let dyn_radius = 65.0;
+      let v_radius = 0.0;
+      let dyn_speed = 0.05;
+      let v_speed = 0.0;
+      let dyn_color = COLORS.OMNI_BLUE;
+
+      const SPHERE_NODES = 450;
+      const sphereBase = [];
+
+      function init3DGeometry() {
+        const phi = Math.PI * (3.0 - Math.sqrt(5.0));
+        for (let i = 0; i < SPHERE_NODES; i++) {
+          let y = 1.0 - (i / (SPHERE_NODES - 1)) * 2.0;
+          let radius = Math.sqrt(1.0 - y * y);
+          let theta = phi * i;
+          sphereBase.push({
+            x: Math.cos(theta) * radius,
+            y: y,
+            z: Math.sin(theta) * radius,
+          });
+        }
+      }
+      init3DGeometry();
+
+      // Outils Mathématiques & Dessin
+      function lerpColor(c1, c2, t) {
+        t = Math.max(0, Math.min(1, t));
+        return {
+          r: Math.round(c1.r + (c2.r - c1.r) * t),
+          g: Math.round(c1.g + (c2.g - c1.g) * t),
+          b: Math.round(c1.b + (c2.b - c1.b) * t),
+        };
+      }
+      function toCss(c) {
+        return `rgb(${c.r}, ${c.g}, ${c.b})`;
       }
 
-      function setGlow(color, blur) {
-        ctx.shadowColor = color ? rgb(color) : "transparent";
-        ctx.shadowBlur = blur || 0;
-      }
-
-      // --- RENDERERS DE HAUTE PRÉCISION ---
-
-      // HUD Persistant (Cadre et réticules micrométriques)
-      function drawPersistentHUD() {
-        let cx = 120,
-          cy = 120;
-        ctx.lineWidth = 1;
-
-        // Anneau extérieur fin
-        ctx.strokeStyle = rgb(PALETTE.DEEP_BLUE, 0.8);
+      function drawCircle(x, y, r, color, fill = false) {
+        if (r <= 0) return;
         ctx.beginPath();
-        ctx.arc(cx, cy, 118, 0, Math.PI * 2);
-        ctx.stroke();
-
-        // Graduations de précision (Degrés)
-        for (let i = 0; i < 72; i++) {
-          let angle = i * 5 * (Math.PI / 180);
-          let isMajor = i % 18 === 0; // Tous les 90 deg
-          let isMedium = i % 6 === 0; // Tous les 30 deg
-
-          let innerR = isMajor ? 105 : isMedium ? 110 : 114;
-          let outerR = 118;
-
-          ctx.strokeStyle = isMajor
-            ? rgb(PALETTE.CYAN, 0.8)
-            : rgb(PALETTE.GREY, 0.3);
-          ctx.beginPath();
-          ctx.moveTo(
-            cx + Math.cos(angle) * innerR,
-            cy + Math.sin(angle) * innerR,
-          );
-          ctx.lineTo(
-            cx + Math.cos(angle) * outerR,
-            cy + Math.sin(angle) * outerR,
-          );
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        if (fill) {
+          ctx.fillStyle = toCss(color);
+          ctx.fill();
+        } else {
+          ctx.strokeStyle = toCss(color);
+          ctx.lineWidth = 1;
           ctx.stroke();
-
-          // Texte des axes majeurs
-          if (isMajor) {
-            ctx.fillStyle = rgb(PALETTE.CYAN, 0.6);
-            ctx.font = "8px monospace";
-            ctx.textAlign = "center";
-            ctx.textBaseline = "middle";
-            let textR = 98;
-            ctx.fillText(
-              `${i * 5}°`,
-              cx + Math.cos(angle) * textR,
-              cy + Math.sin(angle) * textR,
-            );
-          }
         }
-
-        // Crosshair central discret
-        ctx.strokeStyle = rgb(PALETTE.GREY, 0.2);
-        ctx.beginPath();
-        ctx.moveTo(cx - 5, cy);
-        ctx.lineTo(cx + 5, cy);
-        ctx.moveTo(cx, cy - 5);
-        ctx.lineTo(cx, cy + 5);
-        ctx.stroke();
-
-        // Indicateur de statut (Batterie / Link) en haut
-        let blink = Math.sin(g_phase * 5) > 0;
-        ctx.fillStyle = blink
-          ? rgb(PALETTE.GREEN, 0.8)
-          : rgb(PALETTE.GREEN, 0.2);
-        ctx.fillRect(110, 6, 4, 2);
-        ctx.fillRect(115, 6, 4, 2);
-        ctx.fillRect(120, 6, 4, 2);
-        ctx.fillStyle = rgb(PALETTE.GREY, 0.3);
-        ctx.fillRect(125, 6, 4, 2); // Un trait vide
       }
 
-      // Onde polaire déformable (Rendu organique "Siri/Jarvis")
-      function drawOrganicOrb(
-        cx,
-        cy,
-        baseRadius,
-        intensity,
-        color,
-        phaseOffset,
-      ) {
+      function drawLine(x1, y1, x2, y2, color, width = 1) {
         ctx.beginPath();
-        let points = 60;
-        for (let i = 0; i <= points; i++) {
-          let angle = (i / points) * Math.PI * 2;
-          // Formule de déformation complexe combinant plusieurs fréquences
-          let noise =
-            Math.sin(angle * 3 + g_phase * 2 + phaseOffset) *
-            Math.cos(angle * 5 - g_phase) *
-            Math.sin(g_phase * 0.5);
-          let r = baseRadius + noise * intensity;
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.strokeStyle = toCss(color);
+        ctx.lineWidth = width;
+        ctx.stroke();
+      }
 
-          let x = cx + Math.cos(angle) * r;
-          let y = cy + Math.sin(angle) * r;
+      function fillRect(x, y, w, h, color) {
+        ctx.fillStyle = toCss(color);
+        ctx.fillRect(x, y, w, h);
+      }
 
-          if (i === 0) ctx.moveTo(x, y);
-          else ctx.lineTo(x, y);
-        }
-        ctx.closePath();
+      function drawRect(x, y, w, h, color) {
+        ctx.strokeStyle = toCss(color);
+        ctx.lineWidth = 1;
+        ctx.strokeRect(x, y, w, h);
+      }
 
-        // Gradient radial pour le volume
-        let grad = ctx.createRadialGradient(
-          cx,
-          cy,
-          baseRadius * 0.2,
-          cx,
-          cy,
-          baseRadius + intensity,
+      function fillTriangle(x1, y1, x2, y2, x3, y3, color) {
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.lineTo(x3, y3);
+        ctx.fillStyle = toCss(color);
+        ctx.fill();
+      }
+
+      // Correction de l'erreur IndexSizeError avec Math.max(0)
+      function drawGlow(x, y, radius, color, intensity) {
+        radius = Math.max(0, radius);
+        intensity = Math.max(0, intensity);
+        if (radius + intensity <= 0) return;
+        const grad = ctx.createRadialGradient(
+          x,
+          y,
+          radius,
+          x,
+          y,
+          radius + intensity,
         );
-        grad.addColorStop(0, rgb(color, 0.8));
-        grad.addColorStop(0.5, rgb(color, 0.3));
-        grad.addColorStop(1, rgb(color, 0));
-
+        grad.addColorStop(0, toCss(color));
+        grad.addColorStop(1, toCss(COLORS.BG));
+        ctx.beginPath();
+        ctx.arc(x, y, radius + intensity, 0, Math.PI * 2);
         ctx.fillStyle = grad;
         ctx.fill();
+      }
 
-        // Ligne de bordure lumineuse
-        ctx.strokeStyle = rgb(color, 0.6);
-        ctx.lineWidth = 1.5;
+      // Simulation exacte de fillArc de LovyanGFX
+      function drawSegmentedRing(
+        x,
+        y,
+        r,
+        thickness,
+        segments,
+        phase,
+        gapRatio,
+        color,
+      ) {
+        let angleStep = 360.0 / segments;
+        let gap = angleStep * gapRatio;
+        ctx.strokeStyle = toCss(color);
+        ctx.lineWidth = thickness;
+        for (let i = 0; i < segments; i++) {
+          let startAngle = (i * angleStep + phase) * DEG_TO_RAD;
+          let endAngle = (i * angleStep + phase + angleStep - gap) * DEG_TO_RAD;
+          ctx.beginPath();
+          ctx.arc(x, y, Math.max(0, r - thickness / 2), startAngle, endAngle);
+          ctx.stroke();
+        }
+      }
+      function fillArc(x, y, r, r_inner, startDeg, endDeg, color) {
+        ctx.beginPath();
+        let thickness = r - r_inner;
+        ctx.arc(
+          x,
+          y,
+          Math.max(0, r - thickness / 2),
+          startDeg * DEG_TO_RAD,
+          endDeg * DEG_TO_RAD,
+        );
+        ctx.lineWidth = thickness;
+        ctx.strokeStyle = toCss(color);
         ctx.stroke();
       }
 
-      // ==========================================
-      // BOUCLE PRINCIPALE (MOTEUR D'ÉTAT)
-      // ==========================================
-      function updateAndDraw(timestamp) {
-        let dt = (timestamp - lastTime) / 1000;
-        lastTime = timestamp;
-        g_phase += dt;
+      function drawText(text, x, y, color, size = "12px", align = "center") {
+        ctx.font = `${size} sans-serif`;
+        ctx.fillStyle = toCss(color);
+        ctx.textAlign = align;
+        ctx.fillText(text, x, y);
+      }
 
-        // Reset du fond pour netteté absolue (pas de traînée floue)
-        ctx.fillStyle = "#02050a";
-        ctx.fillRect(0, 0, 240, 240);
+      // ==============================================================================
+      // LOGIQUE D'ANIMATION ET VUES
+      // ==============================================================================
 
-        // 1. Dessin du HUD technique de base (toujours présent)
-        drawPersistentHUD();
+      function updateLogic() {
+        let tr = 65.0,
+          ts = 0.03,
+          tc = COLORS.OMNI_BLUE;
 
-        let cx = 120,
-          cy = 120;
-        ctx.globalCompositeOperation = "screen"; // Mode additif pour les lumières
-        // Note: pour certains rendus style 'print' on repassera en 'source-over' si besoin
+        if (local_state === "SPEAKING") {
+          tr = 75.0 + Math.sin(g_phase * 1.5) * 12.0;
+          ts = 0.08;
+          tc = COLORS.OMNI_RED;
+        } else if (local_state === "LISTENING") {
+          tr = 70.0 + Math.sin(g_phase * 0.8) * 6.0;
+          ts = 0.04;
+          tc = COLORS.CYAN;
+        } else if (local_state === "IDLE") {
+          tr = 65.0 + Math.sin(g_phase * 0.5) * 3.0;
+          ts = 0.02;
+          tc = COLORS.OMNI_BLUE;
+        } else {
+          switch (local_state) {
+            case "ERROR":
+              tr = 20.0;
+              ts = 0.0;
+              tc = COLORS.RED;
+              break;
+            case "HOME":
+              tr = 0.0;
+              ts = 0.08;
+              tc = COLORS.BLUE;
+              break;
+            case "VISION":
+              tr = 0.0;
+              ts = 0.1;
+              tc = COLORS.RED;
+              break;
+            case "GHOST":
+              tr = 10.0;
+              ts = 0.01;
+              tc = COLORS.GREY;
+              break;
+            case "MEDIA":
+              tr = 20.0;
+              ts = 0.1;
+              tc = COLORS.PINK;
+              break;
+            case "SUCCESS":
+              tr = 0.0;
+              ts = 0.05;
+              tc = COLORS.GREEN;
+              break;
+            case "SCREENSAVER":
+              tr = 0.0;
+              ts = 0.015;
+              tc = COLORS.CYAN;
+              break;
+            case "WHATSAPP":
+              tr = 10.0;
+              ts = 0.06;
+              tc = COLORS.GREEN;
+              break;
+            default:
+              tr = 30.0;
+              ts = 0.05;
+              tc = COLORS.CYAN;
+              break;
+          }
+        }
 
-        // --- LOGIQUE DES MODES ---
+        const tension = 0.08,
+          dampening = 0.75;
+        v_radius = (v_radius + (tr - dyn_radius) * tension) * dampening;
+        dyn_radius += v_radius;
+        v_speed = (v_speed + (ts - dyn_speed) * tension) * dampening;
+        dyn_speed += v_speed;
+        dyn_color = lerpColor(dyn_color, tc, 0.15);
+        g_phase += dyn_speed;
+      }
 
-        if (
-          g_state === OrbState.IDLE ||
-          g_state === OrbState.LISTENING ||
-          g_state === OrbState.SPEAKING
+      function renderOmniSphere() {
+        let centerGlowCol = lerpColor(COLORS.BG, dyn_color, 0.12);
+        for (let r = 120; r > 30; r -= 4) {
+          let f = 1.0 - r / 120.0;
+          drawCircle(
+            CX,
+            CY,
+            r,
+            lerpColor(COLORS.BG, centerGlowCol, f * f * f),
+            false,
+          );
+        }
+
+        for (
+          let r = Math.floor(dyn_radius * 0.85) + 25;
+          r > Math.floor(dyn_radius * 0.85);
+          r -= 3
         ) {
-          // CORE ORB (Haute fidélité)
-          let baseColor =
-            g_state === OrbState.IDLE
-              ? PALETTE.CYAN
-              : g_state === OrbState.LISTENING
-                ? PALETTE.GREEN
-                : PALETTE.ORANGE;
+          let f = 1.0 - (r - dyn_radius * 0.85) / 25.0;
+          drawCircle(CX, CY, r, lerpColor(COLORS.BG, dyn_color, f * f), false);
+        }
 
-          let amplitude =
-            g_state === OrbState.SPEAKING
-              ? 25
-              : g_state === OrbState.IDLE
-                ? 5
-                : 15;
-          let baseRadius = g_state === OrbState.SPEAKING ? 40 : 30;
+        let rotY = g_phase * 1.5,
+          rotX = Math.sin(g_phase * 0.4) * 0.4;
+        let cosY = Math.cos(rotY),
+          sinY = Math.sin(rotY),
+          cosX = Math.cos(rotX),
+          sinX = Math.sin(rotX);
+        let freq = local_state === "SPEAKING" ? 3.5 : 2.0;
+        let waveAmp = local_state === "SPEAKING" ? 0.3 : 0.12;
+        let pulsePhase = g_phase * 2.5;
 
-          setGlow(baseColor, 15);
-          // Dessin de 3 couches organiques superposées avec déphasage
-          drawOrganicOrb(cx, cy, baseRadius, amplitude, baseColor, 0);
-          drawOrganicOrb(
-            cx,
-            cy,
-            baseRadius * 0.8,
-            amplitude * 1.2,
-            PALETTE.WHITE,
+        let buffer = [];
+        for (let i = 0; i < SPHERE_NODES; i++) {
+          let bx = sphereBase[i].x,
+            by = sphereBase[i].y,
+            bz = sphereBase[i].z;
+          let n1 =
+            Math.sin(bx * freq + pulsePhase) * Math.cos(by * freq - pulsePhase);
+          let n2 = Math.sin(bz * (freq * 1.2) - pulsePhase * 1.2);
+          let r = dyn_radius * (1.0 + (n1 + n2) * waveAmp);
+          let x = bx * r,
+            y = by * r,
+            z = bz * r;
+
+          let x_rot = x * cosY - z * sinY,
+            z_rot = x * sinY + z * cosY;
+          let y_rot = y * cosX - z_rot * sinX;
+          z_rot = y * sinX + z_rot * cosX;
+
+          let persp = 200.0 / (200.0 + z_rot);
+          buffer.push({
+            x: CX + x_rot * persp,
+            y: CY + y_rot * persp,
+            z: z_rot,
+          });
+        }
+
+        let backCol = lerpColor(COLORS.BG, dyn_color, 0.15);
+        buffer.forEach((pt) => {
+          if (pt.z > 0) drawCircle(pt.x, pt.y, 1, backCol, true);
+        });
+        buffer.forEach((pt) => {
+          if (pt.z <= 0) {
+            let depth = Math.min(1.0, Math.abs(pt.z) / dyn_radius);
+            let baseCol = lerpColor(dyn_color, COLORS.WHITE, depth * 0.8);
+            let light = (pt.y - CY) / dyn_radius;
+            if (light > 0) baseCol = lerpColor(baseCol, COLORS.BG, light * 0.6);
+            else
+              baseCol = lerpColor(baseCol, COLORS.WHITE, Math.abs(light) * 0.3);
+            drawCircle(
+              pt.x,
+              pt.y,
+              depth > 0.65 ? 3 : depth > 0.25 ? 2 : 1,
+              baseCol,
+              true,
+            );
+          }
+        });
+      }
+
+      // ---------- TOUS LES MODES SPÉCIFIQUES V7.2 ----------
+      function renderPersistentHUD() {
+        fillArc(CX, CY, 119, 118, 0, 360, COLORS.DEEP_BLUE);
+        fillRect(CX - 1, 0, 2, 6, COLORS.GREY);
+        fillRect(CX - 1, 234, 2, 6, COLORS.GREY);
+        fillRect(0, CY - 1, 6, 2, COLORS.GREY);
+        fillRect(234, CY - 1, 6, 2, COLORS.GREY);
+        let ledCol =
+          Math.sin(g_phase * 5.0) > 0 ? COLORS.GREEN : { r: 0, g: 40, b: 0 };
+        fillRect(115, 6, 4, 3, ledCol);
+        fillRect(121, 6, 4, 3, ledCol);
+        fillRect(127, 6, 4, 3, { r: 20, g: 20, b: 20 });
+        drawText(local_text, CX, 215, dyn_color);
+      }
+
+      function renderModeScreensaver() {
+        let corePulse = (Math.sin(g_phase * 2.0) + 1.0) * 0.5;
+        drawGlow(CX, CY, 15 + corePulse * 5, COLORS.OMNI_BLUE, 25);
+        drawCircle(CX, CY, 4 + corePulse * 2, COLORS.WHITE, true);
+        drawCircle(
+          CX,
+          CY,
+          6 + corePulse * 2,
+          lerpColor(COLORS.CYAN, COLORS.BG, 0.6),
+          true,
+        );
+
+        let R = 85.0,
+          tiltX = 0.35,
+          cosX = Math.cos(tiltX),
+          sinX = Math.sin(tiltX);
+        drawCircle(CX, CY, R + 10, { r: 5, g: 15, b: 25 }, false);
+
+        const num_waves = 4,
+          pts = 110;
+        let buffer = [];
+
+        for (let w = 0; w < num_waves; w++) {
+          let freq = 2.0 + w * 1.5,
+            speed = 0.8 + w * 0.3;
+          if (w % 2 === 1) speed = -speed;
+          let amp = 0.4 + w * 0.1;
+
+          for (let i = 0; i < pts; i++) {
+            let theta = (i / pts) * 2.0 * Math.PI,
+              active_theta = theta + g_phase * speed;
+            let phi = Math.sin(theta * freq + g_phase * (speed * 1.5)) * amp;
+            let bx = R * Math.cos(phi) * Math.cos(active_theta),
+              by = R * Math.sin(phi),
+              bz = R * Math.cos(phi) * Math.sin(active_theta);
+            let y = by * cosX - bz * sinX,
+              z = by * sinX + bz * cosX;
+            let persp = 200.0 / (200.0 + z);
+            buffer.push({ x: CX + bx * persp, y: CY + y * persp, z: z });
+          }
+        }
+
+        let backCol = lerpColor(COLORS.BG, COLORS.BLUE, 0.3);
+        buffer.forEach((pt) => {
+          if (pt.z > 0) fillRect(pt.x, pt.y, 1, 1, backCol);
+        });
+
+        for (let w = 0; w < num_waves; w++) {
+          let off = w * pts;
+          for (let i = 0; i < pts; i++) {
+            let curr = buffer[off + i];
+            if (curr.z <= 0) {
+              let d = Math.min(1.0, Math.abs(curr.z) / R);
+              let c = lerpColor(COLORS.CYAN, COLORS.WHITE, d);
+              drawCircle(curr.x, curr.y, d > 0.6 ? 2 : 1, c, true);
+              if (i > 0) {
+                let prev = buffer[off + i - 1];
+                if (prev.z <= 0) {
+                  drawLine(prev.x, prev.y, curr.x, curr.y, c);
+                  if (d > 0.5)
+                    drawLine(prev.x, prev.y + 1, curr.x, curr.y + 1, c);
+                }
+              }
+              if (i === pts - 1 && buffer[off].z <= 0)
+                drawLine(buffer[off].x, buffer[off].y, curr.x, curr.y, c);
+            }
+          }
+        }
+      }
+
+      function renderModeSystem() {
+        drawSegmentedRing(CX, CY, 110, 8, 8, g_phase * 50.0, 0.1, COLORS.CYAN);
+        drawSegmentedRing(CX, CY, 95, 2, 36, -g_phase * 80.0, 0.5, COLORS.BLUE);
+        drawText("SYS.OPT", CX, CY - 15, COLORS.WHITE, "16px");
+        let load = 40 + Math.sin(g_phase * 5.0) * 20;
+        drawRect(CX - 40, CY, 80, 12, COLORS.CYAN);
+        fillRect(CX - 38, CY + 2, (76 * load) / 100, 8, COLORS.CYAN);
+        drawText("RAM: 1.2G", CX, CY + 40, COLORS.GREEN);
+      }
+
+      function renderModeVision() {
+        for (let i = -120; i <= 120; i += 25) {
+          drawLine(CX + i, 0, CX + i, 240, { r: 40, g: 0, b: 0 });
+          drawLine(0, CY + i, 240, CY + i, { r: 40, g: 0, b: 0 });
+        }
+        let tr = 90 + Math.sin(g_phase * 10.0) * 5;
+        drawLine(CX - tr, CY - tr / 2, CX - tr, CY - tr, COLORS.RED);
+        drawLine(CX - tr, CY - tr, CX - tr / 2, CY - tr, COLORS.RED);
+        drawLine(CX + tr, CY - tr / 2, CX + tr, CY - tr, COLORS.RED);
+        drawLine(CX + tr, CY - tr, CX + tr / 2, CY - tr, COLORS.RED);
+        drawLine(CX - tr, CY + tr / 2, CX - tr, CY + tr, COLORS.RED);
+        drawLine(CX - tr, CY + tr, CX - tr / 2, CY + tr, COLORS.RED);
+        drawLine(CX + tr, CY + tr / 2, CX + tr, CY + tr, COLORS.RED);
+        drawLine(CX + tr, CY + tr, CX + tr / 2, CY + tr, COLORS.RED);
+        let scanY = CY + Math.sin(g_phase * 4.0) * 115;
+        fillRect(CX - 110, scanY - 2, 220, 4, COLORS.RED);
+        drawText("AI_LOCK", CX, CY - 30, COLORS.RED);
+      }
+
+      function renderModeHome() {
+        fillArc(CX, CY, 50, 49, 0, 360, COLORS.BLUE);
+        fillArc(CX, CY, 100, 99, 0, 360, COLORS.BLUE);
+        let scanA = g_phase * 2.0;
+        fillTriangle(
+          CX,
+          CY,
+          CX + Math.cos(scanA) * 120,
+          CY + Math.sin(scanA) * 120,
+          CX + Math.cos(scanA - 0.2) * 120,
+          CY + Math.sin(scanA - 0.2) * 120,
+          { r: 0, g: 50, b: 100 },
+        );
+        drawLine(
+          CX,
+          CY,
+          CX + Math.cos(scanA) * 120,
+          CY + Math.sin(scanA) * 120,
+          COLORS.CYAN,
+        );
+        let nodes = [
+          { a: 0.5, d: 55, nm: "LIV" },
+          { a: 2.1, d: 95, nm: "KIT" },
+          { a: 4.8, d: 80, nm: "BED" },
+        ];
+        nodes.forEach((n) => {
+          let x = CX + Math.cos(n.a) * n.d,
+            y = CY + Math.sin(n.a) * n.d;
+          drawCircle(x, y, 4, COLORS.CYAN, true);
+          drawText(n.nm, x, y - 10, COLORS.WHITE);
+        });
+      }
+
+      function renderModeMedia() {
+        let bars = 45,
+          radius = 55;
+        for (let i = 0; i < bars; i++) {
+          let angle = ((i * 360.0) / bars) * DEG_TO_RAD + g_phase;
+          let val =
+            10 +
+            Math.abs(Math.sin(g_phase * 4.0 + i * 0.4) * 45.0) +
+            Math.sin(i * 132.0) * 5.0;
+          let col = lerpColor(COLORS.PINK, COLORS.PURPLE, i / bars);
+          drawLine(
+            CX + Math.cos(angle) * radius,
+            CY + Math.sin(angle) * radius,
+            CX + Math.cos(angle) * (radius + val),
+            CY + Math.sin(angle) * (radius + val),
+            col,
             2,
           );
-          drawOrganicOrb(
-            cx,
-            cy,
-            baseRadius * 1.1,
-            amplitude * 0.5,
-            baseColor,
-            4,
-          );
-          setGlow(null, 0);
-
-          // Analyseur de spectre circulaire périphérique (simulé)
-          ctx.strokeStyle = rgb(baseColor, 0.4);
-          ctx.lineWidth = 2;
-          for (let i = 0; i < 36; i++) {
-            let angle = i * 10 * (Math.PI / 180);
-            let val =
-              Math.abs(Math.sin(g_phase * 5 + i)) *
-              (g_state === OrbState.SPEAKING ? 15 : 3);
-            let r1 = 60,
-              r2 = 60 + val;
-            ctx.beginPath();
-            ctx.moveTo(cx + Math.cos(angle) * r1, cy + Math.sin(angle) * r1);
-            ctx.lineTo(cx + Math.cos(angle) * r2, cy + Math.sin(angle) * r2);
-            ctx.stroke();
-          }
-        } else if (g_state === OrbState.MODE_SYSTEM) {
-          // HARDWARE DIAGNOSTIC (Arc Reactor Style)
-          ctx.lineWidth = 2;
-
-          // Anneau 1 : Vitesse rapide, haché
-          ctx.setLineDash([10, 15]);
-          ctx.strokeStyle = rgb(PALETTE.CYAN, 0.8);
-          ctx.beginPath();
-          ctx.arc(cx, cy, 75, g_phase * 2, Math.PI * 2 + g_phase * 2);
-          ctx.stroke();
-
-          // Anneau 2 : Contre-rotatif, blocs
-          ctx.setLineDash([40, 5, 5, 5]);
-          ctx.strokeStyle = rgb(PALETTE.WHITE, 0.6);
-          ctx.beginPath();
-          ctx.arc(cx, cy, 65, -g_phase, Math.PI * 2 - g_phase);
-          ctx.stroke();
-          ctx.setLineDash([]); // reset
-
-          // Hexagone central rotatif
-          ctx.strokeStyle = rgb(PALETTE.CYAN, 0.5);
-          ctx.beginPath();
-          for (let i = 0; i <= 6; i++) {
-            let a = i * (Math.PI / 3) + g_phase * 0.5;
-            let x = cx + Math.cos(a) * 40;
-            let y = cy + Math.sin(a) * 40;
-            if (i === 0) ctx.moveTo(x, y);
-            else ctx.lineTo(x, y);
-          }
-          ctx.stroke();
-
-          // Micro-données techniques
-          ctx.fillStyle = rgb(PALETTE.WHITE, 0.9);
-          ctx.font = "10px monospace";
-          ctx.textAlign = "right";
-          ctx.fillText(
-            `CPU: ${(40 + Math.sin(g_phase * 10) * 20).toFixed(1)}%`,
-            cx - 5,
-            cy - 10,
-          );
-          ctx.fillText(`RAM: 1.2GB`, cx - 5, cy + 5);
-          ctx.fillText(`NET: OK`, cx - 5, cy + 20);
-        } else if (g_state === OrbState.MODE_PRINT) {
-          // 3D PRINTER TELEMETRY (Klipper HUD)
-          // 1. Grille isométrique du plateau (Bed)
-          ctx.strokeStyle = rgb(PALETTE.BLUE, 0.5);
-          ctx.lineWidth = 1;
-          ctx.beginPath();
-          for (let i = -3; i <= 3; i++) {
-            ctx.moveTo(cx - 40 + i * 10, cy + 20 + i * 5);
-            ctx.lineTo(cx + 20 + i * 10, cy - 10 + i * 5);
-          }
-          /*
-                for(let i=-3; i<=3; i++) { // Lignes Y (Simplifié pour lisibilité)
-                    ctx.moveTo(cx - 40 + i*10, cy + 20 - i*5);
-                    ctx.lineTo(cx + 20 + i*10, cy + 50 - i*5);
-                }
-                */
-          ctx.stroke();
-
-          // Rendu du Mesh en cours (Cube filaire montant)
-          let zHeight = (g_phase * 5) % 30; // Progression Z
-          ctx.strokeStyle = rgb(PALETTE.CYAN, 0.9);
-          ctx.fillStyle = rgb(PALETTE.CYAN, 0.1);
-          ctx.beginPath();
-          ctx.moveTo(cx - 10, cy + 35 - zHeight);
-          ctx.lineTo(cx + 20, cy + 20 - zHeight);
-          ctx.lineTo(cx, cy + 10 - zHeight);
-          ctx.lineTo(cx - 30, cy + 25 - zHeight);
-          ctx.closePath();
-          ctx.fill();
-          ctx.stroke();
-
-          // Buse (Nozzle) positionnée
-          ctx.fillStyle = rgb(PALETTE.WHITE);
-          ctx.beginPath();
-          ctx.arc(cx - 10, cy + 35 - zHeight, 2, 0, Math.PI * 2);
-          ctx.fill();
-          // Extrusion
-          ctx.strokeStyle = rgb(PALETTE.ORANGE, 1.0);
-          setGlow(PALETTE.ORANGE, 5);
-          ctx.beginPath();
-          ctx.moveTo(cx - 10, cy + 35 - zHeight);
-          ctx.lineTo(cx - 10, cy + 38 - zHeight);
-          ctx.stroke();
-          setGlow(null, 0);
-
-          // 2. Graphique de température en temps réel
-          ctx.strokeStyle = rgb(PALETTE.RED, 0.8);
-          ctx.beginPath();
-          for (let x = 0; x < 80; x++) {
-            let y = cy + 70 - (20 + Math.sin(x * 0.2 + g_phase * 4) * 3);
-            if (x === 0) ctx.moveTo(cx - 40 + x, y);
-            else ctx.lineTo(cx - 40 + x, y);
-          }
-          ctx.stroke();
-
-          ctx.fillStyle = rgb(PALETTE.WHITE);
-          ctx.font = "10px monospace";
-          ctx.textAlign = "left";
-          ctx.fillText(`HOT: 215°C`, cx - 35, cy - 30);
-          ctx.fillStyle = rgb(PALETTE.BLUE);
-          ctx.fillText(`BED: 60°C`, cx - 35, cy - 18);
-        } else if (g_state === OrbState.MODE_HOME) {
-          // DOMOTICS MAP (Radar spatial)
-          ctx.strokeStyle = rgb(PALETTE.BLUE, 0.3);
-          ctx.beginPath();
-          ctx.arc(cx, cy, 30, 0, Math.PI * 2);
-          ctx.stroke();
-          ctx.beginPath();
-          ctx.arc(cx, cy, 60, 0, Math.PI * 2);
-          ctx.stroke();
-
-          // Ligne de balayage radar
-          let scanAngle = g_phase * 2;
-          let grad = ctx.createLinearGradient(
-            cx,
-            cy,
-            cx + Math.cos(scanAngle) * 80,
-            cy + Math.sin(scanAngle) * 80,
-          );
-          grad.addColorStop(0, rgb(PALETTE.CYAN, 0.8));
-          grad.addColorStop(1, rgb(PALETTE.CYAN, 0));
-
-          ctx.strokeStyle = grad;
-          ctx.lineWidth = 3;
-          ctx.beginPath();
-          ctx.moveTo(cx, cy);
-          ctx.lineTo(
-            cx + Math.cos(scanAngle) * 80,
-            cy + Math.sin(scanAngle) * 80,
-          );
-          ctx.stroke();
-
-          // Nœuds domotiques
-          let nodes = [
-            { a: 0.5, d: 40, label: "LIV" },
-            { a: 2.1, d: 65, label: "KIT" },
-            { a: 4.8, d: 50, label: "BED" },
-          ];
-          ctx.font = "8px monospace";
-          nodes.forEach((n) => {
-            let nx = cx + Math.cos(n.a) * n.d;
-            let ny = cy + Math.sin(n.a) * n.d;
-            let angleDiff = Math.abs((scanAngle % (Math.PI * 2)) - n.a);
-            let intensity = angleDiff < 0.3 ? 1.0 : 0.3;
-            ctx.fillStyle = rgb(PALETTE.CYAN, intensity);
-            ctx.beginPath();
-            ctx.arc(nx, ny, 3, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.fillStyle = rgb(PALETTE.WHITE, intensity + 0.2);
-            ctx.fillText(n.label, nx + 6, ny + 3);
-          });
-        } else if (g_state === OrbState.MODE_WEATHER) {
-          // ADVANCED METEOROLOGICAL DASHBOARD
-          let tempProgress = 0.7; // 24°C
-          ctx.lineWidth = 4;
-          ctx.strokeStyle = rgb(PALETTE.GREY, 0.3);
-          ctx.beginPath();
-          ctx.arc(cx, cy, 75, Math.PI * 0.8, Math.PI * 2.2);
-          ctx.stroke();
-
-          ctx.strokeStyle = rgb(PALETTE.ORANGE, 0.9);
-          ctx.beginPath();
-          ctx.arc(
-            cx,
-            cy,
-            75,
-            Math.PI * 0.8,
-            Math.PI * 0.8 + Math.PI * 1.4 * tempProgress,
-          );
-          ctx.stroke();
-
-          // Icône Soleil
-          ctx.fillStyle = rgb(PALETTE.YELLOW);
-          ctx.beginPath();
-          ctx.arc(cx - 20, cy - 15, 12, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.strokeStyle = rgb(PALETTE.YELLOW);
-          ctx.lineWidth = 2;
-          for (let i = 0; i < 8; i++) {
-            let a = i * (Math.PI / 4) + g_phase;
-            ctx.beginPath();
-            ctx.moveTo(cx - 20 + Math.cos(a) * 16, cy - 15 + Math.sin(a) * 16);
-            ctx.lineTo(cx - 20 + Math.cos(a) * 22, cy - 15 + Math.sin(a) * 22);
-            ctx.stroke();
-          }
-
-          ctx.fillStyle = rgb(PALETTE.WHITE);
-          ctx.textAlign = "left";
-          ctx.font = "bold 28px sans-serif";
-          ctx.fillText("24°", cx + 5, cy - 10);
-          ctx.font = "10px monospace";
-          ctx.fillStyle = rgb(PALETTE.CYAN);
-          ctx.fillText("HUM: 45%", cx - 25, cy + 20);
-          ctx.fillText("WND: 12km/h", cx - 25, cy + 32);
-        } else if (g_state === OrbState.MODE_MATRIX) {
-          // DATA TUNNEL
-          ctx.textAlign = "center";
-          for (let i = 0; i < 15; i++) {
-            let z = (g_phase * 80 + i * 20) % 120;
-            let scale = z / 120;
-            let alpha = z / 120;
-            ctx.font = `${10 + scale * 15}px monospace`;
-            ctx.fillStyle = rgb(PALETTE.GREEN, alpha);
-            let r = 20 + scale * 80;
-            let char = String.fromCharCode(0x30a0 + (i % 32));
-            let angle = i * 2;
-            ctx.fillText(
-              char,
-              cx + Math.cos(angle) * r,
-              cy + Math.sin(angle) * r,
-            );
-            ctx.fillText(
-              char,
-              cx + Math.cos(angle + Math.PI) * r,
-              cy + Math.sin(angle + Math.PI) * r,
-            );
-          }
-        } else if (g_state === OrbState.MODE_SEARCH) {
-          // RADAR PULSE
-          setGlow(PALETTE.CYAN, 20);
-          ctx.strokeStyle = rgb(PALETTE.CYAN);
-          let r = (g_phase * 50) % 80;
-          ctx.beginPath();
-          ctx.arc(cx, cy, r, 0, Math.PI * 2);
-          ctx.stroke();
-          ctx.beginPath();
-          ctx.arc(cx, cy, r * 0.6, 0, Math.PI * 2);
-          ctx.stroke();
-          setGlow(null, 0);
-          // Center Eye
-          ctx.fillStyle = rgb(PALETTE.WHITE);
-          ctx.beginPath();
-          ctx.arc(cx, cy, 4, 0, Math.PI * 2);
-          ctx.fill();
-        } else if (g_state === OrbState.MODE_MEDIA) {
-          // FLUID DANCE
-          setGlow(PALETTE.PURPLE, 30);
-          ctx.fillStyle = rgb(PALETTE.PURPLE, 0.6);
-          ctx.beginPath();
-          for (let i = 0; i <= Math.PI * 2; i += 0.1) {
-            let r =
-              50 +
-              Math.sin(i * 3 + g_phase * 3) * 15 +
-              Math.cos(i * 5 - g_phase) * 10;
-            let x = cx + Math.cos(i) * r,
-              y = cy + Math.sin(i) * r;
-            if (i === 0) ctx.moveTo(x, y);
-            else ctx.lineTo(x, y);
-          }
-          ctx.fill();
-          setGlow(null, 0);
-        } else if (g_state === OrbState.MODE_TIMER) {
-          // COUNTDOWN RING
-          let progress = Math.abs(Math.sin(g_phase * 0.5));
-          ctx.lineWidth = 6;
-          setGlow(PALETTE.ORANGE, 15);
-          ctx.strokeStyle = rgb(PALETTE.ORANGE);
-          ctx.beginPath();
-          ctx.arc(
-            cx,
-            cy,
-            80,
-            -Math.PI / 2,
-            Math.PI * 2 * progress - Math.PI / 2,
-          );
-          ctx.stroke();
-          setGlow(null, 0);
-
-          ctx.fillStyle = rgb(PALETTE.WHITE);
-          ctx.font = "bold 24px monospace";
-          ctx.fillText(((1.0 - progress) * 60).toFixed(0), cx, cy + 8);
-        } else if (g_state === OrbState.MODE_NOTIFICATION) {
-          // HEX ALERT
-          setGlow(PALETTE.YELLOW, 20);
-          ctx.strokeStyle = rgb(PALETTE.YELLOW);
-          ctx.lineWidth = 3;
-          let pulse = 1.0 + Math.sin(g_phase * 10) * 0.1;
-          ctx.beginPath();
-          for (let i = 0; i <= 6; i++) {
-            let a = i * (Math.PI / 3);
-            let x = cx + Math.cos(a) * 50 * pulse,
-              y = cy + Math.sin(a) * 50 * pulse;
-            if (i === 0) ctx.moveTo(x, y);
-            else ctx.lineTo(x, y);
-          }
-          ctx.stroke();
-          ctx.fillStyle = rgb(PALETTE.WHITE);
-          ctx.font = "bold 40px sans-serif";
-          ctx.fillText("!", cx, cy + 12);
-        } else if (g_state === OrbState.ERROR) {
-          // GLITCH RED
-          let shift = (Math.random() - 0.5) * 5;
-          setGlow(PALETTE.RED, 20);
-          ctx.fillStyle = rgb(PALETTE.RED);
-          ctx.fillText("ERROR", cx + shift, cy);
-          ctx.strokeStyle = rgb(PALETTE.RED, 0.5);
-          ctx.beginPath();
-          ctx.moveTo(0, cy + shift);
-          ctx.lineTo(240, cy + shift);
-          ctx.stroke();
-        } else if (g_state === OrbState.MODE_SUCCESS) {
-          // CHECK GREEN
-          setGlow(PALETTE.GREEN, 20);
-          ctx.strokeStyle = rgb(PALETTE.GREEN);
-          ctx.lineWidth = 5;
-          ctx.beginPath();
-          ctx.arc(cx, cy, 60, 0, Math.PI * 2);
-          ctx.stroke();
-          ctx.beginPath();
-          ctx.moveTo(cx - 20, cy);
-          ctx.lineTo(cx - 5, cy + 15);
-          ctx.lineTo(cx + 25, cy - 20);
-          ctx.stroke();
-        } else if (g_state === OrbState.MODE_APPS) {
-          // APP LAUNCHER (Grid Carousel)
-          setGlow(PALETTE.PURPLE, 15);
-          ctx.fillStyle = rgb(PALETTE.PURPLE, 0.4);
-          ctx.strokeStyle = rgb(PALETTE.PURPLE, 0.8);
-          let size = 15;
-          let spacing = 25;
-          let rot = g_phase * 0.5;
-
-          // Rotation 3D simulée
-          for (let i = 0; i < 8; i++) {
-            let angle = (i / 8) * Math.PI * 2 + rot;
-            let r = 70;
-            let x = cx + Math.cos(angle) * r;
-            let y = cy + Math.sin(angle) * r * 0.6; // Perspective
-
-            let scale = 0.5 + (Math.sin(angle) + 1) * 0.5; // Scale by depth
-            let s = size * scale;
-
-            ctx.globalAlpha = scale;
-            ctx.beginPath();
-            ctx.rect(x - s / 2, y - s / 2, s, s);
-            ctx.fill();
-            ctx.stroke();
-            ctx.globalAlpha = 1.0;
-          }
-
-          // Central Icon
-          ctx.strokeStyle = rgb(PALETTE.WHITE);
-          ctx.lineWidth = 2;
-          ctx.strokeRect(cx - 15, cy - 15, 30, 30);
-          setGlow(null, 0);
-        } else if (g_state === OrbState.MODE_VISION) {
-          // RETINAL SCAN TERMINTAOR
-          setGlow(PALETTE.RED, 20);
-          ctx.strokeStyle = rgb(PALETTE.RED);
-          ctx.lineWidth = 2;
-
-          // Dynamic Crosshair
-          let r = 80;
-          ctx.beginPath();
-          ctx.moveTo(cx - r, cy);
-          ctx.lineTo(cx - r + 20, cy);
-          ctx.moveTo(cx + r, cy);
-          ctx.lineTo(cx + r - 20, cy);
-          ctx.moveTo(cx, cy - r);
-          ctx.lineTo(cx, cy - r + 20);
-          ctx.moveTo(cx, cy + r);
-          ctx.lineTo(cx, cy + r - 20);
-          ctx.stroke();
-
-          // Scanning Bar
-          let scanY = cy + Math.sin(g_phase * 5) * 80;
-          ctx.lineWidth = 4;
-          ctx.strokeStyle = rgb(PALETTE.RED, 0.8);
-          ctx.beginPath();
-          ctx.moveTo(cx - 60, scanY);
-          ctx.lineTo(cx + 60, scanY);
-          ctx.stroke();
-
-          // Data Stream
-          ctx.fillStyle = rgb(PALETTE.RED);
-          ctx.font = "8px monospace";
-          ctx.textAlign = "right";
-          ctx.fillText(
-            `OBJ: ${Math.floor(g_phase * 100) % 999}`,
-            cx + 70,
-            cy - 40,
-          );
-          ctx.fillText(
-            `CONF: ${(80 + Math.random() * 20).toFixed(1)}%`,
-            cx + 70,
-            cy - 30,
-          );
-        } else if (g_state === OrbState.MODE_GHOST) {
-          // PASSIVE STEALTH
-          // Dark, minimal pulsing ring
-          ctx.strokeStyle = rgb(PALETTE.DARK_GREY);
-          ctx.lineWidth = 1;
-          ctx.beginPath();
-          ctx.arc(cx, cy, 40 + Math.sin(g_phase) * 5, 0, Math.PI * 2);
-          ctx.stroke();
-
-          ctx.strokeStyle = rgb(PALETTE.GREY, 0.5);
-          ctx.beginPath();
-          ctx.arc(cx, cy, 90, 0, Math.PI * 2);
-          ctx.stroke();
-
-          // Subtles waveforms
-          ctx.strokeStyle = rgb(PALETTE.DEEP_BLUE, 0.4);
-          ctx.beginPath();
-          for (let x = -40; x <= 40; x += 5) {
-            let y = cy + Math.sin(x * 0.1 + g_phase) * 10;
-            if (x === -40) ctx.moveTo(cx + x, y);
-            else ctx.lineTo(cx + x, y);
-          }
-          ctx.stroke();
-        } else if (g_state === OrbState.MODE_SECURITY) {
-          // SHIELD / LOCK
-          setGlow(PALETTE.BLUE, 20);
-          ctx.strokeStyle = rgb(PALETTE.BLUE);
-          ctx.fillStyle = rgb(PALETTE.BLUE, 0.2);
-          ctx.lineWidth = 3;
-
-          // Shield Shape
-          ctx.beginPath();
-          ctx.moveTo(cx, cy - 50);
-          ctx.quadraticCurveTo(cx + 40, cy - 50, cx + 40, cy - 10);
-          ctx.quadraticCurveTo(cx + 40, cy + 40, cx, cy + 60);
-          ctx.quadraticCurveTo(cx - 40, cy + 40, cx - 40, cy - 10);
-          ctx.quadraticCurveTo(cx - 40, cy - 50, cx, cy - 50);
-          ctx.fill();
-          ctx.stroke();
-
-          // Padlock Icon
-          ctx.fillStyle = rgb(PALETTE.WHITE);
-          ctx.fillRect(cx - 10, cy - 5, 20, 15);
-          ctx.strokeStyle = rgb(PALETTE.WHITE);
-          ctx.lineWidth = 2;
-          ctx.beginPath();
-          ctx.arc(cx, cy - 5, 7, Math.PI, 0);
-          ctx.stroke();
         }
-
-        // --- TEXTE GLOBAL D'ÉTAT (Texte central bas) ---
-        ctx.globalCompositeOperation = "source-over";
-        ctx.fillStyle = rgb(PALETTE.WHITE, 0.9);
-        ctx.font = "bold 11px monospace";
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        let tw = ctx.measureText(g_text).width;
-        ctx.fillStyle = rgb([0, 0, 0], 0.7);
-        ctx.fillRect(cx - tw / 2 - 4, 195, tw + 8, 14);
-        ctx.fillStyle = rgb(PALETTE.CYAN);
-        ctx.fillText(`[ ${g_text} ]`, cx, 202);
-
-        requestAnimationFrame(updateAndDraw);
+        drawGlow(CX, CY, 25 + Math.sin(g_phase * 5.0) * 5.0, COLORS.PINK, 15);
+        drawCircle(
+          CX,
+          CY,
+          20 + Math.sin(g_phase * 5.0) * 5.0,
+          COLORS.WHITE,
+          true,
+        );
       }
 
-      // ==========================================
-      // CONTRÔLES UI
-      // ==========================================
-      const btnContainer = document.getElementById("state-buttons");
-      const logBox = document.getElementById("serial-log");
-
-      function logEvent(msg) {
-        logBox.innerHTML += `> ${msg}<br>`;
-        logBox.scrollTop = logBox.scrollHeight;
+      function renderModeTimer() {
+        let r = 80,
+          angleEnd = ((ms_time % 60000) / 60000.0) * 360.0;
+        fillArc(CX, CY, r, r - 5, 0, 360, { r: 50, g: 50, b: 0 });
+        fillArc(CX, CY, r, r - 5, 0, angleEnd, COLORS.YELLOW);
+        for (let i = 0; i < 12; i++) {
+          let a = i * 30 * DEG_TO_RAD;
+          drawCircle(
+            CX + Math.cos(a) * (r + 15),
+            CY + Math.sin(a) * (r + 15),
+            3,
+            COLORS.ORANGE,
+            true,
+          );
+        }
+        drawText("TIMER", CX, CY + 10, COLORS.WHITE, "24px");
       }
 
-      Object.keys(OrbState).forEach((key) => {
-        let btn = document.createElement("button");
-        btn.innerText = key.replace("MODE_", "");
-        btn.onclick = () => {
-          document
-            .querySelectorAll("button")
-            .forEach((b) => b.classList.remove("active"));
-          btn.classList.add("active");
-          g_state = OrbState[key];
-          logEvent(`STATE CHANGED -> ${key}`);
-        };
-        btnContainer.appendChild(btn);
-      });
+      function renderModeWeather() {
+        drawGlow(CX, CY, 40, COLORS.YELLOW, 20);
+        drawCircle(CX, CY, 40, COLORS.YELLOW, true);
+        drawSegmentedRing(CX, CY, 60, 4, 8, g_phase * 20.0, 0.4, COLORS.YELLOW);
+        drawText(local_text, CX, CY, COLORS.BG, "16px bold");
+      }
 
-      document.getElementById("btn-send").onclick = () => {
-        const input = document.getElementById("serial-cmd");
-        if (input.value) {
-          logEvent(`CMD RECV: ${input.value}`);
-          g_text = input.value.substring(0, 15).toUpperCase();
-          input.value = "";
+      function renderModePrint() {
+        drawRect(CX - 70, CY - 50, 140, 120, { r: 40, g: 45, b: 50 });
+        let currentY = CY + 30 - ((Math.sin(g_phase * 0.2) + 1.0) / 2.0) * 60.0;
+        drawLine(
+          CX - 68,
+          currentY - 20,
+          CX + 68,
+          currentY - 20,
+          { r: 70, g: 75, b: 80 },
+          1,
+        );
+        let bedY = CY + 40;
+        drawGlow(CX, bedY, 50, COLORS.RED, 10);
+        fillRect(CX - 60, bedY, 120, 6, { r: 120, g: 120, b: 120 });
+        for (let y = bedY - 2; y >= currentY; y -= 3)
+          drawLine(CX - 25, y, CX + 25, y, COLORS.GREEN);
+        let nozzleX = CX + Math.sin(g_phase * 2.5) * 35.0;
+        fillRect(nozzleX - 10, currentY - 25, 20, 15, {
+          r: 180,
+          g: 180,
+          b: 190,
+        });
+        fillTriangle(
+          nozzleX - 4,
+          currentY - 10,
+          nozzleX + 4,
+          currentY - 10,
+          nozzleX,
+          currentY,
+          COLORS.ORANGE,
+        );
+        drawLine(nozzleX, CY - 50, nozzleX, currentY - 25, COLORS.WHITE);
+
+        let t = "--",
+          b = "--",
+          p = "--";
+        if (local_text === "FLOTTE") {
+          t = "N/A";
+          b = "N/A";
+          p = "FLOTTE";
+        } else if (local_text.includes("|")) {
+          let pts = local_text.split("|");
+          t = pts[0];
+          b = pts[1];
+          p = pts[2];
         }
-      };
+        drawText(`T: ${t}C`, CX - 40, CY - 60, COLORS.ORANGE);
+        drawText(`B: ${b}C`, CX + 40, CY - 60, COLORS.RED);
+        drawText(
+          p !== "FLOTTE" && p !== "--" ? `${p}%` : p,
+          CX,
+          CY + 75,
+          COLORS.CYAN,
+        );
+      }
 
-      // Lancement
-      requestAnimationFrame(updateAndDraw);
+      function renderModeMatrix() {
+        ctx.font = "14px monospace";
+        ctx.fillStyle = toCss(COLORS.GREEN);
+        for (let i = 0; i < 18; i++) {
+          ctx.fillText(
+            Math.random() > 0.5 ? "1" : "0",
+            (i * 20) % 240,
+            (ms_time / 15 + i * 40) % 240,
+          );
+        }
+      }
+
+      function renderModeGhost() {
+        drawCircle(CX, CY, 55 + Math.sin(g_phase) * 5, COLORS.DARK, true);
+        fillArc(CX, CY, 110, 108, 0, 360, { r: 30, g: 30, b: 30 });
+        for (let x = -60; x < 60; x += 3) {
+          fillRect(
+            CX + x,
+            CY + Math.sin(x * 0.2 + g_phase) * 15,
+            1,
+            1,
+            COLORS.GREY,
+          );
+        }
+      }
+
+      function renderModeError() {
+        drawText(
+          "ERROR",
+          CX + (Math.random() * 10 - 5),
+          CY + (Math.random() * 10 - 5),
+          COLORS.RED,
+          "24px",
+        );
+        for (let i = 0; i < 8; i++)
+          fillRect(0, Math.random() * 240, 240, 4, { r: 150, g: 0, b: 0 });
+      }
+
+      function renderModeSuccess() {
+        drawSegmentedRing(CX, CY, 85, 4, 1, 0, 0, COLORS.GREEN);
+        drawLine(CX - 30, CY, CX - 5, CY + 25, COLORS.GREEN, 2);
+        drawLine(CX - 29, CY, CX - 4, CY + 25, COLORS.WHITE);
+        drawLine(CX - 5, CY + 25, CX + 40, CY - 30, COLORS.GREEN, 2);
+        drawLine(CX - 4, CY + 25, CX + 41, CY - 30, COLORS.WHITE);
+      }
+
+      function renderModeWhatsapp() {
+        drawSegmentedRing(CX, CY, 85, 4, 12, g_phase * 30.0, 0.3, COLORS.GREEN);
+        drawGlow(CX, CY, 30 + Math.sin(g_phase * 4.0) * 5, COLORS.GREEN, 20);
+        drawCircle(
+          CX,
+          CY,
+          25 + Math.sin(g_phase * 4.0) * 5,
+          { r: 10, g: 80, b: 20 },
+          true,
+        );
+        drawText("MESSAGE", CX, CY - 40, COLORS.WHITE, "14px bold");
+      }
+
+      function renderDefaultLocked() {
+        drawSegmentedRing(CX, CY, 100, 5, 4, g_phase * 50.0, 0.2, dyn_color);
+        drawSegmentedRing(CX, CY, 80, 3, 8, -g_phase * 70.0, 0.4, COLORS.WHITE);
+        drawText("LOCKED", CX, CY + 5, COLORS.WHITE, "16px");
+      }
+
+      // ==============================================================================
+      // BOUCLE D'ANIMATION (Equivalent renderTask)
+      // ==============================================================================
+      let lastTime = 0;
+      function renderLoop(timestamp) {
+        if (timestamp - lastTime >= 33) {
+          // Limitation ~30 FPS comme V7.2
+          ms_time = timestamp;
+          lastTime = timestamp;
+
+          updateLogic();
+          fillRect(0, 0, 240, 240, COLORS.BG); // clear screen
+
+          switch (local_state) {
+            case "IDLE":
+            case "LISTENING":
+            case "SPEAKING":
+              renderOmniSphere();
+              break;
+            case "SYSTEM":
+              renderModeSystem();
+              break;
+            case "VISION":
+              renderModeVision();
+              break;
+            case "HOME":
+              renderModeHome();
+              break;
+            case "GHOST":
+              renderModeGhost();
+              break;
+            case "ERROR":
+              renderModeError();
+              break;
+            case "SUCCESS":
+              renderModeSuccess();
+              break;
+            case "MEDIA":
+              renderModeMedia();
+              break;
+            case "WEATHER":
+              renderModeWeather();
+              break;
+            case "TIMER":
+              renderModeTimer();
+              break;
+            case "PRINT":
+              renderModePrint();
+              break;
+            case "MATRIX":
+              renderModeMatrix();
+              break;
+            case "SCREENSAVER":
+              renderModeScreensaver();
+              break;
+            case "WHATSAPP":
+              renderModeWhatsapp();
+              break;
+            default:
+              renderDefaultLocked();
+              break;
+          }
+
+          if (local_state !== "SCREENSAVER") renderPersistentHUD();
+        }
+        requestAnimationFrame(renderLoop);
+      }
+
+      // Interface UI Actions
+      function setMode(mode) {
+        local_state = mode;
+        document
+          .querySelectorAll("button")
+          .forEach((b) => b.classList.remove("active"));
+        event.target.classList.add("active");
+
+        if (["IDLE", "LISTENING", "SPEAKING"].includes(mode))
+          local_text = "STANDBY";
+        else if (mode === "PRINT") local_text = "220|60|45";
+        else if (mode === "WEATHER") local_text = "24 C";
+        else if (mode === "WHATSAPP") local_text = "Maman";
+        else local_text = "";
+
+        document.getElementById("textInput").value = local_text;
+      }
+
+      function updateText() {
+        const txt = document.getElementById("textInput").value.trim();
+        if (txt) local_text = txt.substring(0, 60).toUpperCase();
+      }
+
+      requestAnimationFrame(renderLoop);
     </script>
   </body>
 </html>

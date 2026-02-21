@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include <WString.h>
 #include <LovyanGFX.hpp>
 #include <vector>
 #include <cmath>
@@ -18,10 +19,10 @@
 #endif
 
 // ==============================================================================
-// 🌟 JARVIS OS - CORE RENDERER V6.7 (ESP32-S3 + GC9A01)
+// 🌟 JARVIS OS - CORE RENDERER V7.2 (ESP32-S3 + GC9A01)
 // ------------------------------------------------------------------------------
-// Moteur 3D Haute Densité avec Z-Sorting en 2 passes (Vrai effet de profondeur).
-// Génération de vagues organiques lissées façon WebGL.
+// Rendu optimisé : Thermal-control (30 FPS, 450 nodes), Screensaver organique,
+// Design épuré (retrait du menu central), API LovyanGFX standard.
 // ==============================================================================
 
 class LGFX : public lgfx::LGFX_Device {
@@ -72,7 +73,7 @@ enum class OrbState : uint8_t {
   IDLE, LISTENING, SPEAKING, ERROR,
   MODE_WEATHER, MODE_HOME, MODE_SYSTEM, MODE_MATRIX, MODE_SEARCH,
   MODE_MEDIA, MODE_TIMER, MODE_PRINT, MODE_NOTIFICATION, MODE_SUCCESS,
-  MODE_APPS, MODE_VISION, MODE_GHOST, MODE_SECURITY, MODE_SCREENSAVER
+  MODE_APPS, MODE_VISION, MODE_GHOST, MODE_SECURITY, MODE_SCREENSAVER, MODE_WHATSAPP
 };
 
 struct JarvisState {
@@ -90,11 +91,12 @@ static uint32_t ms_time = 0;
 
 // ================== MOTEUR 3D & BUFFER ==================
 struct Point3D { float x, y, z; };
-struct ProjPoint { int x, y; float z; }; // Stockage pour le tri Z
+struct ProjPoint { int x, y; float z; };
 
-const int SPHERE_NODES = 600; // Légèrement réduit pour aérer la géométrie 3D
+// OPTIMISATION THERMIQUE : Réduction des nœuds pour soulager la FPU
+const int SPHERE_NODES = 450; 
 Point3D sphereBase[SPHERE_NODES]; 
-ProjPoint renderBuffer[SPHERE_NODES]; // Buffer global pour les 2 passes de dessin
+ProjPoint renderBuffer[SPHERE_NODES]; 
 
 void init3DGeometry() {
     float phi = PI * (3.0f - sqrt(5.0f)); 
@@ -124,12 +126,12 @@ uint16_t lerpColor(uint16_t c1, uint16_t c2, float t) {
           ((b1 + (int)((b2 - b1) * t)) & 0x1F);
 }
 
-// Palette Couleurs Optimisée (Contraste maximal)
+// Palette Couleurs 
 const uint16_t COL_CYAN      = rgb565(0, 240, 255);
 const uint16_t COL_BLUE      = rgb565(0, 100, 255);
 const uint16_t COL_OMNI_BLUE = rgb565(0, 140, 255);   
 const uint16_t COL_OMNI_RED  = rgb565(255, 10, 30);   
-const uint16_t COL_DEEP_BLUE = rgb565(10, 30, 80);
+const uint16_t COL_DEEP_BLUE = rgb565(5, 15, 30);
 const uint16_t COL_ORANGE    = rgb565(255, 120, 0);
 const uint16_t COL_RED       = rgb565(255, 40, 60);
 const uint16_t COL_WHITE     = rgb565(240, 248, 255);
@@ -138,16 +140,19 @@ const uint16_t COL_YELLOW    = rgb565(255, 200, 0);
 const uint16_t COL_PURPLE    = rgb565(180, 50, 255);
 const uint16_t COL_PINK      = rgb565(255, 0, 127);
 const uint16_t COL_GREY      = rgb565(100, 110, 120);
-const uint16_t COL_DARK      = rgb565(20, 25, 30);
-const uint16_t COL_BG        = rgb565(2, 3, 5); // Faux noir (abyssal)
+const uint16_t COL_DARK      = rgb565(10, 15, 20);
+const uint16_t COL_BG        = rgb565(2, 3, 5); 
 
-// Variables dynamiques 
+// Variables dynamiques et vélocités
 float dyn_radius = 65.0f;
+float v_radius = 0.0f;
 float dyn_speed = 0.05f;
+float v_speed = 0.0f;
 uint16_t dyn_color = COL_OMNI_BLUE;
 
 // ================== CORE 0 : PARSEUR SÉRIE ==================
-static void setStateFromStr(String s) {
+static void setStateFromStr(const char* s_ptr) {
+  String s = String(s_ptr);
   s.trim(); 
   s.toUpperCase();
 
@@ -171,6 +176,7 @@ static void setStateFromStr(String s) {
   else if (s == "VISION") newState = OrbState::MODE_VISION;
   else if (s == "GHOST") newState = OrbState::MODE_GHOST;
   else if (s == "SECURITY") newState = OrbState::MODE_SECURITY;
+  else if (s == "WHATSAPP") newState = OrbState::MODE_WHATSAPP;
   
   portENTER_CRITICAL(&jarvisData.spinlock);
   if (jarvisData.currentState != newState) {
@@ -182,30 +188,24 @@ static void setStateFromStr(String s) {
   portEXIT_CRITICAL(&jarvisData.spinlock);
 }
 
-static void handleLine(String line) {
-  line.trim();
-  if (!line.length()) return;
-  if (line == "PING") { Serial.println("PONG"); return; }
+static void handleLine(const char* line) {
+  if (strlen(line) == 0) return;
+  if (strcmp(line, "PING") == 0) { Serial.println("PONG"); return; }
   
-  if (line.startsWith("STATE ") || line.startsWith("MODE ")) { 
-    int spaceIndex = line.indexOf(' ');
-    if (spaceIndex != -1) {
-       String s = line.substring(spaceIndex + 1); 
-       setStateFromStr(s);
+  if (strncmp(line, "STATE ", 6) == 0 || strncmp(line, "MODE ", 5) == 0) { 
+    const char* s = strchr(line, ' ');
+    if (s != nullptr) {
+       setStateFromStr(s + 1); // Pass raw C-string and let constructor convert
        Serial.println("OK MODE");
     }
     return;
   }
   
-  if (line.startsWith("TEXT ")) {
-    String msg = line.substring(5);
-    msg.trim();
-    if (msg.length() > 63) msg = msg.substring(0, 63);
-    
+  if (strncmp(line, "TEXT ", 5) == 0) {
     portENTER_CRITICAL(&jarvisData.spinlock);
-    msg.toCharArray(jarvisData.textLabel, sizeof(jarvisData.textLabel));
+    strncpy(jarvisData.textLabel, line + 5, sizeof(jarvisData.textLabel) - 1);
+    jarvisData.textLabel[sizeof(jarvisData.textLabel) - 1] = '\0';
     portEXIT_CRITICAL(&jarvisData.spinlock);
-    
     Serial.println("OK TEXT");
     return;
   }
@@ -213,13 +213,20 @@ static void handleLine(String line) {
 
 void commTask(void *pvParameters) {
   Serial.println("[Core 0] Tâche UART prête.");
-  String line; 
-  line.reserve(256); 
+  char buffer[256];
+  uint16_t bufferIdx = 0;
+  
   for (;;) {
     while (Serial.available()) {
       char c = (char)Serial.read();
-      if (c == '\n') { handleLine(line); line = ""; }
-      else if (c != '\r') { line += c; if (line.length() > 200) line = ""; }
+      if (c == '\n') { 
+        buffer[bufferIdx] = '\0'; 
+        handleLine(buffer); 
+        bufferIdx = 0; 
+      }
+      else if (c != '\r' && bufferIdx < sizeof(buffer) - 1) { 
+        buffer[bufferIdx++] = c; 
+      }
     }
     vTaskDelay(pdMS_TO_TICKS(10));
   }
@@ -228,7 +235,7 @@ void commTask(void *pvParameters) {
 // ================== CORE 1 : MOTEUR GRAPHIQUE ==================
 static OrbState local_state = OrbState::IDLE;
 static char local_text[64] = "STANDBY";
-static unsigned long idleStartTime = 0; // Timer pour le screensaver
+static unsigned long idleStartTime = 0; 
 
 void drawGlow(int x, int y, int radius, uint16_t color, int intensity) {
   for (int r = radius + intensity; r > radius; r -= 2) {
@@ -239,7 +246,6 @@ void drawGlow(int x, int y, int radius, uint16_t color, int intensity) {
 }
 
 void drawRadialBackground() {
-  // Fond affiné : chute très abrupte vers le noir (factor au cube) pour un max de contraste 3D
   uint16_t centerGlowCol = lerpColor(COL_BG, dyn_color, 0.12f); 
   for (int r = 120; r > 30; r -= 4) {
     float factor = 1.0f - ((float)r / 120.0f);
@@ -257,7 +263,7 @@ void drawSegmentedRing(int x, int y, int r, int thickness, int segments, float p
   for (int i = 0; i < segments; i++) {
     float startAngle = i * angleStep + phase;
     float endAngle = startAngle + angleStep - gap;
-    spr.drawArc(x, y, r, r - thickness, startAngle, endAngle, color);
+    spr.fillArc(x, y, r, r - thickness, startAngle, endAngle, color);
   }
 }
 
@@ -268,15 +274,14 @@ void updateLogic() {
   strncpy(local_text, jarvisData.textLabel, sizeof(local_text));
   portEXIT_CRITICAL(&jarvisData.spinlock);
 
-  // Gestion du Screensaver
   if (local_state == OrbState::IDLE) {
     if (previous_state != OrbState::IDLE && previous_state != OrbState::MODE_SCREENSAVER) {
-      idleStartTime = millis(); // Reset timer quand on repasse en IDLE depuis un autre état actif
+      idleStartTime = millis(); 
     } else if (millis() - idleStartTime > 30000) {
-      local_state = OrbState::MODE_SCREENSAVER; // Force localement le rendu Screensaver après 30s
+      local_state = OrbState::MODE_SCREENSAVER; 
     }
   } else {
-    idleStartTime = millis(); // Reset si on n'est ni en IDLE ni en SCREENSAVER
+    idleStartTime = millis(); 
   }
 
   float target_radius = 65.0f;
@@ -304,22 +309,32 @@ void updateLogic() {
         case OrbState::MODE_MEDIA: target_radius= 20.0f; target_speed = 0.10f; target_color = COL_PINK; break;
         case OrbState::MODE_SUCCESS:target_radius=0.0f;  target_speed = 0.05f; target_color = COL_GREEN; break;
         case OrbState::MODE_SCREENSAVER: target_radius= 0.0f; target_speed = 0.015f; target_color = COL_CYAN; break;
+        case OrbState::MODE_WHATSAPP: target_radius= 10.0f; target_speed = 0.06f; target_color = COL_GREEN; break;
         default:                  target_radius = 30.0f; target_speed = 0.05f; target_color = COL_CYAN; break;
       }
   }
 
-  dyn_radius += (target_radius - dyn_radius) * 0.1f;
-  dyn_speed += (target_speed - dyn_speed) * 0.05f;
+  float tension = 0.08f;  
+  float dampening = 0.75f; 
+  
+  v_radius = (v_radius + (target_radius - dyn_radius) * tension) * dampening;
+  dyn_radius += v_radius;
+
+  v_speed = (v_speed + (target_speed - dyn_speed) * tension) * dampening;
+  dyn_speed += v_speed;
+
   dyn_color = lerpColor(dyn_color, target_color, 0.15f); 
   g_phase += dyn_speed;
 }
 
-// -----------------------------------------------------------
-// LE RENDU OMNI 3D CORRECTIF (Z-Sorting 2 Passes + Cercles de Profondeur)
-// -----------------------------------------------------------
 void renderOmniSphere() {
   drawRadialBackground(); 
-  drawGlow(CX, CY, dyn_radius * 0.85f, dyn_color, 25);
+  
+  for (int r = (int)(dyn_radius * 0.85f) + 25; r > (int)(dyn_radius * 0.85f); r -= 3) {
+    float factor = 1.0f - ((float)(r - dyn_radius * 0.85f) / 25.0f);
+    uint16_t fadeCol = lerpColor(COL_BG, dyn_color, factor * factor); 
+    spr.drawCircle(CX, CY, r, fadeCol); 
+  }
 
   float rotY = g_phase * 1.5f; 
   float rotX = sin(g_phase * 0.4f) * 0.4f; 
@@ -327,18 +342,15 @@ void renderOmniSphere() {
   float cosY = cos(rotY), sinY = sin(rotY);
   float cosX = cos(rotX), sinX = sin(rotX);
 
-  // Mathématique des ondes adoucie pour un look "liquide"
-  float freq = (local_state == OrbState::SPEAKING) ? 3.5f : 2.0f; // Vagues plus denses quand elle parle
+  float freq = (local_state == OrbState::SPEAKING) ? 3.5f : 2.0f;
   float waveAmplitude = (local_state == OrbState::SPEAKING) ? 0.30f : 0.12f;
   float pulsePhase = g_phase * 2.5f;
 
-  // ETAPE 1 : Calcul des coordonnées et projection 3D -> 2D
   for (int i = 0; i < SPHERE_NODES; i++) {
       float bx = sphereBase[i].x;
       float by = sphereBase[i].y;
       float bz = sphereBase[i].z;
 
-      // Génération du bruit 3D lissé
       float n1 = sin(bx * freq + pulsePhase) * cos(by * freq - pulsePhase);
       float n2 = sin(bz * (freq * 1.2f) - pulsePhase * 1.2f);
       float noise = (n1 + n2) * waveAmplitude;
@@ -349,7 +361,6 @@ void renderOmniSphere() {
       float y = by * r;
       float z = bz * r;
 
-      // Matrice de Rotation
       float x_rot = x * cosY - z * sinY;
       float z_rot = x * sinY + z * cosY;
       float y_rot = y * cosX - z_rot * sinX;
@@ -361,42 +372,42 @@ void renderOmniSphere() {
       renderBuffer[i].z = z_rot;
   }
 
-  // ETAPE 2 : Rendu des points ARRIÈRE (Z > 0). Ils sont cachés derrière la masse.
-  uint16_t backCol = lerpColor(COL_BG, dyn_color, 0.2f); // Couleur très sombre
+  uint16_t backCol = lerpColor(COL_BG, dyn_color, 0.15f); 
   for (int i = 0; i < SPHERE_NODES; i++) {
       if (renderBuffer[i].z > 0.0f) {
-          spr.drawPixel(renderBuffer[i].x, renderBuffer[i].y, backCol);
+          spr.fillCircle(renderBuffer[i].x, renderBuffer[i].y, 1, backCol);
       }
   }
 
-  // ETAPE 3 : Rendu des points AVANT (Z <= 0). Dessinés au-dessus pour occulter l'arrière.
   for (int i = 0; i < SPHERE_NODES; i++) {
       if (renderBuffer[i].z <= 0.0f) {
-          float depth = abs(renderBuffer[i].z) / dyn_radius; // 0.0 (Bord) à 1.0 (Nez face caméra)
+          float depth = abs(renderBuffer[i].z) / dyn_radius; 
           if (depth > 1.0f) depth = 1.0f;
           
-          uint16_t frontCol = lerpColor(dyn_color, COL_WHITE, depth * 0.8f);
+          uint16_t baseCol = lerpColor(dyn_color, COL_WHITE, depth * 0.8f);
 
-          // Le "Depth-Cueing" géométrique : la particule grossit si elle s'approche de l'écran.
-          if (depth > 0.65f) {
-              spr.fillCircle(renderBuffer[i].x, renderBuffer[i].y, 2, frontCol);
-          } else if (depth > 0.25f) {
-              spr.fillCircle(renderBuffer[i].x, renderBuffer[i].y, 1, frontCol);
+          float lightFactor = (float)(renderBuffer[i].y - CY) / dyn_radius; 
+          if (lightFactor > 0.0f) {
+              baseCol = lerpColor(baseCol, COL_BG, lightFactor * 0.6f);
           } else {
-              spr.drawPixel(renderBuffer[i].x, renderBuffer[i].y, frontCol);
+              baseCol = lerpColor(baseCol, COL_WHITE, abs(lightFactor) * 0.3f);
+          }
+
+          if (depth > 0.65f) {
+              spr.fillCircle(renderBuffer[i].x, renderBuffer[i].y, 3, baseCol);
+          } else if (depth > 0.25f) {
+              spr.fillCircle(renderBuffer[i].x, renderBuffer[i].y, 2, baseCol);
+          } else {
+              spr.fillCircle(renderBuffer[i].x, renderBuffer[i].y, 1, baseCol);
           }
       }
   }
-
-  // Interface de l'œil central par-dessus la 3D
-  spr.drawCircle(CX, CY, 16, rgb565(20, 50, 80)); 
-  spr.drawFastHLine(CX - 5, CY - 4, 11, COL_WHITE);
-  spr.drawFastHLine(CX - 5, CY,     11, COL_WHITE);
-  spr.drawFastHLine(CX - 5, CY + 4, 11, COL_WHITE);
+  
+  // Le bloc d'interface central (menu burger) a été retiré ici pour un rendu pur.
 }
 
 void renderPersistentHUD() {
-  spr.drawArc(CX, CY, 119, 118, 0, 360, COL_DEEP_BLUE);
+  spr.fillArc(CX, CY, 119, 118, 0, 360, COL_DEEP_BLUE);
   spr.fillRect(CX - 1, 0, 2, 6, COL_GREY); 
   spr.fillRect(CX - 1, 234, 2, 6, COL_GREY);
   spr.fillRect(0, CY - 1, 6, 2, COL_GREY); 
@@ -409,7 +420,7 @@ void renderPersistentHUD() {
   spr.fillRect(127, 6, 4, 3, rgb565(20, 20, 20));
 
   spr.setTextDatum(MC_DATUM);
-  spr.setTextColor(dyn_color); // Sans fond noir
+  spr.setTextColor(dyn_color); 
   spr.setFont(&fonts::FreeSans9pt7b); 
   spr.drawString(local_text, CX - (spr.textWidth(local_text) / 2), 210); 
 }
@@ -441,7 +452,8 @@ void renderModeVision() {
 }
 
 void renderModeHome() {
-  spr.drawArc(CX, CY, 50, 49, 0, 360, COL_BLUE); spr.drawArc(CX, CY, 100, 99, 0, 360, COL_BLUE);
+  spr.fillArc(CX, CY, 50, 49, 0, 360, COL_BLUE); 
+  spr.fillArc(CX, CY, 100, 99, 0, 360, COL_BLUE);
   float scanA = g_phase * 2.0f;
   spr.fillTriangle(CX, CY, CX + cos(scanA)*120, CY + sin(scanA)*120, CX + cos(scanA - 0.2f)*120, CY + sin(scanA - 0.2f)*120, rgb565(0, 50, 100));
   spr.drawLine(CX, CY, CX + cos(scanA)*120, CY + sin(scanA)*120, COL_CYAN);
@@ -469,7 +481,8 @@ void renderModeMedia() {
 
 void renderModeTimer() {
   int r = 80; int angleEnd = (int)((ms_time % 60000) / 60000.0f * 360.0f);
-  spr.drawArc(CX, CY, r, r-5, 0, 360, rgb565(50, 50, 0)); spr.drawArc(CX, CY, r, r-5, 0, angleEnd, COL_YELLOW);
+  spr.fillArc(CX, CY, r, r-5, 0, 360, rgb565(50, 50, 0)); 
+  spr.fillArc(CX, CY, r, r-5, 0, angleEnd, COL_YELLOW);
   for(int i=0; i<12; i++) {
     float a = i * 30 * DEG_TO_RAD; spr.fillCircle(CX + cos(a)*(r+15), CY + sin(a)*(r+15), 3, COL_ORANGE);
   }
@@ -478,11 +491,10 @@ void renderModeTimer() {
 }
 
 void renderModeWeather() {
-  drawGlow(CX, CY, 40, COL_YELLOW, 20); spr.fillCircle(CX, CY, 40, COL_YELLOW);
+  drawGlow(CX, CY, 40, COL_YELLOW, 20); 
+  spr.fillCircle(CX, CY, 40, COL_YELLOW);
   drawSegmentedRing(CX, CY, 60, 4, 8, g_phase * 20.0f, 0.4f, COL_YELLOW);
   spr.setFont(&fonts::FreeSans12pt7b); spr.setTextColor(COL_BG); 
-  
-  // Dynamic text centering based on local_text instead of hardcoded '24 C'
   int textWidth = spr.textWidth(local_text);
   spr.drawString(local_text, CX - (textWidth/2), CY - 10);
 }
@@ -498,60 +510,158 @@ void renderModePrint() {
   spr.fillTriangle(nozzleX - 4, currentY - 10, nozzleX + 4, currentY - 10, nozzleX, currentY, COL_ORANGE); 
   spr.drawLine(nozzleX, CY - 50, nozzleX, currentY - 25, COL_WHITE); 
 
-  // Parse local_text: "T|B|P" e.g "220|60|45"
-  String text = String(local_text);
-  String t = "--"; String b = "--"; String p = "--";
-  if (text.length() > 0 && text.indexOf('|') != -1) {
-    int firstPipe = text.indexOf('|');
-    int secondPipe = text.indexOf('|', firstPipe + 1);
-    if (firstPipe != -1 && secondPipe != -1) {
-      t = text.substring(0, firstPipe);
-      b = text.substring(firstPipe + 1, secondPipe);
-      p = text.substring(secondPipe + 1);
+  char t[16] = "--"; char b[16] = "--"; char p[16] = "--";
+  if (strcmp(local_text, "FLOTTE") == 0) {
+    strcpy(t, "N/A"); strcpy(b, "N/A"); strcpy(p, "FLOTTE");
+  } else {
+    const char* p1 = strchr(local_text, '|');
+    if (p1) {
+      const char* p2 = strchr(p1 + 1, '|');
+      if (p2) {
+        strncpy(t, local_text, p1 - local_text); t[p1 - local_text] = '\0';
+        strncpy(b, p1 + 1, p2 - p1 - 1); b[p2 - p1 - 1] = '\0';
+        strncpy(p, p2 + 1, sizeof(p) - 1);
+      }
     }
-  } else if (text == "FLOTTE") {
-    t = "N/A"; b = "N/A"; p = "FLOTTE";
   }
+
+  char buf[32];
+  spr.setFont(&fonts::FreeSans9pt7b); 
   
-  spr.setFont(&fonts::FreeSans9pt7b); spr.setTextColor(COL_ORANGE); 
-  spr.drawString("T: " + t + "C", CX - 65, CY - 65); 
+  spr.setTextColor(COL_ORANGE); 
+  snprintf(buf, sizeof(buf), "T: %sC", t);
+  spr.drawString(buf, CX - 65, CY - 65); 
+  
   spr.setTextColor(COL_RED); 
-  spr.drawString("B: " + b + "C", CX + 15, CY - 65); 
+  snprintf(buf, sizeof(buf), "B: %sC", b);
+  spr.drawString(buf, CX + 15, CY - 65); 
   
   spr.setTextColor(COL_CYAN);
-  String pc = p;
-  if (p != "--" && p != "FLOTTE") pc += "%";
-  spr.drawString(pc, CX - (spr.textWidth(pc.c_str())/2), CY + 60);
+  if (strcmp(p, "--") != 0 && strcmp(p, "FLOTTE") != 0) {
+      snprintf(buf, sizeof(buf), "%s%%", p);
+  } else {
+      snprintf(buf, sizeof(buf), "%s", p);
+  }
+  spr.drawString(buf, CX - (spr.textWidth(buf)/2), CY + 60);
 }
 
 void renderModeMatrix() {
   spr.setFont(&fonts::FreeSans12pt7b); spr.setTextColor(COL_GREEN); 
   for(int i=0; i<18; i++) {
       int x = (i * 20) % 240; int y = ((ms_time/15 + i*40) % 240);
-      spr.drawString(String((char)('0' + rand()%2)), x, y);
+      char cStr[2] = {(char)('0' + rand()%2), '\0'};
+      spr.drawString(cStr, x, y);
   }
 }
 
 void renderModeScreensaver() {
-  // Screensaver extrêmement zen : un petit cercle très lent au centre, presque éteint, sans HUD
-  float s_phase = g_phase * 0.3f;
-  float pulse = (sin(s_phase) + 1.0f) * 0.5f; // 0 à 1
-  uint16_t calmColor = lerpColor(COL_BG, COL_CYAN, 0.15f + pulse * 0.1f);
-  
-  // Quelques étoiles lointaines qui tournent doucement
-  for (int i=0; i<8; i++) {
-    float a = i * 45 * DEG_TO_RAD + (s_phase * 0.5f);
-    float r = 70 + sin(a * 3 + s_phase) * 15;
-    spr.drawPixel(CX + cos(a)*r, CY + sin(a)*r, rgb565(30, 50, 70));
+  // 1. Noyau d'énergie central (identique à la vidéo cible)
+  float corePulse = (sin(g_phase * 2.0f) + 1.0f) * 0.5f; 
+  drawGlow(CX, CY, 15 + corePulse * 5, COL_OMNI_BLUE, 25);
+  spr.fillCircle(CX, CY, 4 + corePulse * 2, COL_WHITE);
+  spr.fillCircle(CX, CY, 6 + corePulse * 2, lerpColor(COL_CYAN, COL_BG, 0.6f));
+
+  float R = 85.0f;          // Rayon de la sphère
+  float tiltX = 0.35f;      // Inclinaison caméra (Pitch) pour voir le volume
+  float cosX = cos(tiltX);
+  float sinX = sin(tiltX);
+
+  spr.drawCircle(CX, CY, R + 10, rgb565(5, 15, 25)); // Léger halo externe
+
+  // 4 ondes x 110 points = 440 points (Rentrent dans le renderBuffer de 450 sans allocation)
+  const int num_waves = 4;
+  const int points_per_wave = 110; 
+
+  // ETAPE 1 : Calcul et Projection Mathématique (Entrecroisement)
+  int idx = 0;
+  for (int w = 0; w < num_waves; w++) {
+      float freq = 2.0f + (w * 1.5f);        // Fréquences différentes = entrelacement
+      float speed = 0.8f + (w * 0.3f);       // Vitesses différentes
+      if (w % 2 == 1) speed = -speed;        // Sens de rotation alterné
+      
+      float amp = 0.4f + (w * 0.1f);         // Amplitude de la vague (très haute)
+
+      for (int i = 0; i < points_per_wave; i++) {
+          float theta = (i / (float)points_per_wave) * 2.0f * PI; 
+          float active_theta = theta + g_phase * speed; 
+
+          // Formule clé : toutes les ondes oscillent autour de 0 (équateur)
+          float phi = sin(theta * freq + g_phase * (speed * 1.5f)) * amp;
+
+          // Sphérique vers Cartésien
+          float bx = R * cos(phi) * cos(active_theta);
+          float by = R * sin(phi);
+          float bz = R * cos(phi) * sin(active_theta);
+
+          // Application de la caméra
+          float y = by * cosX - bz * sinX;
+          float z = by * sinX + bz * cosX;
+          float x = bx;
+
+          // Projection Perspective
+          float perspective = 200.0f / (200.0f + z);
+          renderBuffer[idx].x = CX + (int)(x * perspective);
+          renderBuffer[idx].y = CY + (int)(y * perspective);
+          renderBuffer[idx].z = z;
+          idx++;
+      }
   }
-  
-  // Halo central très doux
-  drawGlow(CX, CY, 15 + pulse * 10, calmColor, 20);
-  spr.drawCircle(CX, CY, 15 + pulse * 10, lerpColor(calmColor, COL_WHITE, 0.2f));
+
+  // ETAPE 2 : Rendu Arrière (Z > 0)
+  // Dessin de pixels sombres isolés (pas de lignes) pour la face arrière, comme la vidéo
+  uint16_t backCol = lerpColor(COL_BG, COL_BLUE, 0.3f);
+  for (int i = 0; i < num_waves * points_per_wave; i++) {
+      if (renderBuffer[i].z > 0) {
+          spr.drawPixel(renderBuffer[i].x, renderBuffer[i].y, backCol);
+      }
+  }
+
+  // ETAPE 3 : Rendu Avant (Z <= 0) - Création du ruban d'énergie dense
+  for (int w = 0; w < num_waves; w++) {
+      int offset = w * points_per_wave;
+      for (int i = 0; i < points_per_wave; i++) {
+          int current = offset + i;
+          
+          if (renderBuffer[current].z <= 0) {
+              float depth = abs(renderBuffer[current].z) / R; 
+              if (depth > 1.0f) depth = 1.0f;
+              
+              uint16_t c = lerpColor(COL_CYAN, COL_WHITE, depth);
+              
+              // Nœud épais
+              if (depth > 0.6f) {
+                  spr.fillCircle(renderBuffer[current].x, renderBuffer[current].y, 2, c);
+              } else {
+                  spr.fillCircle(renderBuffer[current].x, renderBuffer[current].y, 1, c);
+              }
+
+              // Connecter au point précédent pour créer le ruban d'énergie continu
+              if (i > 0) {
+                  int prev = current - 1;
+                  // Si le point précédent est aussi devant, on trace la ligne
+                  if (renderBuffer[prev].z <= 0) {
+                      spr.drawLine(renderBuffer[prev].x, renderBuffer[prev].y, renderBuffer[current].x, renderBuffer[current].y, c);
+                      // Doubler la ligne au centre pour accentuer l'épaisseur de la vague
+                      if (depth > 0.5f) {
+                          spr.drawLine(renderBuffer[prev].x, renderBuffer[prev].y+1, renderBuffer[current].x, renderBuffer[current].y+1, c);
+                      }
+                  }
+              }
+              // Relier la fin de la boucle au début pour fermer le ruban
+              if (i == points_per_wave - 1) {
+                  int prev = offset; 
+                  if (renderBuffer[prev].z <= 0) {
+                      spr.drawLine(renderBuffer[prev].x, renderBuffer[prev].y, renderBuffer[current].x, renderBuffer[current].y, c);
+                  }
+              }
+          }
+      }
+  }
 }
 
 void renderModeGhost() {
-  spr.fillCircle(CX, CY, 55 + sin(g_phase)*5, COL_DARK); spr.drawArc(CX, CY, 110, 108, 0, 360, rgb565(30,30,30));
+  spr.fillCircle(CX, CY, 55 + sin(g_phase)*5, COL_DARK); 
+  spr.fillArc(CX, CY, 110, 108, 0, 360, rgb565(30,30,30));
   for(int x=-60; x<60; x+=3) { int y = CY + sin(x*0.2f + g_phase)*15; spr.drawPixel(CX+x, y, COL_GREY); }
 }
 
@@ -574,43 +684,53 @@ void renderDefaultLocked() {
   spr.drawString("LOCKED", CX - (spr.textWidth("LOCKED")/2), CY);
 }
 
+void renderModeWhatsapp() {
+  drawSegmentedRing(CX, CY, 85, 4, 12, g_phase * 30.0f, 0.3f, COL_GREEN);
+  drawGlow(CX, CY, 30 + sin(g_phase * 4.0f) * 5, COL_GREEN, 20);
+  spr.fillCircle(CX, CY, 25 + sin(g_phase * 4.0f) * 5, rgb565(10, 80, 20));
+  
+  spr.setFont(&fonts::FreeSans12pt7b);
+  spr.setTextColor(COL_WHITE);
+  spr.drawString("MESSAGE", CX - (spr.textWidth("MESSAGE")/2), CY - 45);
+  // local_text holds the sender's name
+}
+
 void renderTask(void *pvParameters) {
-  uint32_t lastFrame = 0;
+  // OPTIMISATION THERMIQUE : Framerate verrouillé à ~30 FPS (33ms)
+  const TickType_t xFrequency = pdMS_TO_TICKS(33); 
+  TickType_t xLastWakeTime = xTaskGetTickCount();
+
   for (;;) {
-    uint32_t now = millis();
-    if (now - lastFrame >= 16) {
-      ms_time = now;
-      lastFrame = now;
-      
-      updateLogic();
-      
-      spr.fillScreen(COL_BG); 
-      
-      switch (local_state) { 
-        case OrbState::IDLE:
-        case OrbState::LISTENING:
-        case OrbState::SPEAKING:  renderOmniSphere(); break;
-        case OrbState::MODE_SYSTEM: renderModeSystem(); break;
-        case OrbState::MODE_VISION: renderModeVision(); break;
-        case OrbState::MODE_HOME:   renderModeHome(); break;
-        case OrbState::MODE_GHOST:  renderModeGhost(); break;
-        case OrbState::ERROR:       renderModeError(); break;
-        case OrbState::MODE_SUCCESS:renderModeSuccess(); break;
-        case OrbState::MODE_MEDIA:  renderModeMedia(); break;
-        case OrbState::MODE_WEATHER:renderModeWeather(); break;
-        case OrbState::MODE_TIMER:  renderModeTimer(); break;
-        case OrbState::MODE_PRINT:  renderModePrint(); break;
-        case OrbState::MODE_MATRIX: renderModeMatrix(); break;
-        case OrbState::MODE_SCREENSAVER: renderModeScreensaver(); break;
-        default:                    renderDefaultLocked(); break;
-      }
-      
-      if (local_state != OrbState::MODE_SCREENSAVER) {
-         renderPersistentHUD();
-      }
-      spr.pushSprite(0, 0);
+    ms_time = millis();
+    updateLogic();
+    spr.fillScreen(COL_BG); 
+    
+    switch (local_state) { 
+      case OrbState::IDLE:
+      case OrbState::LISTENING:
+      case OrbState::SPEAKING:  renderOmniSphere(); break;
+      case OrbState::MODE_SYSTEM: renderModeSystem(); break;
+      case OrbState::MODE_VISION: renderModeVision(); break;
+      case OrbState::MODE_HOME:   renderModeHome(); break;
+      case OrbState::MODE_GHOST:  renderModeGhost(); break;
+      case OrbState::ERROR:       renderModeError(); break;
+      case OrbState::MODE_SUCCESS:renderModeSuccess(); break;
+      case OrbState::MODE_MEDIA:  renderModeMedia(); break;
+      case OrbState::MODE_WEATHER:renderModeWeather(); break;
+      case OrbState::MODE_TIMER:  renderModeTimer(); break;
+      case OrbState::MODE_PRINT:  renderModePrint(); break;
+      case OrbState::MODE_MATRIX: renderModeMatrix(); break;
+      case OrbState::MODE_SCREENSAVER: renderModeScreensaver(); break;
+      case OrbState::MODE_WHATSAPP: renderModeWhatsapp(); break;
+      default:                    renderDefaultLocked(); break;
     }
-    vTaskDelay(pdMS_TO_TICKS(1)); 
+    
+    if (local_state != OrbState::MODE_SCREENSAVER) {
+       renderPersistentHUD();
+    }
+    
+    spr.pushSprite(0, 0);
+    vTaskDelayUntil(&xLastWakeTime, xFrequency); 
   }
 }
 
@@ -625,7 +745,7 @@ void setup() {
   spr.setSwapBytes(true); 
   
   init3DGeometry(); 
-  Serial.println("JARVIS OS V6.7 - DEEP Z-SORTING ENGINE ONLINE");
+  Serial.println("JARVIS OS V7.2 - OPTIMIZED THERMAL RENDERER ONLINE");
 
   xTaskCreatePinnedToCore(commTask, "CommTask", 4096, NULL, 1, NULL, 0);
   xTaskCreatePinnedToCore(renderTask, "RenderTask", 8192, NULL, 2, NULL, 1);

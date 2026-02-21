@@ -33,3 +33,7 @@ dist-ssr
 # Google API Secrets
 server/google_token.json
 server/google_credentials.json
+
+# WhatsApp sessions
+server/.wwebjs_auth/
+server/.wwebjs_cache/

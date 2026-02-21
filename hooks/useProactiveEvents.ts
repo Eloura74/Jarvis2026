@@ -38,38 +38,58 @@ export function useProactiveEvents({
       );
     };
 
-    eventSource.addEventListener("PRINTER_BAMBU", (event) => {
+    eventSource.onmessage = (event) => {
       try {
         const payload = JSON.parse(event.data);
-        const { data, message } = payload;
+        const { type, payload: data, messageToSpeak } = payload;
 
-        console.log(`📥 [SSE] Reçu event PRINTER_BAMBU:`, data, message);
+        if (type === "PRINTER_BAMBU") {
+          console.log(
+            `📥 [SSE] Reçu event PRINTER_BAMBU:`,
+            data,
+            messageToSpeak,
+          );
 
-        if (message) {
-          addLogRef.current("Push Notification: " + message, "SYSTEM", "info");
-          speakRef.current(message);
-        }
+          if (data && data.event === "PRINT_FINISHED") {
+            setStatusOverlayRef.current({
+              id: `bambu-finished-${Date.now()}`,
+              title: "Bambu Lab A1 Mini",
+              type: "printer",
+              lastUpdate: new Date().toLocaleTimeString(),
+              stats: [
+                {
+                  label: "Statut",
+                  value: "Impression terminée",
+                  status: "normal",
+                  icon: "fas fa-check-circle",
+                },
+              ],
+            });
+          }
+        } else if (type === "WHATSAPP") {
+          console.log(`📥 [SSE] Reçu event WHATSAPP:`, data, messageToSpeak);
 
-        if (data && data.event === "PRINT_FINISHED") {
-          setStatusOverlayRef.current({
-            id: `bambu-finished-${Date.now()}`,
-            title: "Bambu Lab A1 Mini",
-            type: "printer",
-            lastUpdate: new Date().toLocaleTimeString(),
-            stats: [
-              {
-                label: "Statut",
-                value: "Impression terminée",
-                status: "normal",
-                icon: "fas fa-check-circle",
-              },
-            ],
-          });
+          if (data && data.sender) {
+            setStatusOverlayRef.current({
+              id: `whatsapp-${Date.now()}`,
+              title: "Nouveau Message WhatsApp",
+              type: "system",
+              lastUpdate: new Date().toLocaleTimeString(),
+              stats: [
+                {
+                  label: "Expéditeur",
+                  value: data.sender,
+                  status: "normal",
+                  icon: "fab fa-whatsapp",
+                },
+              ],
+            });
+          }
         }
       } catch (err) {
-        console.error("❌ Erreur parsing SSE PRINTER_BAMBU:", err);
+        console.error("❌ Erreur parsing SSE dans useProactiveEvents:", err);
       }
-    });
+    };
 
     eventSource.onerror = (err) => {
       console.error(

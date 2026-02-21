@@ -41,6 +41,7 @@ import configRoutes from "./routes/config.js";
 import bambuRoutes from "./routes/bambu.js";
 import weatherRoutes from "./routes/weather.js";
 import eventsRoutes from "./routes/events.js";
+import whatsappRoutes from "./routes/whatsapp.js";
 
 const app = express();
 const PORT = 3001;
@@ -63,6 +64,7 @@ app.use("/api/config", configRoutes); // Config persistante
 app.use("/api/bambu", bambuRoutes); // Bambu MQTT proxy
 app.use("/api/weather", weatherRoutes); // Weather Proxy
 app.use("/api/events", eventsRoutes); // Jarvis Push Notifications
+app.use("/api/whatsapp", whatsappRoutes); // WhatsApp Auth and Status
 
 // Index des applications (chargé en mémoire)
 let appsIndex = [];
@@ -159,6 +161,8 @@ import { initBambuMqtt } from "./services/bambuMqtt.js";
 // Import Sphere Service
 import { initSphereService } from "./services/sphereService.js";
 import sphereRoutes from "./routes/sphere.js";
+// Import WhatsApp Service
+import { initWhatsAppService } from "./services/whatsappService.js";
 
 // START
 initializeIndex().then(() => {
@@ -166,6 +170,8 @@ initializeIndex().then(() => {
   initBambuMqtt();
   // Init Sphere Serial connection
   initSphereService();
+  // Init WhatsApp connection
+  initWhatsAppService();
 
   // Register Sphere Routes
   app.use("/api/sphere", sphereRoutes);

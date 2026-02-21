@@ -58,6 +58,16 @@ export function useJarvisBrain(props: UseJarvisBrainProps) {
   const [hudNotifications, setHudNotifications] = useState<TechNotification[]>(
     [],
   );
+  const addLogRef = React.useRef(addLog);
+  const speakRef = React.useRef(speak);
+  const addConversationMessageRef = React.useRef(addConversationMessage);
+
+  React.useEffect(() => {
+    addLogRef.current = addLog;
+    speakRef.current = speak;
+    addConversationMessageRef.current = addConversationMessage;
+  }, [addLog, speak, addConversationMessage]);
+
   // 🔔 NOTIFICATIONS PROACTIVES (SSE)
   React.useEffect(() => {
     const sseUrl = "http://localhost:3001/api/events";
@@ -76,11 +86,15 @@ export function useJarvisBrain(props: UseJarvisBrainProps) {
 
         // Si le backend a fourni une phrase précise à prononcer (ex: "Impression terminée")
         if (data.messageToSpeak) {
-          speak(data.messageToSpeak, false); // On force la parole (queue=false)
-          addLog(`Proactive: ${data.messageToSpeak}`, "SYSTEM", "warning");
+          speakRef.current(data.messageToSpeak, false); // On force la parole (queue=false)
+          addLogRef.current(
+            `Proactive: ${data.messageToSpeak}`,
+            "SYSTEM",
+            "warning",
+          );
 
-          if (addConversationMessage) {
-            addConversationMessage(
+          if (addConversationMessageRef.current) {
+            addConversationMessageRef.current(
               "model",
               `(Notification Proactive) ${data.messageToSpeak}`,
             );
@@ -112,7 +126,7 @@ export function useJarvisBrain(props: UseJarvisBrainProps) {
       eventSource.close();
       console.log("[JARVIS BRAIN] SSE Déconnecté.");
     };
-  }, [speak, addLog, addConversationMessage]);
+  }, []);
   // 🌌 QUANTUM OBSERVER (Analyse proactive + Ghost Mode)
   // On ne passe que les commandes réelles de l'utilisateur (pas les prompts internes de bouclage)
   const realUserCommands = React.useMemo(() => {

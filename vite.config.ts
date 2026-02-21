@@ -9,6 +9,13 @@ export default defineConfig(({ mode }) => {
       port: 5173,
       strictPort: true,
       host: "0.0.0.0",
+      watch: {
+        ignored: [
+          "**/.wwebjs_auth/**",
+          "**/server/.wwebjs_auth/**",
+          "**/sphere/**",
+        ],
+      },
       proxy: {
         "/api": {
           target: env.VITE_HA_BASE_URL || "http://192.168.1.193:8123",
