@@ -53,7 +53,7 @@ export function useWakeWord(
 ) {
   const {
     keywords = DEFAULT_KEYWORDS,
-    confidenceThreshold = 0.4, // Seuil baissé
+    confidenceThreshold = 0.75, // Seuil élevé pour éviter faux positifs (bruit de fond)
     language = "fr-FR",
   } = options;
 
@@ -126,6 +126,9 @@ export function useWakeWord(
         const isWakeWord = keywords.some((keyword) =>
           transcript.includes(keyword),
         );
+
+        // Bloquer si Jarvis est en train de parler (évite qu'il s'entende lui-même)
+        if (window.speechSynthesis.speaking) return;
 
         if (isWakeWord && confidence >= confidenceThreshold) {
           console.log("✅ WAKE WORD DÉTECTÉ !");

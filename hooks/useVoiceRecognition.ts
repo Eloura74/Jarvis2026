@@ -221,7 +221,7 @@ export function useVoiceRecognition(
             // CAS 1 : Résultat FINAL → traiter immédiatement
             if (isFinal) {
               // Filtrer par confiance minimum
-              if (confidence > 0.5) {
+              if (confidence > 0.65) {
                 console.log(
                   `✅ Transcription finale: "${transcript}" (${Math.round(confidence * 100)}%)`,
                 );

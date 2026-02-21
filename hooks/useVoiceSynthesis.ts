@@ -162,19 +162,21 @@ export function useVoiceSynthesis({
 
       const handleEndOrError = (type: string) => {
         console.log(`🔊 TTS ${type}`);
-        onEnd?.(); // Signal fin à l'UI
-        // 🟣 SPHERE: IDLE
-        fetch("http://localhost:3001/api/sphere/state", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ state: "IDLE" }),
-        }).catch(() => {});
-
         currentUtteranceRef.current = null;
 
         // Délai avant le prochain message
         setTimeout(() => {
           processNextInQueue();
+
+          // 🟣 SPHERE: IDLE uniquement si la queue est vide (sinon SPEAKING du msg suivant sera écrasé)
+          if (messageQueue.current.length === 0 && !isProcessingQueue.current) {
+            onEnd?.(); // Signal fin à l'UI
+            fetch("http://localhost:3001/api/sphere/state", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ state: "IDLE" }),
+            }).catch(() => {});
+          }
         }, 50);
       };
 

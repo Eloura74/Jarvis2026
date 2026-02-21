@@ -91,20 +91,15 @@ export function useJarvisInteraction({
         }
       }
 
-      // 2. Filtrer si Jarvis parle (pour évite qu'il ne s'écoute lui-même)
-      // On compte sur l'annulation d'écho matérielle/navigateur pour ne pas entendre Jarvis
-      // Si on arrive ici avec du texte alors qu'il parle, c'est que l'utilisateur a parlé par dessus !
+      // 2. Filtrer si Jarvis parle : ignorer silencieusement toute transcription
+      // (c'est la voix de Jarvis captée par le micro, pas l'utilisateur)
+      // Seul un mot STOP explicite (bloc ci-dessus) peut interrompre.
       if (isCurrentlySpeaking) {
-        console.log("⚡ BARGE-IN NATUREL: Interruption pour nouvelle commande");
-        // 1. On coupe l'audio en cours
-        window.speechSynthesis.cancel();
-
-        // 2. On met à jour l'état
-        isSpeakingRef.current = false;
-        setStatus(SystemStatus.IDLE);
-        addLog("⚡ Barge-in Nouvelle Commande", "VOICE", "info");
-
-        // On ne return PAS, on laisse la commande se valider en bas
+        console.log(
+          "🔇 Transcription ignorée (Jarvis parle) :",
+          text.substring(0, 30),
+        );
+        return;
       }
 
       // 3. Période de sécurité (Echo cancellation temporelle)
