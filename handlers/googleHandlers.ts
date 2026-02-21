@@ -8,12 +8,14 @@ import { HandlerContext } from "../types/app.types";
  * Lit les derniers emails
  */
 export async function handleGmailRead(
-  args: { max?: number; query?: string },
+  args: { max?: number; maxResults?: number; query?: string },
   ctx: HandlerContext,
 ) {
   const { addLog } = ctx;
-  const max = args.max || 3;
-  const q = args.query || "";
+  // Gemini envoie parfois 'maxResults' au lieu de 'max' — on accepte les deux
+  const max = args.max || args.maxResults || 5;
+  // Par défaut : mails non lus uniquement (is:unread), sauf si query explicite
+  const q = args.query !== undefined ? args.query : "is:unread";
 
   try {
     addLog(
@@ -49,8 +51,16 @@ export async function handleGmailRead(
     return { status: "success", data: emails };
   } catch (error: unknown) {
     const err = error as Error;
-    addLog(`Erreur Gmail: ${err.message || String(error)}`, "SYSTEM", "error");
-    throw error;
+    const msg = err.message || String(error);
+    addLog(`Erreur Gmail: ${msg}`, "SYSTEM", "error");
+    // Retourner un résultat d'erreur lisible plutôt que de throw (évite le silence)
+    return {
+      status: "error",
+      message:
+        msg.includes("authentifi") || msg.includes("expir")
+          ? "Session Google expirée. Veuillez vous reconnecter via les paramètres."
+          : `Impossible de lire les mails : ${msg}`,
+    };
   }
 }
 

@@ -82,8 +82,19 @@ export function useProactiveEvents({
                   status: "normal",
                   icon: "fab fa-whatsapp",
                 },
+                {
+                  label: "Message",
+                  value: data.body || "(Contenu média)",
+                  status: "normal",
+                  icon: "fas fa-comment-dots",
+                },
               ],
             });
+
+            // Fermeture automatique après 10 secondes
+            setTimeout(() => {
+              setStatusOverlayRef.current(null);
+            }, 10000);
           }
         }
       } catch (err) {

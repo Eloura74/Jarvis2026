@@ -102,14 +102,22 @@ export function useJarvisBrain(props: UseJarvisBrainProps) {
         }
 
         // Ajouter au HUD
+        const newNotifId = `push-${Date.now()}`;
         const newNotif: TechNotification = {
-          id: `push-${Date.now()}`,
+          id: newNotifId,
           title: `Alerte ${data.type}`,
           message: data.messageToSpeak || "Nouvel évènement reçu.",
           type: "info",
           timestamp: new Date(),
         };
         setHudNotifications((prev) => [...prev, newNotif]);
+
+        // Auto-remove notification after 8 seconds
+        setTimeout(() => {
+          setHudNotifications((prev) =>
+            prev.filter((n) => n.id !== newNotifId),
+          );
+        }, 8000);
       } catch (err) {
         console.error("Erreur parsing SSE:", err);
       }
@@ -241,6 +249,20 @@ export function useJarvisBrain(props: UseJarvisBrainProps) {
                 }, 1000);
               }
 
+              // Rich tools : erreur → lire le message d'erreur vocalement
+              if (
+                toolResult &&
+                toolResult.status === "error" &&
+                toolResult.message &&
+                isRichTool(toolCall.name) &&
+                !hasSpokenSummary
+              ) {
+                speak(toolResult.message as string, true);
+                hasSpokenSummary = true;
+                if (addConversationMessage)
+                  addConversationMessage("model", toolResult.message as string);
+              }
+
               // Rich tools (intelligent summary)
               if (
                 toolResult &&
@@ -351,6 +373,9 @@ function detectVisualMode(text: string): string | null {
   if (t.match(/musique|spotify|volume|son|joue|play|pause/)) return "MEDIA";
   if (t.match(/succès|réussi|terminé|bravo/)) return "SUCCESS";
   if (t.match(/notif|message|alerte/)) return "NOTIFICATION";
+  if (t.match(/mail|email|gmail|boite mail|courrier/)) return "GMAIL";
+  if (t.match(/agenda|calendrier|rendez-vous|rdv|planifie|evenement/))
+    return "CALENDAR";
 
   if (t.match(/météo|weather|temps|pleuvoir|soleil/)) return "WEATHER";
   if (t.match(/maison|home|lumière|salon|cuisine|étage|garage|domotique/))
@@ -380,5 +405,7 @@ function modeFromTool(toolName: string): string | null {
   if (toolName.includes("search") || toolName.includes("browser"))
     return "SEARCH";
   if (toolName.includes("weather")) return "WEATHER";
+  if (toolName.startsWith("gmail")) return "GMAIL";
+  if (toolName.startsWith("calendar")) return "CALENDAR";
   return null;
 }

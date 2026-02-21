@@ -6,8 +6,15 @@
  * - Navigation URLs directes
  * - Gestion favoris locaux
  *
+ * IMPORTANT : window.open() est bloqué par le popup blocker du navigateur
+ * quand appelé depuis un contexte asynchrone (vocal → Gemini → tool call).
+ * On passe donc systématiquement par le backend (POST /api/web/open-url)
+ * qui utilise la commande Windows 'start' pour ouvrir dans le navigateur par défaut.
+ *
  * @module webNavigationService
  */
+
+import { openUrlViaBackend } from "./backendApi";
 
 // ============================================================================
 // TYPES
@@ -54,22 +61,20 @@ export function buildSearchUrl(engine: SearchEngine, query: string): string {
 }
 
 /**
- * Ouvre une recherche dans un nouvel onglet
+ * Ouvre une recherche dans le navigateur par défaut via le backend.
+ * Utilise le backend pour contourner le blocage popup du navigateur.
  *
  * @param engine - Moteur de recherche
  * @param query - Requête
+ * @returns Promise<boolean> - true si succès
  */
-export function searchWeb(engine: SearchEngine, query: string): boolean {
-  try {
-    const url = buildSearchUrl(engine, query);
-    window.open(url, "_blank");
-
-    console.log(`🌐 Recherche ${engine}: "${query}"`);
-    return true;
-  } catch (error) {
-    console.error("Erreur searchWeb:", error);
-    return false;
-  }
+export async function searchWeb(
+  engine: SearchEngine,
+  query: string,
+): Promise<boolean> {
+  const url = buildSearchUrl(engine, query);
+  console.log(`🌐 Recherche ${engine}: "${query}"`);
+  return openUrlViaBackend(url);
 }
 
 // ============================================================================
@@ -77,26 +82,20 @@ export function searchWeb(engine: SearchEngine, query: string): boolean {
 // ============================================================================
 
 /**
- * Ouvre une URL dans un nouvel onglet
+ * Ouvre une URL dans le navigateur par défaut via le backend.
+ * Normalise l'URL si nécessaire (ajout de https://).
  *
  * @param url - URL à ouvrir
+ * @returns Promise<boolean> - true si succès
  */
-export function openUrl(url: string): boolean {
-  try {
-    // Normaliser URL (ajouter https:// si manquant)
-    let normalizedUrl = url;
-    if (!url.startsWith("http://") && !url.startsWith("https://")) {
-      normalizedUrl = `https://${url}`;
-    }
-
-    window.open(normalizedUrl, "_blank");
-
-    console.log(`🌐 URL ouverte: ${normalizedUrl}`);
-    return true;
-  } catch (error) {
-    console.error("Erreur openUrl:", error);
-    return false;
+export async function openUrl(url: string): Promise<boolean> {
+  // Normaliser URL (ajouter https:// si manquant)
+  let normalizedUrl = url;
+  if (!url.startsWith("http://") && !url.startsWith("https://")) {
+    normalizedUrl = `https://${url}`;
   }
+  console.log(`🌐 URL ouverte: ${normalizedUrl}`);
+  return openUrlViaBackend(normalizedUrl);
 }
 
 // ============================================================================
@@ -181,7 +180,9 @@ export function openBookmark(title: string): boolean {
   );
 
   if (found) {
-    openUrl(found.url);
+    openUrl(found.url).catch((e) =>
+      console.error("Erreur ouverture favori:", e),
+    );
     console.log(`⭐ Favori ouvert: ${found.title}`);
     return true;
   }

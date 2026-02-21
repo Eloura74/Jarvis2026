@@ -73,7 +73,8 @@ enum class OrbState : uint8_t {
   IDLE, LISTENING, SPEAKING, ERROR,
   MODE_WEATHER, MODE_HOME, MODE_SYSTEM, MODE_MATRIX, MODE_SEARCH,
   MODE_MEDIA, MODE_TIMER, MODE_PRINT, MODE_NOTIFICATION, MODE_SUCCESS,
-  MODE_APPS, MODE_VISION, MODE_GHOST, MODE_SECURITY, MODE_SCREENSAVER, MODE_WHATSAPP
+  MODE_APPS, MODE_VISION, MODE_GHOST, MODE_SECURITY, MODE_SCREENSAVER, MODE_WHATSAPP,
+  MODE_GMAIL, MODE_CALENDAR
 };
 
 struct JarvisState {
@@ -177,6 +178,8 @@ static void setStateFromStr(const char* s_ptr) {
   else if (s == "GHOST") newState = OrbState::MODE_GHOST;
   else if (s == "SECURITY") newState = OrbState::MODE_SECURITY;
   else if (s == "WHATSAPP") newState = OrbState::MODE_WHATSAPP;
+  else if (s == "GMAIL")    newState = OrbState::MODE_GMAIL;
+  else if (s == "CALENDAR") newState = OrbState::MODE_CALENDAR;
   
   portENTER_CRITICAL(&jarvisData.spinlock);
   if (jarvisData.currentState != newState) {
@@ -310,6 +313,8 @@ void updateLogic() {
         case OrbState::MODE_SUCCESS:target_radius=0.0f;  target_speed = 0.05f; target_color = COL_GREEN; break;
         case OrbState::MODE_SCREENSAVER: target_radius= 0.0f; target_speed = 0.015f; target_color = COL_CYAN; break;
         case OrbState::MODE_WHATSAPP: target_radius= 10.0f; target_speed = 0.06f; target_color = COL_GREEN; break;
+        case OrbState::MODE_GMAIL:    target_radius= 5.0f;  target_speed = 0.07f; target_color = COL_RED; break;
+        case OrbState::MODE_CALENDAR: target_radius= 5.0f;  target_speed = 0.05f; target_color = COL_CYAN; break;
         default:                  target_radius = 30.0f; target_speed = 0.05f; target_color = COL_CYAN; break;
       }
   }
@@ -695,6 +700,79 @@ void renderModeWhatsapp() {
   // local_text holds the sender's name
 }
 
+// ================== MODE GMAIL ==================
+void renderModeGmail() {
+  // Anneau externe tournant — rouge Gmail
+  drawSegmentedRing(CX, CY, 90, 5, 12, g_phase * 35.0f, 0.25f, COL_RED);
+  drawSegmentedRing(CX, CY, 75, 2, 24, -g_phase * 55.0f, 0.5f, rgb565(180, 30, 30));
+
+  // Enveloppe centrale animée
+  float pulse = sin(g_phase * 4.0f) * 0.5f + 0.5f;
+  uint16_t envCol = lerpColor(rgb565(60, 5, 5), COL_RED, pulse);
+  drawGlow(CX, CY, 32, COL_RED, 18);
+
+  // Corps de l'enveloppe (rectangle arrondi simulé)
+  spr.fillRect(CX - 30, CY - 18, 60, 36, envCol);
+  spr.drawRect(CX - 30, CY - 18, 60, 36, COL_WHITE);
+
+  // Rabat de l'enveloppe (V)
+  spr.drawLine(CX - 30, CY - 18, CX, CY + 2, COL_WHITE);
+  spr.drawLine(CX, CY + 2, CX + 30, CY - 18, COL_WHITE);
+
+  // Label
+  spr.setFont(&fonts::FreeSans9pt7b);
+  spr.setTextColor(COL_WHITE);
+  spr.drawString("GMAIL", CX - (spr.textWidth("GMAIL") / 2), CY - 45);
+
+  // Compteur de mails non lus (depuis local_text si dispo)
+  if (strlen(local_text) > 0) {
+    spr.setTextColor(COL_RED);
+    spr.drawString(local_text, CX - (spr.textWidth(local_text) / 2), CY + 40);
+  }
+}
+
+// ================== MODE CALENDAR ==================
+void renderModeCalendar() {
+  // Anneau externe tournant — cyan agenda
+  drawSegmentedRing(CX, CY, 90, 5, 8, g_phase * 20.0f, 0.15f, COL_CYAN);
+  drawSegmentedRing(CX, CY, 72, 2, 32, -g_phase * 40.0f, 0.5f, COL_BLUE);
+
+  // Corps du calendrier
+  drawGlow(CX, CY, 38, COL_CYAN, 15);
+  spr.fillRect(CX - 32, CY - 28, 64, 56, rgb565(5, 20, 35));
+  spr.drawRect(CX - 32, CY - 28, 64, 56, COL_CYAN);
+
+  // Barre de titre du calendrier
+  spr.fillRect(CX - 32, CY - 28, 64, 14, COL_CYAN);
+  spr.setFont(&fonts::FreeSans9pt7b);
+  spr.setTextColor(COL_BG);
+  spr.drawString("CAL", CX - (spr.textWidth("CAL") / 2), CY - 23);
+
+  // Grille de jours (3x3 points)
+  uint16_t dotCol = lerpColor(COL_BLUE, COL_WHITE, (sin(g_phase * 3.0f) + 1.0f) * 0.5f);
+  for (int row = 0; row < 3; row++) {
+    for (int col = 0; col < 4; col++) {
+      int dx = CX - 22 + col * 15;
+      int dy = CY - 8 + row * 14;
+      // Mettre en surbrillance un "rendez-vous" animé
+      bool highlight = (row == 1 && col == 2);
+      spr.fillCircle(dx, dy, highlight ? 4 : 2,
+                     highlight ? lerpColor(COL_CYAN, COL_WHITE, (sin(g_phase * 6.0f) + 1.0f) * 0.5f) : dotCol);
+    }
+  }
+
+  // Label
+  spr.setFont(&fonts::FreeSans9pt7b);
+  spr.setTextColor(COL_WHITE);
+  spr.drawString("AGENDA", CX - (spr.textWidth("AGENDA") / 2), CY - 48);
+
+  // Texte de l'événement (depuis local_text si dispo)
+  if (strlen(local_text) > 0) {
+    spr.setTextColor(COL_CYAN);
+    spr.drawString(local_text, CX - (spr.textWidth(local_text) / 2), CY + 40);
+  }
+}
+
 void renderTask(void *pvParameters) {
   // OPTIMISATION THERMIQUE : Framerate verrouillé à ~30 FPS (33ms)
   const TickType_t xFrequency = pdMS_TO_TICKS(33); 
@@ -722,6 +800,8 @@ void renderTask(void *pvParameters) {
       case OrbState::MODE_MATRIX: renderModeMatrix(); break;
       case OrbState::MODE_SCREENSAVER: renderModeScreensaver(); break;
       case OrbState::MODE_WHATSAPP: renderModeWhatsapp(); break;
+      case OrbState::MODE_GMAIL:    renderModeGmail(); break;
+      case OrbState::MODE_CALENDAR: renderModeCalendar(); break;
       default:                    renderDefaultLocked(); break;
     }
     

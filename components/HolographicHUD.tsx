@@ -25,6 +25,9 @@ const HolographicHUD: React.FC<HolographicHUDProps> = ({ notifications }) => {
     return () => clearInterval(timer);
   }, []);
 
+  // Nettoyage automatique local pour éviter l'accumulation visuelle si le parent ne le fait pas
+  // Toutefois, les notifications viennent de props. Il est préférable de gérer le cycle de vie dans useJarvisBrain.
+
   return (
     <div className="fixed top-10 right-10 flex flex-col gap-4 pointer-events-none z-50">
       {/* 🔮 NEURAL ENGINE STATUS */}

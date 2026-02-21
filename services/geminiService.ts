@@ -57,6 +57,8 @@ You are J.A.R.V.I.S., the sophisticated AI assistant of Monsieur.
 1. **VISUAL BROWSING**: Keywords: "Ouvre", "Montre-moi", "Va sur", "Cherche X sur Y". Tool: \`open_url\`.
 2. **STATUS REPORT**: Keywords: "Rapport", "État", "Comment va", "Statut". Tool: \`show_status_overlay\`.
 3. **DEEP RESEARCH**: Keywords: "Analyse", "Fais un rapport détaillé". Tool: \`read_web_page\`.
+4. **GMAIL**: Keywords: "mails", "emails", "messages", "qui m'a écrit", "boîte mail". Tool: \`gmail_read\`. Always use query="is:unread" by default. After reading, summarize each email: sender + subject.
+5. **CALENDRIER**: Keywords: "rendez-vous", "agenda", "calendrier", "planifie", "ajoute", "réunion". Tool: \`calendar_create\` or \`calendar_list\`. For creation, ALWAYS convert the spoken date to ISO 8601 (YYYY-MM-DDTHH:MM:SS). Example: "le 23 février à 9h" → "2026-02-23T09:00:00".
 
 **MEMORY:** ${memorySummary}
 **CONTEXT:**
@@ -200,12 +202,20 @@ const toolDeclarations: FunctionDeclaration[] = [
   },
   {
     name: "gmail_read",
-    description: "Read emails.",
+    description:
+      "Read Gmail emails. Use for: lis mes mails, mes derniers emails, qui ma ecrit, mails non lus, analyse mes mails. Default: 5 unread emails. Pass query=is:unread for unread, query empty for all recent.",
     parameters: {
       type: Type.OBJECT,
       properties: {
-        maxResults: { type: Type.NUMBER },
-        query: { type: Type.STRING },
+        maxResults: {
+          type: Type.NUMBER,
+          description: "Number of emails to fetch (default 5)",
+        },
+        query: {
+          type: Type.STRING,
+          description:
+            "Gmail search query. Use 'is:unread' for unread emails, '' for all recent. Default: 'is:unread'",
+        },
       },
     },
   },
@@ -224,10 +234,16 @@ const toolDeclarations: FunctionDeclaration[] = [
   },
   {
     name: "calendar_list",
-    description: "List calendar events.",
+    description:
+      "List upcoming Google Calendar events. Use for: mes prochains rendez-vous, agenda, evenements prevus, mon planning.",
     parameters: {
       type: Type.OBJECT,
-      properties: { maxResults: { type: Type.NUMBER } },
+      properties: {
+        maxResults: {
+          type: Type.NUMBER,
+          description: "Number of events to list (default 5)",
+        },
+      },
     },
   },
   {
@@ -255,15 +271,33 @@ const toolDeclarations: FunctionDeclaration[] = [
   },
   {
     name: "calendar_create",
-    description: "Create a calendar event.",
+    description:
+      "Create a Google Calendar event. Use for: 'ajoute un rendez-vous', 'crée un événement', 'mets dans mon agenda', 'planifie'. IMPORTANT: startTime MUST be a full ISO 8601 datetime string (e.g. '2026-02-23T09:00:00'). The current year is 2026. If only a date is given (e.g. '23 février'), infer the time as 09:00 if not specified. endTime defaults to startTime + 1 hour if not provided.",
     parameters: {
       type: Type.OBJECT,
       properties: {
-        summary: { type: Type.STRING },
-        startTime: { type: Type.STRING },
-        endTime: { type: Type.STRING },
-        location: { type: Type.STRING },
-        description: { type: Type.STRING },
+        summary: {
+          type: Type.STRING,
+          description: "Event title/name (e.g. 'Rendez-vous médiathèque')",
+        },
+        startTime: {
+          type: Type.STRING,
+          description:
+            "Start datetime in ISO 8601 format: YYYY-MM-DDTHH:MM:SS (e.g. '2026-02-23T09:00:00')",
+        },
+        endTime: {
+          type: Type.STRING,
+          description:
+            "End datetime in ISO 8601 format. Optional, defaults to startTime + 1 hour.",
+        },
+        location: {
+          type: Type.STRING,
+          description: "Location of the event. Optional.",
+        },
+        description: {
+          type: Type.STRING,
+          description: "Additional notes. Optional.",
+        },
       },
       required: ["summary", "startTime"],
     },
@@ -584,17 +618,65 @@ export const summarizeToolResults = async (
   await waitIfNecessary();
 
   try {
+    // Prompts spécialisés par outil pour une synthèse vocale naturelle
+    if (toolName === "gmail_read") {
+      const emails = resultData as Array<{
+        from: string;
+        subject: string;
+        date: string;
+      }>;
+      if (!emails || emails.length === 0) {
+        return "Aucun mail non lu, Monsieur.";
+      }
+      // Construire un résumé direct sans passer par Gemini pour éviter le fallback
+      const lines = emails.map((e, i) => {
+        // Extraire juste le nom de l'expéditeur (avant le <email>)
+        const senderName = e.from
+          ? e.from
+              .replace(/<[^>]+>/g, "")
+              .replace(/"/g, "")
+              .trim()
+          : "Expéditeur inconnu";
+        return `${i + 1}. De ${senderName} : ${e.subject || "sans objet"}`;
+      });
+      return `Monsieur a ${emails.length} mail${emails.length > 1 ? "s" : ""} non lu${emails.length > 1 ? "s" : ""}. ${lines.join(". ")}.`;
+    }
+
+    if (toolName === "calendar_list") {
+      const events = resultData as Array<{ summary: string; start: string }>;
+      if (!events || events.length === 0) {
+        return "Aucun événement à venir dans votre agenda, Monsieur.";
+      }
+      const lines = events.slice(0, 3).map((e) => {
+        const date = new Date(e.start).toLocaleDateString("fr-FR", {
+          weekday: "long",
+          day: "numeric",
+          month: "long",
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+        return `${e.summary} le ${date}`;
+      });
+      return `Voici vos prochains rendez-vous, Monsieur : ${lines.join(", ")}.`;
+    }
+
+    if (toolName === "calendar_create") {
+      const event = resultData as {
+        summary?: string;
+        start?: { dateTime?: string };
+      };
+      const title = event?.summary || "l'événement";
+      return `Rendez-vous "${title}" ajouté à votre agenda, Monsieur.`;
+    }
+
+    // Prompt générique pour les autres outils
     const prompt =
-      "Syntrétise ces résultats de l'outil '" +
+      "Synthétise ces résultats de l'outil '" +
       toolName +
-      "' pour Monsieur. \n" +
+      "' pour Monsieur en 1-2 phrases en français, de façon naturelle et concise.\n" +
       "DONNÉES: " +
-      JSON.stringify(resultData) +
-      "\n\nRÈGLES: \n" +
-      "- RÉPONDRE TOUJOURS EN FRANÇAIS.\n" +
-      "- Être extrêmement concis (1-2 phrases).\n" +
-      "- Ne pas lire les adresses email complètes.\n" +
-      "- S'adresser à l'utilisateur comme 'Monsieur'.";
+      JSON.stringify(resultData).substring(0, 2000) +
+      "\nRÈGLES: répondre en français, s'adresser comme 'Monsieur', ne pas lire les emails complets.";
 
     const response = await generateContentWithFallback(
       [{ role: "user", parts: [{ text: prompt }] }],
@@ -695,7 +777,10 @@ export const getNeuralBriefing = async ({
 
 export interface StreamCallbacks {
   onTextChunk?: (text: string) => void;
-  onToolCall?: (tool: { name: string; args: Record<string, unknown> }) => void;
+  onToolCall?: (tool: {
+    name: string;
+    args: Record<string, unknown>;
+  }) => void | Promise<void>;
   onComplete?: (finalDecision: OmniDecision) => void;
   onError?: (error: string) => void;
 }
@@ -767,7 +852,7 @@ export const streamCommand = async (
               args: call.args as Record<string, unknown>,
             };
             allToolCalls.push(validCall);
-            if (callbacks.onToolCall) callbacks.onToolCall(validCall);
+            if (callbacks.onToolCall) await callbacks.onToolCall(validCall);
           }
         }
       }

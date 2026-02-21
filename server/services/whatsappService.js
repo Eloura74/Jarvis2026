@@ -101,6 +101,7 @@ export function initWhatsAppService() {
         {
           sender: senderName,
           from: msg.from,
+          body: msg.body, // Ajout du contenu du message
           hasMedia: msg.hasMedia,
         },
         messageToSpeak,

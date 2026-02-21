@@ -95,19 +95,63 @@ export async function setTokenFromCode(code) {
 }
 
 /**
- * Récupère un client authentifié
+ * Récupère un client authentifié avec refresh automatique du token.
+ * Si l'access_token est expiré, utilise le refresh_token pour en obtenir un nouveau
+ * et sauvegarde le token mis à jour sur disque.
  */
 async function getAuthorizedClient() {
   const oAuth2Client = await getOAuth2Client();
   if (!oAuth2Client) throw new Error("Client non configuré");
 
+  let tokenData;
   try {
     const token = await fs.readFile(TOKEN_PATH, "utf8");
-    oAuth2Client.setCredentials(JSON.parse(token));
-    return oAuth2Client;
+    tokenData = JSON.parse(token);
   } catch (err) {
-    throw new Error("Utilisateur non authentifié");
+    throw new Error(
+      "Utilisateur non authentifié - veuillez vous connecter via /api/google/auth-url",
+    );
   }
+
+  oAuth2Client.setCredentials(tokenData);
+
+  // Écouter les nouveaux tokens (refresh automatique par la lib Google)
+  oAuth2Client.on("tokens", async (newTokens) => {
+    // Fusionner avec les tokens existants pour conserver le refresh_token
+    const merged = { ...tokenData, ...newTokens };
+    try {
+      await fs.writeFile(TOKEN_PATH, JSON.stringify(merged));
+      console.log("🔄 Token Google rafraîchi et sauvegardé.");
+      tokenData = merged;
+    } catch (e) {
+      console.error(
+        "❌ Impossible de sauvegarder le token rafraîchi:",
+        e.message,
+      );
+    }
+  });
+
+  // Vérifier si le token est expiré et forcer un refresh si nécessaire
+  const expiryDate = tokenData.expiry_date;
+  const isExpired = expiryDate && Date.now() >= expiryDate - 60000; // 1 min de marge
+
+  if (isExpired && tokenData.refresh_token) {
+    try {
+      console.log("🔄 Token expiré, tentative de refresh...");
+      const { credentials } = await oAuth2Client.refreshAccessToken();
+      const merged = { ...tokenData, ...credentials };
+      await fs.writeFile(TOKEN_PATH, JSON.stringify(merged));
+      oAuth2Client.setCredentials(merged);
+      console.log("✅ Token Google rafraîchi avec succès.");
+    } catch (refreshErr) {
+      console.error("❌ Échec du refresh token:", refreshErr.message);
+      throw new Error(
+        "Session Google expirée - reconnectez-vous via /api/google/auth-url",
+      );
+    }
+  }
+
+  return oAuth2Client;
 }
 
 /**

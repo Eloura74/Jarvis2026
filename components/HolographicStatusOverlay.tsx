@@ -118,7 +118,7 @@ export const HolographicStatusOverlay: React.FC<
             }}
           >
             <DraggablePanel
-              title={`// SYS_MONITOR // ${displayData.type.toUpperCase()}`}
+              title={`// ${displayData.type === "system" ? "INCOMING_MESSAGE" : "SYS_MONITOR"} // ${displayData.type.toUpperCase()}`}
               onClose={onClose}
               className="!relative !inset-auto !m-0" // Utilise le flux Flex du parent
             >
@@ -126,75 +126,92 @@ export const HolographicStatusOverlay: React.FC<
                 {/* Badge Live Status */}
                 {klipper.isConnected && <LiveBadge />}
 
-                {/* Header Image Section */}
-                <div style={{ position: "relative", marginBottom: "24px" }}>
-                  <div
-                    style={{
-                      height: "320px",
-                      overflow: "hidden",
-                      border: `1px solid ${THEME.cyanDim}`,
-                      position: "relative",
-                      backgroundColor: "rgba(0, 5, 10, 0.8)",
-                      borderRadius: "4px",
-                      boxShadow: `0 0 20px ${THEME.cyan}30`,
-                    }}
-                  >
-                    <div className="holo-grid-overlay" />
-
-                    <img
-                      src={displayData.image}
-                      alt={displayData.title}
-                      style={{
-                        width: "100%",
-                        height: "100%",
-                        objectFit: "contain",
-                        opacity: 0.95,
-                        filter:
-                          "contrast(1.2) brightness(1.2) saturate(1.1) drop-shadow(0 0 15px rgba(0, 243, 255, 0.4))",
-                      }}
-                      onError={(e) => {
-                        console.error(
-                          "Failed to load overlay image:",
-                          displayData.image,
-                        );
-                        (e.target as HTMLImageElement).src =
-                          "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?auto=format&fit=crop&q=80&w=800";
-                      }}
-                    />
-
+                {/* Header Image Section - Hidden if WhatsApp/System with no image */}
+                {!(displayData.type === "system" && !displayData.image) && (
+                  <div style={{ position: "relative", marginBottom: "24px" }}>
                     <div
                       style={{
-                        position: "absolute",
-                        bottom: 0,
-                        left: 0,
-                        right: 0,
-                        background: `linear-gradient(to top, rgba(5, 10, 20, 0.95), transparent)`,
-                        padding: "16px 20px",
+                        height:
+                          displayData.type === "system" ? "120px" : "320px",
+                        overflow: "hidden",
+                        border: `1px solid ${THEME.cyanDim}`,
+                        position: "relative",
+                        backgroundColor: "rgba(0, 5, 10, 0.8)",
+                        borderRadius: "4px",
+                        boxShadow: `0 0 20px ${THEME.cyan}30`,
                         display: "flex",
                         alignItems: "center",
-                        gap: "10px",
-                        borderBottom: `1px solid ${THEME.cyanDim}`,
+                        justifyContent: "center",
                       }}
                     >
-                      <Activity
-                        size={16}
-                        color={THEME.cyan}
-                        className="animate-pulse"
-                      />
-                      <span
+                      <div className="holo-grid-overlay" />
+
+                      {displayData.image ? (
+                        <img
+                          src={displayData.image}
+                          alt={displayData.title}
+                          style={{
+                            width: "100%",
+                            height: "100%",
+                            objectFit: "contain",
+                            opacity: 0.95,
+                            filter:
+                              "contrast(1.2) brightness(1.2) saturate(1.1) drop-shadow(0 0 15px rgba(0, 243, 255, 0.4))",
+                          }}
+                          onError={(e) => {
+                            console.error(
+                              "Failed to load overlay image:",
+                              displayData.image,
+                            );
+                            (e.target as HTMLImageElement).src =
+                              "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?auto=format&fit=crop&q=80&w=800";
+                          }}
+                        />
+                      ) : (
+                        <div style={{ textAlign: "center", color: THEME.cyan }}>
+                          <i
+                            className="fab fa-whatsapp"
+                            style={{ fontSize: "48px", marginBottom: "10px" }}
+                          ></i>
+                        </div>
+                      )}
+
+                      <div
                         style={{
-                          color: THEME.cyan,
-                          fontFamily: '"JetBrains Mono", monospace',
-                          fontSize: "12px",
-                          fontWeight: 600,
-                          letterSpacing: "2px",
+                          position: "absolute",
+                          bottom: 0,
+                          left: 0,
+                          right: 0,
+                          background: `linear-gradient(to top, rgba(5, 10, 20, 0.95), transparent)`,
+                          padding: "10px 20px",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "10px",
+                          borderBottom: `1px solid ${THEME.cyanDim}`,
                         }}
                       >
-                        REAL_TIME_LINK :: {displayData.title.toUpperCase()}
-                      </span>
+                        <Activity
+                          size={16}
+                          color={THEME.cyan}
+                          className="animate-pulse"
+                        />
+                        <span
+                          style={{
+                            color: THEME.cyan,
+                            fontFamily: '"JetBrains Mono", monospace',
+                            fontSize: "12px",
+                            fontWeight: 600,
+                            letterSpacing: "2px",
+                          }}
+                        >
+                          {displayData.type === "system"
+                            ? "SECURE_CHANNEL_ACTIVE"
+                            : `REAL_TIME_LINK :: ${displayData.title.toUpperCase()}`}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
+                )}
 
                 {/* Stats Grid */}
                 <div

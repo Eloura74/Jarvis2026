@@ -25,6 +25,9 @@ const VALID_STATES = [
   "VISION",
   "GHOST",
   "SECURITY",
+  "WHATSAPP",
+  "GMAIL",
+  "CALENDAR",
 ];
 
 // POST /api/sphere/state OR /api/sphere/mode

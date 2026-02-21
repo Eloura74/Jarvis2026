@@ -116,6 +116,28 @@ export async function takeScreenshotOnBackend(): Promise<string | null> {
 }
 
 /**
+ * Ouvre une URL dans le navigateur par défaut via le backend (Windows).
+ * Contourne le blocage popup du navigateur qui bloque window.open() en contexte async.
+ *
+ * @param url - URL à ouvrir (doit commencer par http:// ou https://)
+ * @returns true si l'ouverture a réussi
+ */
+export async function openUrlViaBackend(url: string): Promise<boolean> {
+  try {
+    const response = await fetch(`${BACKEND_URL}/api/web/open-url`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url }),
+    });
+    const data = await response.json();
+    return data.success === true;
+  } catch (error: unknown) {
+    console.error("Backend open-url error:", error);
+    return false;
+  }
+}
+
+/**
  * Contrôle l'alimentation/session via le backend
  */
 export async function controlPowerOnBackend(

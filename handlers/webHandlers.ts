@@ -23,7 +23,7 @@ export const handleSearchWeb = async (
   addLog(`Searching ${engine}: "${query}"`, "OMNI", "info");
   setStatus(SystemStatus.NETWORKING);
 
-  const success = webNav.searchWeb(engine, query);
+  const success = await webNav.searchWeb(engine, query);
 
   if (success) {
     addLog(`Search opened in browser`, "SYSTEM", "success");
@@ -47,7 +47,7 @@ export const handleOpenUrl = async (
   addLog(`Opening: ${url}`, "OMNI", "info");
   setStatus(SystemStatus.NETWORKING);
 
-  const success = webNav.openUrl(url);
+  const success = await webNav.openUrl(url);
 
   if (success) {
     addLog(`URL opened in browser`, "SYSTEM", "success");
@@ -183,7 +183,7 @@ export const handleGenerateImage = async (
   }
 
   // Ouverture avec focus automatique pour Bing
-  const success = webNav.openUrl(url);
+  const success = await webNav.openUrl(url);
 
   if (success) {
     addLog(`Generator opened: ${provider}`, "SYSTEM", "success");
