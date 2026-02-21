@@ -3,28 +3,85 @@ import { setSphereState, setSphereText } from "../services/sphereService.js";
 
 const router = express.Router();
 
-// POST /api/sphere/state OR /api/sphere/mode
-// Body: { state: "IDLE" | "LISTENING" | "SPEAKING" | "ERROR" | "WEATHER" | "HOME" | "SYSTEM" | "MATRIX" | "SEARCH" }
-router.post(["/state", "/mode"], (req, res) => {
-  const { state, mode } = req.body;
-  const target = state || mode;
+// Liste blanche des états reconnus par l'ESP32
+const VALID_STATES = [
+  "IDLE",
+  "STANDBY",
+  "LISTENING",
+  "SPEAKING",
+  "RECEIVING",
+  "ERROR",
+  "WEATHER",
+  "HOME",
+  "SYSTEM",
+  "MATRIX",
+  "SEARCH",
+  "MEDIA",
+  "TIMER",
+  "PRINT",
+  "NOTIF",
+  "SUCCESS",
+  "APPS",
+  "VISION",
+  "GHOST",
+  "SECURITY",
+];
 
-  if (target) {
-    setSphereState(target);
-    res.json({ success: true, state: target });
-  } else {
-    res.status(400).json({ error: "Invalid state/mode." });
+// POST /api/sphere/state OR /api/sphere/mode
+router.post(["/state", "/mode"], async (req, res) => {
+  try {
+    const target = req.body.state || req.body.mode;
+
+    if (!target || typeof target !== "string") {
+      return res
+        .status(400)
+        .json({ error: "État ou mode manquant ou format invalide." });
+    }
+
+    const normalizedTarget = target.trim().toUpperCase();
+
+    if (!VALID_STATES.includes(normalizedTarget)) {
+      return res.status(400).json({
+        error: "État non reconnu.",
+        accepted_values: VALID_STATES,
+      });
+    }
+
+    // L'utilisation de await prévient les crashs si le service est asynchrone
+    await setSphereState(normalizedTarget);
+    res.json({ success: true, state: normalizedTarget });
+  } catch (error) {
+    console.error("[API] Erreur série (State) :", error.message);
+    res
+      .status(500)
+      .json({ error: "Erreur de communication avec le matériel." });
   }
 });
 
 // POST /api/sphere/text
-router.post("/text", (req, res) => {
-  const { text } = req.body;
-  if (text) {
-    setSphereText(text);
+router.post("/text", async (req, res) => {
+  try {
+    let { text } = req.body;
+
+    if (text === undefined || text === null) {
+      return res.status(400).json({ error: "Texte manquant." });
+    }
+
+    // Conversion forcée en chaîne et nettoyage
+    text = String(text).trim();
+
+    // Tronquage préventif à 63 caractères pour correspondre au buffer C++ (char textLabel[64])
+    if (text.length > 63) {
+      text = text.substring(0, 63);
+    }
+
+    await setSphereText(text);
     res.json({ success: true, text });
-  } else {
-    res.status(400).json({ error: "Missing text" });
+  } catch (error) {
+    console.error("[API] Erreur série (Text) :", error.message);
+    res
+      .status(500)
+      .json({ error: "Erreur de communication avec le matériel." });
   }
 });
 
