@@ -37,10 +37,11 @@ export function useJarvisInteraction({
 
   // Refs pour gestion asynchrone
   const lastMicActivationTime = useRef<number>(0);
-  const lastSpeechEndTime = useRef<number>(0); // NOUVEAU : Traceur de fin de parole
+  const lastSpeechEndTime = useRef<number>(0); // Traceur de fin de parole
   const isSpeakingRef = useRef(false);
-  const isExitingRef = useRef(false); // NOUVEAU : Verrou pour éviter les boucles de fin
+  const isExitingRef = useRef(false); // Verrou pour éviter les boucles de fin
   const conversationModeRef = useRef(conversationMode);
+  const conversationTimeoutRef = useRef<NodeJS.Timeout | null>(null); // Timeout d'inactivité conversation
   const onCommandRef = useRef(onCommandReceived);
 
   // Sync Refs
@@ -142,11 +143,14 @@ export function useJarvisInteraction({
         return;
       }
 
-      // 4. Activation Auto du mode conversation
+      // 4. Activation Auto du mode conversation + reset timeout inactivité
       if (!conversationMode) {
         setConversationMode(true);
         addLog("🎤 Mode conversation activé", "SYSTEM", "info");
       }
+      // Reset du timeout d'inactivité à chaque commande reçue
+      if (conversationTimeoutRef.current)
+        clearTimeout(conversationTimeoutRef.current);
 
       // 6. Transmission de la commande
       console.log(`✅ Commande validée : "${text}"`);
@@ -211,31 +215,50 @@ export function useJarvisInteraction({
       setStatus(SystemStatus.IDLE);
       lastSpeechEndTime.current = Date.now(); // Marquer le moment exact
 
-      // Redémarrage automatique si mode conversation (avec sécurité renforcée)
-      setTimeout(() => {
-        isSpeakingRef.current = false;
+      // PROTECTION CRITIQUE : Si la file d'attente vocale a encore des choses à dire,
+      // on ne réactive PAS encore le micro (on attendra le prochain onEnd)
+      if (window.speechSynthesis.speaking) {
+        console.log(
+          "⏳ Parole encore en cours (file d'attente), attente fin réelle...",
+        );
+        return;
+      }
 
-        // PROTECTION CRITIQUE : Si la file d'attente vocale a encore des choses à dire,
-        // on ne réactive PAS encore le micro (on attendra le prochain onEnd)
-        if (window.speechSynthesis.speaking) {
-          console.log(
-            "⏳ Parole encore en cours (file d'attente), attente fin réelle...",
-          );
-          return;
-        }
+      isSpeakingRef.current = false;
 
-        // On ne redémarre PAS si on est en train de quitter
-        if (conversationModeRef.current && !isExitingRef.current) {
+      // Réactivation micro alignée sur la période de sécurité (3500ms)
+      // Cela évite que les échos de la voix de Jarvis soient captés
+      if (conversationModeRef.current && !isExitingRef.current) {
+        setTimeout(() => {
+          // Vérifier une dernière fois qu'on n'est pas en train de parler
+          if (window.speechSynthesis.speaking) return;
+
           console.log(
-            "🎤 Mode conversation : Réactivation micro après pause sécurité",
+            "🎤 Mode conversation : Réactivation micro après délai sécurité (3.5s)",
           );
           lastMicActivationTime.current = Date.now();
           startListening();
-        } else if (isExitingRef.current) {
-          console.log("👋 Fin de session confirmée, micro reste coupé.");
-          isExitingRef.current = false; // Reset pour la prochaine fois
-        }
-      }, 500); // Délai court ici, la vraie sécurité est dans useVoiceRecognition
+
+          // Timeout d'inactivité : si personne ne parle dans les 15s, on quitte le mode conversation
+          if (conversationTimeoutRef.current)
+            clearTimeout(conversationTimeoutRef.current);
+          conversationTimeoutRef.current = setTimeout(() => {
+            if (
+              conversationModeRef.current &&
+              !window.speechSynthesis.speaking
+            ) {
+              console.log(
+                "⏰ Timeout inactivité conversation (15s) → retour Wake Word",
+              );
+              setConversationMode(false);
+              stopListening();
+            }
+          }, 15000);
+        }, 3500); // Aligné sur la période de sécurité anti-écho
+      } else if (isExitingRef.current) {
+        console.log("👋 Fin de session confirmée, micro reste coupé.");
+        isExitingRef.current = false; // Reset pour la prochaine fois
+      }
     },
   });
 
@@ -260,10 +283,15 @@ export function useJarvisInteraction({
         console.warn("⚠️ Watchdog: Statut bloqué sur SPEAKING corrigé -> IDLE");
         setStatus(SystemStatus.IDLE);
         isSpeakingRef.current = false;
+        const timeSinceSpeech = Date.now() - lastSpeechEndTime.current;
         lastSpeechEndTime.current = Date.now();
 
-        // Relance écoute si mode conversation
-        if (conversationModeRef.current && !isExitingRef.current) {
+        // Relance écoute si mode conversation, mais seulement hors période de sécurité
+        if (
+          conversationModeRef.current &&
+          !isExitingRef.current &&
+          timeSinceSpeech >= 3500
+        ) {
           startListening();
         }
       }
