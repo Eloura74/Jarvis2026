@@ -18,6 +18,7 @@ import { useShellShortcuts } from "../hooks/useShellShortcuts";
 import ShellOverlays from "./overlays/ShellOverlays";
 import ShellPanels from "./overlays/ShellPanels";
 import { useProactiveEvents } from "../hooks/useProactiveEvents";
+import { useDialogFlow } from "../hooks/useDialogFlow";
 
 export interface JarvisShellProps {
   shouldGreet?: boolean;
@@ -92,6 +93,35 @@ export default function JarvisShell({ shouldGreet }: JarvisShellProps) {
     },
   });
 
+  // ============================================================
+  // DIALOG FLOW — Après useJarvisInteraction (besoin de speak)
+  // Les refs stables sont passées à useJarvisBrain via props
+  // ============================================================
+  const dialogFlow = useDialogFlow({
+    speak: (text, queue) => interaction.speak(text, queue),
+    addLog,
+    setStatusOverlay: (data) =>
+      setStatusOverlay(data as StatusOverlayData | null),
+    onSendWhatsApp: async (to, message) => {
+      const response = await fetch("http://localhost:3001/api/whatsapp/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ to, message }),
+      });
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Erreur envoi WhatsApp");
+      }
+    },
+    onSphereMode: (mode) => {
+      fetch("http://localhost:3001/api/sphere/mode", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode }),
+      }).catch(() => {});
+    },
+  });
+
   const brain = useJarvisBrain({
     appMemory,
     updateMemory,
@@ -104,6 +134,8 @@ export default function JarvisShell({ shouldGreet }: JarvisShellProps) {
     addConversationMessage,
     getConversationContext,
     stopConversation: interaction.stopFullConversation,
+    interceptCommandRef: dialogFlow.interceptCommandRef,
+    startWhatsAppFlowRef: dialogFlow.startWhatsAppFlowRef,
     setStatusOverlay: (data) => {
       console.log("🔮 SHELL: setStatusOverlay called with:", data?.title);
       if (statusOverlay && data && statusOverlay.id !== data.id) {
@@ -134,6 +166,7 @@ export default function JarvisShell({ shouldGreet }: JarvisShellProps) {
     speak: interaction.speak,
     addLog,
     setStatusOverlay,
+    onProactiveEvent: brain.onProactiveEvent,
   });
 
   useShellShortcuts({

@@ -58,7 +58,8 @@ You are J.A.R.V.I.S., the sophisticated AI assistant of Monsieur.
 2. **STATUS REPORT**: Keywords: "Rapport", "État", "Comment va", "Statut". Tool: \`show_status_overlay\`.
 3. **DEEP RESEARCH**: Keywords: "Analyse", "Fais un rapport détaillé". Tool: \`read_web_page\`.
 4. **GMAIL**: Keywords: "mails", "emails", "messages", "qui m'a écrit", "boîte mail". Tool: \`gmail_read\`. Always use query="is:unread" by default. After reading, summarize each email: sender + subject.
-5. **CALENDRIER**: Keywords: "rendez-vous", "agenda", "calendrier", "planifie", "ajoute", "réunion". Tool: \`calendar_create\` or \`calendar_list\`. For creation, ALWAYS convert the spoken date to ISO 8601 (YYYY-MM-DDTHH:MM:SS). Example: "le 23 février à 9h" → "2026-02-23T09:00:00".
+5. **CALENDRIER**: Keywords: "rendez-vous", "agenda", "calendrier", "planifie", "ajoute", "réunion". Tool: \`calendar_create\` or \`calendar_list\`. For creation, ALWAYS convert the spoken date to ISO 8601 (YYYY-MM-DDTHH:MM:SS). Example: "le 23 février à 9h" → "2026-02-23T09:00:00". For "quel est mon prochain RDV" or "qu'est-ce que j'ai prévu", use \`calendar_next\`.
+6. **WHATSAPP**: Keywords: "réponds à", "envoie un message à", "dis à [nom] que", "WhatsApp à". Tool: \`whatsapp_reply\`. If the user provides a message text, include it in the 'message' field. If the user only says who to send to (no message content), call the tool with ONLY the 'to' field and leave 'message' empty — the system will ask for the message content interactively.
 
 **MEMORY:** ${memorySummary}
 **CONTEXT:**
@@ -367,6 +368,26 @@ const toolDeclarations: FunctionDeclaration[] = [
     },
   },
   {
+    name: "whatsapp_reply",
+    description:
+      "Send a WhatsApp message to a contact. Use when user says 'réponds à [nom]', 'envoie un WhatsApp à [nom]', 'dis à [nom] que...'. The 'to' field must be the contact name as spoken by the user.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        to: {
+          type: Type.STRING,
+          description:
+            "Contact name or phone number (e.g. 'Laura', 'Maman', '33612345678@c.us'). Use the name as spoken by the user.",
+        },
+        message: {
+          type: Type.STRING,
+          description: "The message text to send.",
+        },
+      },
+      required: ["to"],
+    },
+  },
+  {
     name: "get_travel_time",
     description: "Get travel duration and traffic info to a destination.",
     parameters: {
@@ -521,96 +542,6 @@ async function generateContentWithFallback(
   }
 }
 
-export const parseCommand = async (
-  input: string,
-  memories: AppMemory[],
-  conversationContext: string = "",
-): Promise<OmniDecision> => {
-  // Check Shield (Désactivé pour laisser le backoff gérer)
-  // if (checkShield()) { ... }
-
-  await waitIfNecessary();
-
-  try {
-    console.log(`Appel Gemini pour "${input}"`);
-
-    // Utilisation d'une concaténation simple pour éviter les erreurs de backticks
-    let memSum = "No prior usage.";
-    if (memories.length > 0) {
-      memSum =
-        "Frequent Apps: " +
-        memories.map((m) => m.appName + " (" + m.launchCount + ")").join(", ");
-    }
-
-    const haContext = await getHAContext();
-
-    // Appel avec Fallback
-    const response = await generateContentWithFallback(input, {
-      systemInstruction:
-        generateSystemInstruction(memSum, conversationContext) + haContext,
-      tools: [{ functionDeclarations: toolDeclarations }],
-      temperature: 0.1,
-    });
-
-    const candidate = response.candidates?.[0];
-    if (!candidate) throw new Error("No response from Neural Core.");
-
-    const functionCalls = candidate.content?.parts
-      ?.filter((p: any) => p.functionCall)
-      .map((p: any) => p.functionCall);
-
-    const validCalls =
-      functionCalls
-        ?.filter(
-          (fc: any): fc is { name: string; args: Record<string, unknown> } =>
-            fc?.name !== undefined && fc?.args !== undefined,
-        )
-        .map((fc: any) => ({ name: fc.name, args: fc.args })) || [];
-
-    const textResponse = candidate.content?.parts
-      ?.filter((p: any) => p.text)
-      .map((p: any) => p.text)
-      .join("");
-
-    let decision: OmniDecision;
-
-    if (validCalls.length > 0 && textResponse) {
-      decision = {
-        type: "MIXED_RESPONSE",
-        toolCalls: validCalls,
-        text: textResponse,
-        confidence: 0.99,
-      };
-    } else if (validCalls.length > 0) {
-      decision = { type: "TOOL_CALL", toolCalls: validCalls, confidence: 0.99 };
-    } else {
-      decision = {
-        type: "TEXT_RESPONSE",
-        text: textResponse || "Standing by.",
-        confidence: 0.8,
-      };
-    }
-
-    console.log(
-      "🎯 DECISION:",
-      decision.type,
-      validCalls.length > 0 ? validCalls[0].name : "",
-    );
-    return decision;
-  } catch (error: unknown) {
-    console.error("OMNI Core Error:", error);
-
-    // MODIFICATION D'URGENCE : Affichage de l'erreur réelle au lieu du message "Saturé"
-    const errorMessage =
-      error instanceof Error ? error.message : "Erreur inconnue";
-    return {
-      type: "TEXT_RESPONSE", // CHANGÉ DE ERROR À TEXT_RESPONSE POUR ÊTRE SÛR QUE JARVIS LE DISE
-      text: `⚠️ ALERTE SYSTÈME : ${errorMessage}. (Code: ERR_CORE_FAIL)`,
-      confidence: 1.0,
-    };
-  }
-};
-
 export const summarizeToolResults = async (
   toolName: string,
   resultData: unknown,
@@ -667,6 +598,24 @@ export const summarizeToolResults = async (
       };
       const title = event?.summary || "l'événement";
       return `Rendez-vous "${title}" ajouté à votre agenda, Monsieur.`;
+    }
+
+    if (toolName === "calendar_next") {
+      const result = resultData as {
+        summary?: string;
+        timeLabel?: string;
+        location?: string;
+      } | null;
+      if (!result || !result.summary) {
+        return "Aucun rendez-vous à venir dans votre agenda, Monsieur.";
+      }
+      const loc = result.location ? `, à ${result.location}` : "";
+      return `Votre prochain rendez-vous est "${result.summary}", ${result.timeLabel}${loc}, Monsieur.`;
+    }
+
+    if (toolName === "whatsapp_reply") {
+      const result = resultData as { message?: string } | null;
+      return result?.message || "Message WhatsApp envoyé, Monsieur.";
     }
 
     // Prompt générique pour les autres outils

@@ -36,6 +36,14 @@ interface UseJarvisBrainProps {
   setVisualMode?: (query: string | null, isVisible: boolean) => void;
   stopConversation?: () => void;
   setStatusOverlay?: (data: StatusOverlayData | null) => void;
+  /** Ref stable vers interceptCommand du dialog flow (fournie par JarvisShell) */
+  interceptCommandRef?: React.MutableRefObject<
+    ((text: string) => Promise<{ intercepted: boolean }>) | null
+  >;
+  /** Ref stable vers startWhatsAppFlow du dialog flow (fournie par JarvisShell) */
+  startWhatsAppFlowRef?: React.MutableRefObject<
+    ((recipient: string, recipientRaw: string) => void) | null
+  >;
 }
 
 export function useJarvisBrain(props: UseJarvisBrainProps) {
@@ -48,93 +56,68 @@ export function useJarvisBrain(props: UseJarvisBrainProps) {
     appMemory,
   } = props;
 
+  // ── Tous les useState/useRef en premier (règle des hooks) ──────────────────
   const [commandHistory, setCommandHistory] = useState<CommandInfo[]>([]);
   const [successTrigger, setSuccessTrigger] = useState(0);
   const [lastTokenUsage, setLastTokenUsage] =
     useState<OmniDecision["tokenUsage"]>();
-
-  // Utilisation du routeur d'outils extrait
-  const { executeTool } = useToolExecutor(props);
   const [hudNotifications, setHudNotifications] = useState<TechNotification[]>(
     [],
   );
+
+  // Refs stables pour les callbacks sync
   const addLogRef = React.useRef(addLog);
   const speakRef = React.useRef(speak);
   const addConversationMessageRef = React.useRef(addConversationMessage);
 
+  // Sync refs via useEffect
   React.useEffect(() => {
     addLogRef.current = addLog;
     speakRef.current = speak;
     addConversationMessageRef.current = addConversationMessage;
   }, [addLog, speak, addConversationMessage]);
 
-  // 🔔 NOTIFICATIONS PROACTIVES (SSE)
-  React.useEffect(() => {
-    const sseUrl = "http://localhost:3001/api/events";
-    console.log("[JARVIS BRAIN] Connexion aux évènements proactifs (SSE)...");
-    const eventSource = new EventSource(sseUrl);
+  // ── Hooks personnalisés ──────────────────────────────────────────────────────
 
-    eventSource.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        if (data.type === "CONNECTED") {
-          console.log("[JARVIS BRAIN] SSE Connecté :", data.message);
-          return;
-        }
+  // Utilisation du routeur d'outils extrait
+  // startWhatsAppFlowRef est injecté depuis JarvisShell (via useDialogFlow)
+  const { executeTool } = useToolExecutor({
+    ...props,
+    startWhatsAppFlow: (recipient, recipientRaw) => {
+      props.startWhatsAppFlowRef?.current?.(recipient, recipientRaw);
+    },
+  });
 
-        console.log("🔔 [JARVIS PUSH NOTIFICATION]", data);
-
-        // Si le backend a fourni une phrase précise à prononcer (ex: "Impression terminée")
-        if (data.messageToSpeak) {
-          speakRef.current(data.messageToSpeak, false); // On force la parole (queue=false)
-          addLogRef.current(
-            `Proactive: ${data.messageToSpeak}`,
-            "SYSTEM",
-            "warning",
+  // 🔔 NOTIFICATIONS PROACTIVES — callback appelé par useProactiveEvents (SSE centralisé)
+  // La connexion SSE est gérée UNIQUEMENT dans useProactiveEvents pour éviter le double traitement.
+  const onProactiveEvent = React.useCallback(
+    (type: string, messageToSpeak?: string) => {
+      if (messageToSpeak) {
+        speakRef.current(messageToSpeak, false);
+        addLogRef.current(`Proactive: ${messageToSpeak}`, "SYSTEM", "warning");
+        if (addConversationMessageRef.current) {
+          addConversationMessageRef.current(
+            "model",
+            `(Notification Proactive) ${messageToSpeak}`,
           );
-
-          if (addConversationMessageRef.current) {
-            addConversationMessageRef.current(
-              "model",
-              `(Notification Proactive) ${data.messageToSpeak}`,
-            );
-          }
         }
-
-        // Ajouter au HUD
-        const newNotifId = `push-${Date.now()}`;
-        const newNotif: TechNotification = {
-          id: newNotifId,
-          title: `Alerte ${data.type}`,
-          message: data.messageToSpeak || "Nouvel évènement reçu.",
-          type: "info",
-          timestamp: new Date(),
-        };
-        setHudNotifications((prev) => [...prev, newNotif]);
-
-        // Auto-remove notification after 8 seconds
-        setTimeout(() => {
-          setHudNotifications((prev) =>
-            prev.filter((n) => n.id !== newNotifId),
-          );
-        }, 8000);
-      } catch (err) {
-        console.error("Erreur parsing SSE:", err);
       }
-    };
-
-    eventSource.onerror = (err) => {
-      console.warn(
-        "[JARVIS BRAIN] Erreur connexion SSE, tentative de reconnexion...",
-        err,
-      );
-    };
-
-    return () => {
-      eventSource.close();
-      console.log("[JARVIS BRAIN] SSE Déconnecté.");
-    };
-  }, []);
+      // Ajouter au HUD
+      const newNotifId = `push-${Date.now()}`;
+      const newNotif: TechNotification = {
+        id: newNotifId,
+        title: `Alerte ${type}`,
+        message: messageToSpeak || "Nouvel évènement reçu.",
+        type: "info",
+        timestamp: new Date(),
+      };
+      setHudNotifications((prev) => [...prev, newNotif]);
+      setTimeout(() => {
+        setHudNotifications((prev) => prev.filter((n) => n.id !== newNotifId));
+      }, 8000);
+    },
+    [],
+  );
   // 🌌 QUANTUM OBSERVER (Analyse proactive + Ghost Mode)
   // On ne passe que les commandes réelles de l'utilisateur (pas les prompts internes de bouclage)
   const realUserCommands = React.useMemo(() => {
@@ -176,6 +159,18 @@ export function useJarvisBrain(props: UseJarvisBrainProps) {
   const processCommand = useCallback(
     async (text: string, manualContext?: string) => {
       if (!text.trim()) return;
+
+      // ============================================================
+      // INTERCEPTION DIALOG FLOW (avant Gemini)
+      // Utilise la ref stable injectée depuis JarvisShell
+      // ============================================================
+      if (props.interceptCommandRef?.current) {
+        const dialogResult = await props.interceptCommandRef.current(text);
+        if (dialogResult.intercepted) {
+          setStatus(SystemStatus.IDLE);
+          return;
+        }
+      }
 
       const isInternalPrompt = text.includes(
         "L'action précédente est terminée",
@@ -334,6 +329,7 @@ export function useJarvisBrain(props: UseJarvisBrainProps) {
         setTimeout(() => setSphereMode("IDLE"), 4000);
       }
     },
+
     [
       executeTool,
       addConversationMessage,
@@ -352,6 +348,7 @@ export function useJarvisBrain(props: UseJarvisBrainProps) {
     successTrigger,
     lastTokenUsage,
     hudNotifications,
+    onProactiveEvent,
   };
 }
 

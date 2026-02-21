@@ -74,6 +74,7 @@ export function useVoiceRecognition(
   onTranscript: (text: string) => void,
   onStatusChange?: (listening: boolean) => void,
   onInterimTranscript?: (text: string) => void,
+  onError?: (error: string) => void,
 ): UseVoiceRecognitionReturn {
   const [isListening, setIsListening] = useState(false);
   const [isSupported, setIsSupported] = useState(false);
@@ -210,7 +211,6 @@ export function useVoiceRecognition(
           // Support résultats intermédiaires pour feedback instantané
           let lastInterimTranscript = "";
 
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           recognition.onresult = (event: SpeechRecognitionEvent) => {
             // Récupérer dernier résultat
             const lastResult = event.results[event.results.length - 1];
@@ -270,13 +270,18 @@ export function useVoiceRecognition(
             }
           };
           // Événement : erreur de reconnaissance
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
-            // Ignorer les erreurs "aborted", "no-speech" et "not-allowed" si l'utilisateur n'a pas pu parler
-            if (
+            if (event.error === "not-allowed") {
+              // Micro refusé : notifier l'utilisateur vocalement via callback
+              console.warn("⚠️ Microphone refusé par le navigateur.");
+              if (onError) {
+                onError(
+                  "Accès au microphone refusé, Monsieur. Veuillez l'autoriser dans les paramètres du navigateur.",
+                );
+              }
+            } else if (
               event.error === "aborted" ||
-              event.error === "no-speech" ||
-              event.error === "not-allowed"
+              event.error === "no-speech"
             ) {
               console.warn(
                 `⚠️ Reconnaissance vocale interrompue (${event.error})`,
@@ -299,9 +304,12 @@ export function useVoiceRecognition(
         .catch((error) => {
           console.warn("Permission microphone refusée:", error.message);
           setIsSupported(false);
-          alert(
-            "Veuillez autoriser l'accès au microphone pour utiliser la reconnaissance vocale.",
-          );
+          // Notifier via callback (pas d'alert bloquant)
+          if (onError) {
+            onError(
+              "Accès au microphone refusé. Veuillez l'autoriser dans les paramètres du navigateur.",
+            );
+          }
         });
     } else {
       setIsSupported(false);
@@ -378,7 +386,7 @@ export function useVoiceRecognition(
         console.log("⚡ FORCE RESUME MICROPHONE (Bypass locks)");
         isStartingRef.current = true;
         recognitionRef.current.start();
-      } catch (e) {
+      } catch {
         // Ignorer l'erreur si c'est déjà démarré
         isStartingRef.current = false;
       }

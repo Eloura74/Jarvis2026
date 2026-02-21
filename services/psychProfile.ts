@@ -3,13 +3,13 @@
  * Collecte mood passif + analyse batch Gemini (1x/jour)
  */
 
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenAI } from "@google/genai";
 import { MoodEntry, analyzeMoodHistory } from "../utils/moodAnalyzer";
+import { storageGet, storageSet, STORAGE_KEYS } from "./storageService";
 
 const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || "";
-const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
 
-const STORAGE_KEY = "jarvis-mood-history";
 const MAX_HISTORY_DAYS = 30;
 
 export interface PsychProfile {
@@ -37,21 +37,14 @@ export function recordMood(valence: number, arousal: number): void {
   const cutoff = Date.now() - MAX_HISTORY_DAYS * 24 * 60 * 60 * 1000;
   const filtered = history.filter((entry) => entry.timestamp > cutoff);
 
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(filtered));
+  storageSet(STORAGE_KEYS.MOOD_HISTORY, filtered);
 }
 
 /**
  * Récupère historique mood
  */
 export function getMoodHistory(): MoodEntry[] {
-  const stored = localStorage.getItem(STORAGE_KEY);
-  if (!stored) return [];
-
-  try {
-    return JSON.parse(stored);
-  } catch {
-    return [];
-  }
+  return storageGet<MoodEntry[]>(STORAGE_KEYS.MOOD_HISTORY, []);
 }
 
 /**
@@ -63,8 +56,6 @@ export async function analyzePsychProfile(): Promise<PsychProfile> {
   const basicInsights = analyzeMoodHistory(history);
 
   // Gemini deep analysis
-  const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-
   const prompt = `Analyse ce profil psychologique sur 7 jours:
 
 Mood moyen:
@@ -82,8 +73,11 @@ Fournis en JSON:
 }`;
 
   try {
-    const result = await model.generateContent(prompt);
-    const response = result.response.text();
+    const result = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
+    });
+    const response = result.candidates?.[0]?.content?.parts?.[0]?.text || "";
 
     const jsonMatch = response.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
@@ -118,19 +112,12 @@ Fournis en JSON:
  * Récupère dernière analyse (cache localStorage)
  */
 export function getLastProfile(): PsychProfile | null {
-  const stored = localStorage.getItem("jarvis-psych-profile");
-  if (!stored) return null;
-
-  try {
-    return JSON.parse(stored);
-  } catch {
-    return null;
-  }
+  return storageGet<PsychProfile | null>(STORAGE_KEYS.PSYCH_PROFILE, null);
 }
 
 /**
  * Sauvegarde profile analysé
  */
 export function saveProfile(profile: PsychProfile): void {
-  localStorage.setItem("jarvis-psych-profile", JSON.stringify(profile));
+  storageSet(STORAGE_KEYS.PSYCH_PROFILE, profile);
 }

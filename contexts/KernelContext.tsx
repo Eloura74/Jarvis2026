@@ -1,4 +1,4 @@
-import React, { useState, useCallback, ReactNode } from "react";
+import React, { useState, useCallback, ReactNode, useEffect } from "react";
 import { LogEntry } from "../types";
 import { useSystemStatus } from "../hooks/useSystemStatus";
 import { useAppMemory } from "../hooks/useAppMemory";
@@ -10,6 +10,12 @@ import {
   KernelContextType,
   VoiceSettings,
 } from "./KernelContextDefinition";
+import {
+  storageGet,
+  storageSet,
+  STORAGE_KEYS,
+  runStorageCleanup,
+} from "../services/storageService";
 
 // ========================================
 // PROVIDER
@@ -74,34 +80,34 @@ export const KernelProvider: React.FC<KernelProviderProps> = ({ children }) => {
     [],
   );
 
-  // 6. Paramètres Voix (NOUVEAU)
-  const [voiceSettings, setVoiceSettingsState] = useState<VoiceSettings>(() => {
-    // Charger depuis localStorage si dispo
-    const saved = localStorage.getItem("jarvis_voice_settings");
-    return saved
-      ? JSON.parse(saved)
-      : {
-          voiceURI: null,
-          pitch: 1.0,
-          rate: 1.0,
-          volume: 1.0,
-        };
-  });
+  // Nettoyage localStorage au montage (une seule fois)
+  useEffect(() => {
+    runStorageCleanup();
+  }, []);
+
+  // 6. Paramètres Voix
+  const [voiceSettings, setVoiceSettingsState] = useState<VoiceSettings>(() =>
+    storageGet<VoiceSettings>(STORAGE_KEYS.VOICE_SETTINGS, {
+      voiceURI: null,
+      pitch: 1.0,
+      rate: 1.0,
+      volume: 1.0,
+    }),
+  );
 
   const setVoiceSettings = useCallback((settings: VoiceSettings) => {
     setVoiceSettingsState(settings);
-    localStorage.setItem("jarvis_voice_settings", JSON.stringify(settings));
+    storageSet(STORAGE_KEYS.VOICE_SETTINGS, settings);
   }, []);
 
-  // 7. Gestion du Wake Word (NOUVEAU)
-  const [wakeWordEnabled, setWakeWordEnabledState] = useState<boolean>(() => {
-    const saved = localStorage.getItem("jarvis_wake_word_enabled");
-    return saved !== null ? JSON.parse(saved) : true;
-  });
+  // 7. Gestion du Wake Word
+  const [wakeWordEnabled, setWakeWordEnabledState] = useState<boolean>(() =>
+    storageGet<boolean>(STORAGE_KEYS.WAKE_WORD_ENABLED, true),
+  );
 
   const setWakeWordEnabled = useCallback((enabled: boolean) => {
     setWakeWordEnabledState(enabled);
-    localStorage.setItem("jarvis_wake_word_enabled", JSON.stringify(enabled));
+    storageSet(STORAGE_KEYS.WAKE_WORD_ENABLED, enabled);
   }, []);
 
   // Valeur exposée

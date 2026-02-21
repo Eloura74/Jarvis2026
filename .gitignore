@@ -37,3 +37,7 @@ server/google_credentials.json
 # WhatsApp sessions
 server/.wwebjs_auth/
 server/.wwebjs_cache/
+
+# Cache fichiers générés automatiquement
+server/apps-index.json
+server/data/local_memory_index.json

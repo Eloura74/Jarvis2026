@@ -18,6 +18,7 @@
  */
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import React from "react";
 
 // Types pour Web Speech API (non standard dans TS)
 declare global {
@@ -36,6 +37,10 @@ interface UseWakeWordOptions {
   confidenceThreshold?: number;
   /** Langue de reconnaissance */
   language?: string;
+  /** Ref vers le timestamp de fin de parole de Jarvis (pour bloquer les échos) */
+  lastSpeechEndTimeRef?: React.MutableRefObject<number>;
+  /** Période de sécurité post-parole en ms (défaut: 3500) */
+  speechSafetyPeriodMs?: number;
 }
 
 const DEFAULT_KEYWORDS = ["jarvis", "hey jarvis", "ok jarvis"];
@@ -55,6 +60,8 @@ export function useWakeWord(
     keywords = DEFAULT_KEYWORDS,
     confidenceThreshold = 0.75, // Seuil élevé pour éviter faux positifs (bruit de fond)
     language = "fr-FR",
+    lastSpeechEndTimeRef,
+    speechSafetyPeriodMs = 3500,
   } = options;
 
   const [isEnabled, setIsEnabled] = useState(false);
@@ -130,6 +137,17 @@ export function useWakeWord(
         // Bloquer si Jarvis est en train de parler (évite qu'il s'entende lui-même)
         if (window.speechSynthesis.speaking) return;
 
+        // Bloquer pendant la période de sécurité post-parole (anti-écho)
+        if (lastSpeechEndTimeRef) {
+          const timeSinceSpeech = Date.now() - lastSpeechEndTimeRef.current;
+          if (timeSinceSpeech < speechSafetyPeriodMs) {
+            console.log(
+              `⏳ Wake Word bloqué (écho post-parole: ${timeSinceSpeech}ms < ${speechSafetyPeriodMs}ms)`,
+            );
+            return;
+          }
+        }
+
         if (isWakeWord && confidence >= confidenceThreshold) {
           console.log("✅ WAKE WORD DÉTECTÉ !");
           setLastDetection(new Date());
@@ -170,7 +188,7 @@ export function useWakeWord(
           } catch {
             // console.error("Erreur redémarrage wake word:", error);
           }
-        }, 1000); // 1s de pause avant relance
+        }, speechSafetyPeriodMs); // Aligné sur la période de sécurité anti-écho (3500ms)
       }
     };
 
@@ -203,7 +221,13 @@ export function useWakeWord(
       // console.error("❌ Impossible de démarrer wake word:", error);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [keywordsKey, confidenceThreshold, language, onWakeWordDetected]);
+  }, [
+    keywordsKey,
+    confidenceThreshold,
+    language,
+    onWakeWordDetected,
+    speechSafetyPeriodMs,
+  ]);
   const stopListening = useCallback(() => {
     // 🛑 Arrêt critique : on met le ref à false immédiatement pour bloquer tout restart
     isEnabledRef.current = false;

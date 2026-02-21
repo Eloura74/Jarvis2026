@@ -9,6 +9,7 @@ import { HolographicModal } from "../../components/ui/HolographicModal";
 import { HolographicFleetOverlay } from "../../components/HolographicFleetOverlay";
 import { toasterConfig } from "../../utils/toasterConfig";
 import { TechNotification, StatusOverlayData } from "../../types/app.types";
+import { WhatsAppComposeOverlayPanel } from "../../components/WhatsAppComposeOverlay";
 
 // Force Refresh
 type VisualModeLike = { query: string | null; isVisible: boolean };
@@ -48,6 +49,12 @@ export default function ShellOverlays({
         </HolographicModal>
       ) : statusOverlay?.type === "fleet" ? (
         <HolographicFleetOverlay
+          data={statusOverlay}
+          isVisible={!!statusOverlay}
+          onClose={() => setStatusOverlay(null)}
+        />
+      ) : statusOverlay?.type === ("whatsapp_compose" as string) ? (
+        <WhatsAppComposeOverlayPanel
           data={statusOverlay}
           isVisible={!!statusOverlay}
           onClose={() => setStatusOverlay(null)}

@@ -56,7 +56,6 @@ app.use("/api/commands", commandsRoutes);
 app.use("/api/google", googleRoutes);
 app.use("/api/system", systemRoutes);
 app.use("/api/windows", windowsRoutes);
-app.use("/api/automation", windowsRoutes); // Partagé avec windowsRoutes
 app.use("/api/files", filesRoutes);
 app.use("/api/memory", memoryRoutes);
 app.use("/api/web", webRoutes);
@@ -163,6 +162,8 @@ import { initSphereService } from "./services/sphereService.js";
 import sphereRoutes from "./routes/sphere.js";
 // Import WhatsApp Service
 import { initWhatsAppService } from "./services/whatsappService.js";
+// Import Calendar Reminder Service
+import { startCalendarReminder } from "./services/calendarReminder.js";
 
 // START
 initializeIndex().then(() => {
@@ -172,6 +173,8 @@ initializeIndex().then(() => {
   initSphereService();
   // Init WhatsApp connection
   initWhatsAppService();
+  // Init Calendar Reminder (rappels proactifs)
+  startCalendarReminder();
 
   // Register Sphere Routes
   app.use("/api/sphere", sphereRoutes);

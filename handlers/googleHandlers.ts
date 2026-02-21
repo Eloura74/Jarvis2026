@@ -101,6 +101,88 @@ export async function handleGmailSend(
 }
 
 /**
+ * Retourne le prochain rendez-vous du calendrier
+ * Répond à "quel est mon prochain RDV", "qu'est-ce que j'ai prévu", etc.
+ */
+export async function handleCalendarNext(
+  _args: Record<string, never>,
+  ctx: HandlerContext,
+) {
+  const { addLog } = ctx;
+
+  try {
+    addLog("Recherche du prochain rendez-vous...", "OMNI", "info");
+    const response = await fetch(
+      `http://localhost:3001/api/google/calendar/events?max=1`,
+    );
+    const data = await response.json();
+
+    if (data.error) throw new Error(data.error);
+
+    const events = data.events as Array<{
+      summary: string;
+      start: string;
+      end: string;
+      location?: string;
+    }>;
+
+    if (!events || events.length === 0) {
+      return {
+        status: "success",
+        message: "Aucun rendez-vous à venir dans votre agenda.",
+        data: null,
+      };
+    }
+
+    const next = events[0];
+    const startDate = new Date(next.start);
+    const now = new Date();
+    const diffMs = startDate.getTime() - now.getTime();
+    const diffMin = Math.round(diffMs / 60000);
+
+    let timeLabel = "";
+    if (diffMin < 60) {
+      timeLabel = `dans ${diffMin} minute${diffMin > 1 ? "s" : ""}`;
+    } else if (diffMin < 1440) {
+      const h = Math.floor(diffMin / 60);
+      const m = diffMin % 60;
+      timeLabel = `dans ${h}h${m > 0 ? m : ""}`;
+    } else {
+      timeLabel = startDate.toLocaleDateString("fr-FR", {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    }
+
+    addLog(
+      `📅 Prochain RDV: ${next.summary} (${timeLabel})`,
+      "CALENDAR",
+      "info",
+    );
+
+    return {
+      status: "success",
+      data: { ...next, timeLabel },
+      message: `Prochain rendez-vous : ${next.summary}, ${timeLabel}${next.location ? `, à ${next.location}` : ""}.`,
+    };
+  } catch (error: unknown) {
+    const err = error as Error;
+    const msg = err.message || String(error);
+    addLog(`Erreur Calendar Next: ${msg}`, "SYSTEM", "error");
+    return {
+      status: "error",
+      message:
+        msg.includes("authentifi") || msg.includes("expir")
+          ? "Session Google expirée. Veuillez vous reconnecter."
+          : `Impossible de récupérer le prochain rendez-vous : ${msg}`,
+    };
+  }
+}
+
+/**
  * Liste les évènements du calendrier
  */
 export async function handleCalendarList(

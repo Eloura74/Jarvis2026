@@ -24,6 +24,8 @@ export function useQuantumObserver({
   isEnabled,
   executeTool,
 }: QuantumObserverProps) {
+  // Guard contre undefined lors du HMR (hot module replacement)
+  const safeLogs = logs ?? [];
   // Utiliser le localStorage pour garder trace du dernier scan même après un refresh/HMR
   const lastScanTime = useRef<number>(
     parseInt(localStorage.getItem("jarvis_last_qms_scan") || "0"),
@@ -37,7 +39,7 @@ export function useQuantumObserver({
   const ghostModeIdleThreshold = 900000; // 15 minutes d'inactivité
 
   useEffect(() => {
-    if (!isEnabled) {
+    if (!isEnabled || !logs) {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
         intervalRef.current = null;
@@ -64,10 +66,10 @@ export function useQuantumObserver({
           console.log("🌌 [QMS] Neural Observation heartbeat check...");
           try {
             // On ne scanne que si on a au moins 5 logs
-            if (logs.length < 5) return;
+            if (safeLogs.length < 5) return;
 
             const result = await scanForQuantumLinks(
-              logs.slice(-10),
+              safeLogs.slice(-10),
               currentTask,
             );
             if (result && result.hasSuggestion) {
@@ -96,7 +98,7 @@ export function useQuantumObserver({
       clearTimeout(initialDelay);
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [logs, currentTask, onSuggestion, isEnabled, executeTool]);
+  }, [safeLogs, currentTask, onSuggestion, isEnabled, executeTool]);
 
   // Exposer une méthode pour reset l'inactivité
   const resetInactivity = () => {

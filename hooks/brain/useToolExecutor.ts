@@ -19,6 +19,8 @@ interface ToolExecutorProps {
   setVisualMode?: (query: string | null, isVisible: boolean) => void;
   stopConversation?: () => void;
   setStatusOverlay?: (data: StatusOverlayData | null) => void;
+  /** Callback pour démarrer le flow WhatsApp 2 étapes */
+  startWhatsAppFlow?: (recipient: string, recipientRaw: string) => void;
 }
 
 /**
@@ -36,6 +38,7 @@ export function useToolExecutor({
   setVisualMode,
   stopConversation,
   setStatusOverlay,
+  startWhatsAppFlow,
 }: ToolExecutorProps) {
   const executeTool = useCallback(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -166,11 +169,42 @@ export function useToolExecutor({
                 "Impossible d'activer le mode Ghost (dépendance manquante)",
             };
 
+          // === WHATSAPP ===
+          case "whatsapp_reply": {
+            // Si Gemini a fourni un message, envoi direct (commande complète)
+            // Si pas de message, démarrer le flow 2 étapes
+            if (toolArgs.message && toolArgs.message.trim()) {
+              const { handleWhatsAppReply } =
+                await import("../../handlers/whatsappHandlers");
+              const result = await handleWhatsAppReply(toolArgs, ctx);
+              if (result.status === "success") {
+                speak(`Message envoyé à ${toolArgs.to}, Monsieur.`);
+              } else {
+                speak(
+                  `Désolé, je n'ai pas pu envoyer le message. ${result.message}`,
+                );
+              }
+              return result;
+            } else {
+              // Pas de message : démarrer le flow 2 étapes
+              if (startWhatsAppFlow) {
+                startWhatsAppFlow(toolArgs.to, toolArgs.to);
+              } else {
+                speak(
+                  `Quel message souhaitez-vous envoyer à ${toolArgs.to}, Monsieur ?`,
+                );
+              }
+              return { status: "success", message: "Dialog flow démarré" };
+            }
+          }
+
           // === GOOGLE SERVICES ===
           case "gmail_read":
             return await handlers.handleGmailRead(toolArgs, ctx);
           case "gmail_send":
             return await handlers.handleGmailSend(toolArgs, ctx);
+          case "calendar_next":
+            return await handlers.handleCalendarNext(toolArgs, ctx);
           case "calendar_list":
             return await handlers.handleCalendarList(toolArgs, ctx);
           case "calendar_create":
@@ -378,6 +412,7 @@ export function useToolExecutor({
       updateMemory,
       findApp,
       setStatusOverlay,
+      startWhatsAppFlow,
     ],
   );
 

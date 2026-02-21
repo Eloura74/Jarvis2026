@@ -5,10 +5,10 @@
  * QUOTA SAFE: Max 12 calls/h = 2400 tokens/h
  */
 
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenAI } from "@google/genai";
 
 const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || "";
-const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
 
 export interface GhostAnalysis {
   timestamp: number;
@@ -79,8 +79,6 @@ async function analyzeWithGemini(base64Image: string): Promise<GhostAnalysis> {
   // Extraction header data:image/jpeg;base64,
   const base64Data = base64Image.split(",")[1];
 
-  const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-
   const prompt = `Analyse cette image (Ghost Mode). Soyez BREF, DIRECT et CONCIS.
 Contexte: 1 phrase max pour décrire l'essentiel.
 Action: Ce que l'utilisateur fait (1 phrase).
@@ -93,16 +91,19 @@ Réponds STRICTEMENT en JSON :
   "detectedLanguage": "Langage informatique si visible (sinon null)"
 }`;
 
-  const result = await model.generateContent([
-    prompt,
-    {
-      inlineData: {
-        data: base64Data,
-        mimeType: "image/jpeg",
+  const result = await ai.models.generateContent({
+    model: "gemini-2.5-flash",
+    contents: [
+      {
+        role: "user",
+        parts: [
+          { text: prompt },
+          { inlineData: { data: base64Data, mimeType: "image/jpeg" } },
+        ],
       },
-    },
-  ]);
-  const response = result.response.text();
+    ],
+  });
+  const response = result.candidates?.[0]?.content?.parts?.[0]?.text || "";
 
   try {
     const jsonMatch = response.match(/\{[\s\S]*\}/);

@@ -63,6 +63,7 @@ export function useJarvisInteraction({
     forceResumeListening,
   } = useVoiceRecognition(
     (text) => {
+      // Callback onTranscript — voir ci-dessous
       // 1. GESTION STOP PRIORITAIRE (Barge-in)
       const textLower = text.toLowerCase();
       const STOP_KEYWORDS = [
@@ -189,6 +190,15 @@ export function useJarvisInteraction({
         }
       }
     },
+    // onError : annonce vocale si le micro est refusé par le navigateur
+    (errorMessage) => {
+      addLog(`⚠️ Micro: ${errorMessage}`, "SYSTEM", "error");
+      // Utiliser speechSynthesis directement car rawSpeak n'est pas encore défini ici
+      const utterance = new SpeechSynthesisUtterance(errorMessage);
+      utterance.lang = "fr-FR";
+      utterance.rate = 1.0;
+      window.speechSynthesis.speak(utterance);
+    },
   );
 
   // ========================================
@@ -311,6 +321,11 @@ export function useJarvisInteraction({
     useCallback(() => {
       // Callback vide par sécurité (tout est géré dans le useEffect ci-dessous)
     }, []),
+    {
+      // Partager la ref de fin de parole pour bloquer les échos de Jarvis
+      lastSpeechEndTimeRef: lastSpeechEndTime,
+      speechSafetyPeriodMs: 3500,
+    },
   );
 
   // 🛑 GESTION WAKE WORD DÉTECTÉ (via useEffect pour éviter erreur d'initialisation)
