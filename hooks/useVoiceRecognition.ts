@@ -44,6 +44,8 @@ interface UseVoiceRecognitionReturn {
   toggleListening: () => void;
   /** Arrête l'écoute et attend l'événement onend (résout la race condition asynchrone) */
   stopAndWait: () => Promise<void>;
+  /** Force la réactivation du micro (utile quand le navigateur mute pendant le TTS) */
+  forceResumeListening: () => void;
 }
 
 // Types pour Web Speech API
@@ -270,8 +272,12 @@ export function useVoiceRecognition(
           // Événement : erreur de reconnaissance
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
-            // Ignorer les erreurs "aborted" et "no-speech" qui sont fréquentes/normales
-            if (event.error === "aborted" || event.error === "no-speech") {
+            // Ignorer les erreurs "aborted", "no-speech" et "not-allowed" si l'utilisateur n'a pas pu parler
+            if (
+              event.error === "aborted" ||
+              event.error === "no-speech" ||
+              event.error === "not-allowed"
+            ) {
               console.warn(
                 `⚠️ Reconnaissance vocale interrompue (${event.error})`,
               );
@@ -365,6 +371,20 @@ export function useVoiceRecognition(
     }
   }, [startListening, stopListening]);
 
+  // Méthode : forcer la relance (contourne les refs de sécurité)
+  const forceResumeListening = useCallback(() => {
+    if (recognitionRef.current) {
+      try {
+        console.log("⚡ FORCE RESUME MICROPHONE (Bypass locks)");
+        isStartingRef.current = true;
+        recognitionRef.current.start();
+      } catch (e) {
+        // Ignorer l'erreur si c'est déjà démarré
+        isStartingRef.current = false;
+      }
+    }
+  }, []);
+
   // ========================================
   // MÉTHODE : Arrêt AVEC ATTENTE événement onend
   // ========================================
@@ -418,5 +438,6 @@ export function useVoiceRecognition(
     stopListening,
     toggleListening,
     stopAndWait,
+    forceResumeListening,
   };
 }

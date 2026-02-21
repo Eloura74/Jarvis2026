@@ -54,6 +54,20 @@ export default function JarvisShell({ shouldGreet }: JarvisShellProps) {
         "🟢 APP: HolographicStatusOverlay update requested for:",
         statusOverlay.title,
       );
+    } else {
+      console.log("🟢 APP: Overlay closed, resetting Sphere to IDLE");
+      // 🟣 SPHERE: IDLE when overlay closes
+      fetch("http://localhost:3001/api/sphere/state", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ state: "IDLE" }),
+      }).catch(() => {});
+
+      fetch("http://localhost:3001/api/sphere/mode", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode: "IDLE" }),
+      }).catch(() => {});
     }
   }, [statusOverlay]);
 

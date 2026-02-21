@@ -41,6 +41,8 @@ interface UseVoiceSynthesisOptions {
   rate?: number;
   /** URI de la voix spécifique à utiliser */
   voiceURI?: string | null;
+  /** Callback to forcibly resume listening */
+  forceResumeListening?: () => void;
 }
 
 interface UseVoiceSynthesisReturn {
@@ -60,6 +62,7 @@ export function useVoiceSynthesis({
   pitch = 1.0,
   rate = 1.0,
   voiceURI = null,
+  forceResumeListening,
 }: UseVoiceSynthesisOptions): UseVoiceSynthesisReturn {
   /**
    * Prononce le texte fourni avec la voix J.A.R.V.I.S.-like
@@ -145,6 +148,10 @@ export function useVoiceSynthesis({
       utterance.onstart = () => {
         console.log("🔊 TTS Start:", text.substring(0, 20) + "...");
         onStart?.();
+        // FORCE RESUME MIC HERE IF PROVIDED
+        setTimeout(() => {
+          forceResumeListening?.();
+        }, 100);
         // 🟣 SPHERE: SPEAKING
         fetch("http://localhost:3001/api/sphere/state", {
           method: "POST",
@@ -201,6 +208,7 @@ export function useVoiceSynthesis({
       rate,
       voiceURI,
       processNextInQueue,
+      forceResumeListening,
     ],
   );
 
