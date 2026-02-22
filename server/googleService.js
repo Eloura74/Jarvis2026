@@ -14,6 +14,13 @@ import path from "path";
 const TOKEN_PATH = path.join(process.cwd(), "google_token.json");
 const CREDENTIALS_PATH = path.join(process.cwd(), "google_credentials.json");
 
+// Singleton du client OAuth2 : évite de recréer le client (et ses listeners) à chaque appel
+// Cela empêche l'accumulation de listeners "tokens" qui génèrent des logs répétitifs
+let _oAuth2ClientSingleton = null;
+let _tokenDataCache = null; // Cache en mémoire du token courant
+let _lastTokenLogTime = 0; // Timestamp du dernier log de refresh (throttle)
+const TOKEN_LOG_THROTTLE_MS = 5 * 60 * 1000; // 1 log de refresh max toutes les 5 minutes
+
 /**
  * Charge les credentials depuis le fichier
  */
@@ -34,9 +41,15 @@ export async function saveCredentials(credentials) {
 }
 
 /**
- * Crée un client OAuth2
+ * Crée (ou retourne) le client OAuth2 singleton.
+ * Un seul client est instancié pour toute la durée de vie du serveur.
+ * Cela évite l'accumulation de listeners "tokens" qui génèrent des logs répétitifs
+ * et une fuite mémoire progressive.
  */
 async function getOAuth2Client() {
+  // Retourner le singleton s'il existe déjà
+  if (_oAuth2ClientSingleton) return _oAuth2ClientSingleton;
+
   // 1. Priorité aux variables d'environnement (.env.local)
   const env_id = process.env.GOOGLE_CLIENT_ID;
   const env_secret = process.env.GOOGLE_CLIENT_SECRET;
@@ -45,25 +58,68 @@ async function getOAuth2Client() {
   if (env_id && env_secret) {
     const redirect_uri =
       env_redirect || "http://localhost:3001/api/google/callback";
-    return new google.auth.OAuth2(env_id, env_secret, redirect_uri);
+    _oAuth2ClientSingleton = new google.auth.OAuth2(
+      env_id,
+      env_secret,
+      redirect_uri,
+    );
+  } else {
+    // 2. Fallback sur le fichier JSON (non recommandé mais garde la compatibilité)
+    const raw = await loadCredentials();
+    if (!raw) return null;
+
+    const credentials = raw.web || raw;
+    const client_id = credentials.client_id;
+    const client_secret = credentials.client_secret;
+
+    const redirect_uri =
+      credentials.redirect_uri ||
+      (credentials.redirect_uris && credentials.redirect_uris[0]) ||
+      "http://localhost:3001/api/google/callback";
+
+    if (!client_id || !client_secret) return null;
+
+    _oAuth2ClientSingleton = new google.auth.OAuth2(
+      client_id,
+      client_secret,
+      redirect_uri,
+    );
   }
 
-  // 2. Fallback sur le fichier JSON (non recommandé mais garde la compatibilité)
-  const raw = await loadCredentials();
-  if (!raw) return null;
+  // Enregistrer le listener "tokens" UNE SEULE FOIS sur le singleton
+  // Ce listener est déclenché automatiquement par la lib Google quand un token est rafraîchi
+  _oAuth2ClientSingleton.on("tokens", async (newTokens) => {
+    // Fusionner avec le cache en mémoire pour conserver le refresh_token
+    const merged = { ..._tokenDataCache, ...newTokens };
+    _tokenDataCache = merged;
+    try {
+      await fs.writeFile(TOKEN_PATH, JSON.stringify(merged));
+      // Throttle : log visible seulement si le dernier log date de plus de 5 minutes
+      // Évite le spam de logs à chaque appel Gmail/Calendar
+      const now = Date.now();
+      if (now - _lastTokenLogTime > TOKEN_LOG_THROTTLE_MS) {
+        console.log("🔄 [Google] Token rafraîchi et sauvegardé.");
+        _lastTokenLogTime = now;
+      }
+    } catch (e) {
+      console.error(
+        "❌ [Google] Impossible de sauvegarder le token rafraîchi:",
+        e.message,
+      );
+    }
+  });
 
-  const credentials = raw.web || raw;
-  const client_id = credentials.client_id;
-  const client_secret = credentials.client_secret;
+  return _oAuth2ClientSingleton;
+}
 
-  const redirect_uri =
-    credentials.redirect_uri ||
-    (credentials.redirect_uris && credentials.redirect_uris[0]) ||
-    "http://localhost:3001/api/google/callback";
-
-  if (!client_id || !client_secret) return null;
-
-  return new google.auth.OAuth2(client_id, client_secret, redirect_uri);
+/**
+ * Invalide le singleton OAuth2 (utile après un nouveau setTokenFromCode).
+ * Permet de forcer la recréation du client avec les nouvelles credentials.
+ */
+export function resetOAuth2Client() {
+  _oAuth2ClientSingleton = null;
+  _tokenDataCache = null;
+  _lastTokenLogTime = 0;
 }
 
 /**
@@ -85,66 +141,72 @@ export async function getAuthUrl() {
 }
 
 /**
- * Échange le code contre un token
+ * Échange le code contre un token et réinitialise le singleton.
+ * Appelé lors du callback OAuth2 (/api/google/callback).
  */
 export async function setTokenFromCode(code) {
+  // Réinitialiser le singleton pour forcer la recréation avec les nouvelles credentials
+  resetOAuth2Client();
   const oAuth2Client = await getOAuth2Client();
   const { tokens } = await oAuth2Client.getToken(code);
+  // Sauvegarder le token et mettre à jour le cache mémoire
+  _tokenDataCache = tokens;
   await fs.writeFile(TOKEN_PATH, JSON.stringify(tokens));
+  console.log("✅ [Google] Nouveau token OAuth2 sauvegardé.");
   return tokens;
 }
 
 /**
  * Récupère un client authentifié avec refresh automatique du token.
- * Si l'access_token est expiré, utilise le refresh_token pour en obtenir un nouveau
- * et sauvegarde le token mis à jour sur disque.
+ * Utilise le singleton OAuth2 et le cache mémoire pour éviter les lectures disque répétées.
+ * Le listener "tokens" est enregistré UNE SEULE FOIS sur le singleton (dans getOAuth2Client).
  */
 async function getAuthorizedClient() {
   const oAuth2Client = await getOAuth2Client();
   if (!oAuth2Client) throw new Error("Client non configuré");
 
-  let tokenData;
-  try {
-    const token = await fs.readFile(TOKEN_PATH, "utf8");
-    tokenData = JSON.parse(token);
-  } catch (err) {
-    throw new Error(
-      "Utilisateur non authentifié - veuillez vous connecter via /api/google/auth-url",
-    );
-  }
-
-  oAuth2Client.setCredentials(tokenData);
-
-  // Écouter les nouveaux tokens (refresh automatique par la lib Google)
-  oAuth2Client.on("tokens", async (newTokens) => {
-    // Fusionner avec les tokens existants pour conserver le refresh_token
-    const merged = { ...tokenData, ...newTokens };
+  // Charger le token depuis le cache mémoire ou depuis le disque (1 seule lecture au démarrage)
+  if (!_tokenDataCache) {
     try {
-      await fs.writeFile(TOKEN_PATH, JSON.stringify(merged));
-      console.log("🔄 Token Google rafraîchi et sauvegardé.");
-      tokenData = merged;
-    } catch (e) {
-      console.error(
-        "❌ Impossible de sauvegarder le token rafraîchi:",
-        e.message,
+      const token = await fs.readFile(TOKEN_PATH, "utf8");
+      _tokenDataCache = JSON.parse(token);
+    } catch (err) {
+      throw new Error(
+        "Utilisateur non authentifié - veuillez vous connecter via /api/google/auth-url",
       );
     }
-  });
+  }
+
+  // Appliquer les credentials du cache sur le client singleton
+  oAuth2Client.setCredentials(_tokenDataCache);
 
   // Vérifier si le token est expiré et forcer un refresh si nécessaire
-  const expiryDate = tokenData.expiry_date;
-  const isExpired = expiryDate && Date.now() >= expiryDate - 60000; // 1 min de marge
+  // Marge de 2 minutes pour éviter les erreurs de timing réseau
+  const expiryDate = _tokenDataCache.expiry_date;
+  const isExpired = expiryDate && Date.now() >= expiryDate - 120000;
 
-  if (isExpired && tokenData.refresh_token) {
+  if (isExpired && _tokenDataCache.refresh_token) {
     try {
-      console.log("🔄 Token expiré, tentative de refresh...");
+      // Log throttlé : visible seulement si le dernier log date de plus de 5 minutes
+      const now = Date.now();
+      if (now - _lastTokenLogTime > TOKEN_LOG_THROTTLE_MS) {
+        console.log("🔄 [Google] Token expiré, refresh en cours...");
+      }
       const { credentials } = await oAuth2Client.refreshAccessToken();
-      const merged = { ...tokenData, ...credentials };
+      const merged = { ..._tokenDataCache, ...credentials };
+      // Mettre à jour le cache mémoire ET le fichier disque
+      _tokenDataCache = merged;
       await fs.writeFile(TOKEN_PATH, JSON.stringify(merged));
       oAuth2Client.setCredentials(merged);
-      console.log("✅ Token Google rafraîchi avec succès.");
+      // Log throttlé
+      if (now - _lastTokenLogTime > TOKEN_LOG_THROTTLE_MS) {
+        console.log("✅ [Google] Token rafraîchi avec succès.");
+        _lastTokenLogTime = now;
+      }
     } catch (refreshErr) {
-      console.error("❌ Échec du refresh token:", refreshErr.message);
+      console.error("❌ [Google] Échec du refresh token:", refreshErr.message);
+      // Invalider le cache pour forcer une relecture au prochain appel
+      _tokenDataCache = null;
       throw new Error(
         "Session Google expirée - reconnectez-vous via /api/google/auth-url",
       );

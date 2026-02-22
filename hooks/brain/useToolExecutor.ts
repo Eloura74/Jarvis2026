@@ -375,6 +375,99 @@ export function useToolExecutor({
             return { status: "success", briefing };
           }
 
+          // === MODE VEILLE INTELLIGENTE ===
+          // Commandes vocales : "Jarvis, active le mode veille" / "Jarvis, bonne nuit"
+          case "sleep_mode": {
+            const action = toolArgs.action || "activate";
+            const wakeUpTime = toolArgs.wake_up_time || null;
+            if (action === "activate") {
+              const res = await fetch(
+                "http://localhost:3001/api/sleep/activate",
+                {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ wakeUpTime }),
+                },
+              );
+              const data = await res.json();
+              if (!data.success)
+                speak(`Impossible d'activer la veille : ${data.message}`);
+              return {
+                status: data.success ? "success" : "error",
+                message: data.message,
+              };
+            } else {
+              const res = await fetch(
+                "http://localhost:3001/api/sleep/deactivate",
+                { method: "POST" },
+              );
+              const data = await res.json();
+              return {
+                status: data.success ? "success" : "error",
+                message: data.message,
+              };
+            }
+          }
+
+          // === BRIEFING VOCAL MATINAL ===
+          // Commandes vocales : "Jarvis, donne-moi mon briefing" / "Jarvis, résumé du matin"
+          case "morning_briefing": {
+            const city = toolArgs.city || "Annecy";
+            const res = await fetch(
+              `http://localhost:3001/api/briefing?city=${encodeURIComponent(city)}`,
+            );
+            if (!res.ok) {
+              speak("Désolé Monsieur, je n'ai pas pu générer votre briefing.");
+              return { status: "error", message: `HTTP ${res.status}` };
+            }
+            const briefingData = await res.json();
+            if (briefingData.text) speak(briefingData.text);
+            return { status: "success", data: briefingData };
+          }
+
+          // === SNAPSHOT CAMÉRA HA ===
+          // Commandes vocales : "Jarvis, montre-moi la caméra de la VZ330"
+          case "camera_snapshot": {
+            const webcamUrl = toolArgs.webcam_url;
+            if (!webcamUrl) {
+              speak("Aucune URL de caméra fournie, Monsieur.");
+              return { status: "error", message: "webcam_url manquant" };
+            }
+            const res = await fetch(
+              `http://localhost:3001/api/camera/snapshot?url=${encodeURIComponent(webcamUrl)}`,
+            );
+            if (!res.ok) {
+              const err = await res.json();
+              speak("La caméra est inaccessible pour le moment, Monsieur.");
+              return { status: "error", message: err.error };
+            }
+            const snap = await res.json();
+            // Afficher le snapshot dans l'overlay holographique
+            if (ctx.setStatusOverlay) {
+              ctx.setStatusOverlay({
+                id: `camera-snap-${Date.now()}`,
+                title: toolArgs.printer_name || "Caméra",
+                type: "printer",
+                lastUpdate: new Date().toLocaleTimeString("fr-FR"),
+                image: `data:${snap.mimeType};base64,${snap.base64}`,
+                stats: [
+                  {
+                    label: "Capture",
+                    value: new Date().toLocaleTimeString("fr-FR"),
+                    status: "normal",
+                  },
+                  {
+                    label: "Taille",
+                    value: `${Math.round(snap.sizeBytes / 1024)} Ko`,
+                    status: "normal",
+                  },
+                ],
+              });
+            }
+            speak(`Voici la vue de la caméra, Monsieur.`);
+            return { status: "success", capturedAt: snap.capturedAt };
+          }
+
           // === CONVERSATION CONTROL ===
           case "stop_listening":
             if (ctx.stopConversation) {

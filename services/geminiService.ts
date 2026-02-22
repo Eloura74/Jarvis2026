@@ -411,6 +411,62 @@ const toolDeclarations: FunctionDeclaration[] = [
       required: ["destination"],
     },
   },
+  {
+    name: "sleep_mode",
+    description:
+      "Activate or deactivate intelligent sleep mode (Do Not Disturb). Use when user says 'bonne nuit', 'active la veille', 'mode nuit', 'ne pas déranger', 'réveille-moi à [heure]', 'désactive la veille', 'bonjour'. Action 'activate' suspends non-critical notifications and reduces TTS volume. Action 'deactivate' resumes normal operation.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        action: {
+          type: Type.STRING,
+          description:
+            "'activate' to enable sleep mode, 'deactivate' to disable it.",
+        },
+        wake_up_time: {
+          type: Type.STRING,
+          description:
+            "Optional wake-up time in ISO 8601 format (e.g. '2026-02-23T07:00:00'). If not provided, defaults to 8 hours.",
+        },
+      },
+      required: ["action"],
+    },
+  },
+  {
+    name: "morning_briefing",
+    description:
+      "Generate and speak a complete morning briefing: weather, calendar events, unread emails. Use when user says 'briefing du matin', 'résumé de la journée', 'quoi de neuf ce matin', 'donne-moi mon briefing', 'qu'est-ce que j'ai aujourd'hui'.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        city: {
+          type: Type.STRING,
+          description: "City for weather forecast. Default: 'Annecy'.",
+        },
+      },
+    },
+  },
+  {
+    name: "camera_snapshot",
+    description:
+      "Capture and display a live snapshot from a 3D printer webcam. Use when user says 'montre-moi la caméra de [imprimante]', 'capture la webcam', 'que fait l'imprimante en ce moment visuellement'. The webcam_url must be a local network address.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        webcam_url: {
+          type: Type.STRING,
+          description:
+            "Full webcam URL (e.g. 'http://192.168.1.130/webcam/?action=stream'). Use HA_ENTITIES.PRINTERS webcamUrl values.",
+        },
+        printer_name: {
+          type: Type.STRING,
+          description:
+            "Human-readable printer name for the overlay title (e.g. 'VZ330').",
+        },
+      },
+      required: ["webcam_url"],
+    },
+  },
 ];
 
 // ============================================================================

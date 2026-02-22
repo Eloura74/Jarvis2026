@@ -148,6 +148,43 @@ export function useProactiveEvents({
               setStatusOverlayRef.current(null);
             }, 20000);
           }
+        } else if (type === "SLEEP_MODE") {
+          // Événement déclenché par sleepModeService.js (activation/désactivation veille)
+          console.log(`📥 [SSE] Reçu event SLEEP_MODE:`, data);
+
+          if (data?.active) {
+            // Afficher un overlay discret indiquant que la veille est active
+            setStatusOverlayRef.current({
+              id: `sleep-${Date.now()}`,
+              title: "Mode Veille Activé",
+              type: "system",
+              lastUpdate: new Date().toLocaleTimeString(),
+              stats: [
+                {
+                  label: "Statut",
+                  value: "Ne pas déranger",
+                  status: "normal",
+                  icon: "fas fa-moon",
+                },
+                {
+                  label: "Réveil",
+                  value: data.wakeUpAt
+                    ? new Date(data.wakeUpAt).toLocaleTimeString("fr-FR", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })
+                    : "Manuel",
+                  status: "normal",
+                  icon: "fas fa-clock",
+                },
+              ],
+            });
+            // Fermer l'overlay après 5s (mode veille = interface discrète)
+            setTimeout(() => setStatusOverlayRef.current(null), 5000);
+          } else {
+            // Réveil : fermer tout overlay résiduel
+            setStatusOverlayRef.current(null);
+          }
         }
       } catch (err) {
         console.error("❌ Erreur parsing SSE dans useProactiveEvents:", err);

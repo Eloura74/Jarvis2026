@@ -42,6 +42,9 @@ import bambuRoutes from "./routes/bambu.js";
 import weatherRoutes from "./routes/weather.js";
 import eventsRoutes from "./routes/events.js";
 import whatsappRoutes from "./routes/whatsapp.js";
+import sleepRoutes from "./routes/sleep.js";
+import briefingRoutes from "./routes/briefing.js";
+import cameraRoutes from "./routes/camera.js";
 
 const app = express();
 const PORT = 3001;
@@ -64,6 +67,9 @@ app.use("/api/bambu", bambuRoutes); // Bambu MQTT proxy
 app.use("/api/weather", weatherRoutes); // Weather Proxy
 app.use("/api/events", eventsRoutes); // Jarvis Push Notifications
 app.use("/api/whatsapp", whatsappRoutes); // WhatsApp Auth and Status
+app.use("/api/sleep", sleepRoutes); // Mode Veille Intelligente
+app.use("/api/briefing", briefingRoutes); // Briefing Vocal Matinal
+app.use("/api/camera", cameraRoutes); // Snapshots Webcam HA
 
 // Index des applications (chargé en mémoire)
 let appsIndex = [];

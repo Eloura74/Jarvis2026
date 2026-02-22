@@ -19,6 +19,7 @@ import ShellOverlays from "./overlays/ShellOverlays";
 import ShellPanels from "./overlays/ShellPanels";
 import { useProactiveEvents } from "../hooks/useProactiveEvents";
 import { useDialogFlow } from "../hooks/useDialogFlow";
+import { useHACameraRefresh } from "../hooks/useHACameraRefresh";
 
 export interface JarvisShellProps {
   shouldGreet?: boolean;
@@ -184,6 +185,15 @@ export default function JarvisShell({ shouldGreet }: JarvisShellProps) {
     enabled: true,
     status,
     interaction,
+  });
+
+  // Rafraîchissement automatique des données HA (caméras + températures imprimantes)
+  // Actif uniquement quand un overlay de type "printer" ou "fleet" est affiché
+  // Intervalle : 10s — arrêt automatique quand l'overlay est fermé
+  useHACameraRefresh({
+    currentOverlay: statusOverlay,
+    setStatusOverlay,
+    enabled: true,
   });
 
   const premiumStatus =

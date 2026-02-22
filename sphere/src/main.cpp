@@ -90,6 +90,18 @@ const int CY = 120;
 static float g_phase = 0.0f;
 static uint32_t ms_time = 0;
 
+// ================== VARIABLES VEILLE ==================
+// Phase lente indépendante pour le breathing du screensaver (~8s par cycle)
+static float g_sleep_phase = 0.0f;
+// Couleur de drift chromatique propre à la veille (évolue très lentement)
+static uint16_t g_sleep_color = 0;
+// Positions des particules de poussière flottantes (8 particules)
+struct DustParticle { float angle; float radius; float speed; float size; };
+static DustParticle g_dust[8];
+static bool g_dust_init = false;
+// Timestamp d'entrée en screensaver (pour le framerate adaptatif)
+static unsigned long g_screensaver_start = 0;
+
 // ================== MOTEUR 3D & BUFFER ==================
 struct Point3D { float x, y, z; };
 struct ProjPoint { int x, y; float z; };
@@ -98,6 +110,18 @@ struct ProjPoint { int x, y; float z; };
 const int SPHERE_NODES = 450; 
 Point3D sphereBase[SPHERE_NODES]; 
 ProjPoint renderBuffer[SPHERE_NODES]; 
+
+// Initialise les particules de poussière flottantes avec des positions pseudo-aléatoires
+// Appelé une seule fois au premier passage en MODE_SCREENSAVER
+void initDustParticles() {
+  // Positions distribuées uniformément autour de la sphère
+  for (int i = 0; i < 8; i++) {
+    g_dust[i].angle  = (i / 8.0f) * 2.0f * PI + (i * 0.37f); // Décalage pseudo-aléatoire
+    g_dust[i].radius = 92.0f + (i % 3) * 8.0f;               // Orbites légèrement différentes
+    g_dust[i].speed  = 0.0008f + (i % 4) * 0.0003f;          // Vitesses très lentes
+    g_dust[i].size   = (i % 2 == 0) ? 1 : 2;                 // Taille alternée
+  }
+}
 
 void init3DGeometry() {
     float phi = PI * (3.0f - sqrt(5.0f)); 
@@ -281,9 +305,19 @@ void updateLogic() {
     if (previous_state != OrbState::IDLE && previous_state != OrbState::MODE_SCREENSAVER) {
       idleStartTime = millis(); 
     } else if (millis() - idleStartTime > 30000) {
+      // Première entrée en screensaver : initialiser les variables de veille
+      if (previous_state == OrbState::IDLE) {
+        g_screensaver_start = millis();
+        g_sleep_color = COL_CYAN;
+        if (!g_dust_init) { initDustParticles(); g_dust_init = true; }
+      }
       local_state = OrbState::MODE_SCREENSAVER; 
     }
   } else {
+    // Retour d'activité : réinitialiser le flag pour la prochaine veille
+    if (previous_state == OrbState::MODE_SCREENSAVER) {
+      g_dust_init = false;
+    }
     idleStartTime = millis(); 
   }
 
@@ -311,7 +345,9 @@ void updateLogic() {
         case OrbState::MODE_GHOST: target_radius= 10.0f; target_speed = 0.01f; target_color = COL_GREY; break;
         case OrbState::MODE_MEDIA: target_radius= 20.0f; target_speed = 0.10f; target_color = COL_PINK; break;
         case OrbState::MODE_SUCCESS:target_radius=0.0f;  target_speed = 0.05f; target_color = COL_GREEN; break;
-        case OrbState::MODE_SCREENSAVER: target_radius= 0.0f; target_speed = 0.015f; target_color = COL_CYAN; break;
+        // En veille : vitesse de base très lente, la sphère 3D est éteinte (radius=0)
+        // Le breathing est géré indépendamment dans renderModeScreensaver()
+        case OrbState::MODE_SCREENSAVER: target_radius= 0.0f; target_speed = 0.012f; target_color = COL_CYAN; break;
         case OrbState::MODE_WHATSAPP: target_radius= 10.0f; target_speed = 0.06f; target_color = COL_GREEN; break;
         case OrbState::MODE_GMAIL:    target_radius= 5.0f;  target_speed = 0.07f; target_color = COL_RED; break;
         case OrbState::MODE_CALENDAR: target_radius= 5.0f;  target_speed = 0.05f; target_color = COL_CYAN; break;
@@ -560,112 +596,176 @@ void renderModeMatrix() {
 }
 
 void renderModeScreensaver() {
-  // 1. Noyau d'énergie central (identique à la vidéo cible)
-  float corePulse = (sin(g_phase * 2.0f) + 1.0f) * 0.5f; 
-  drawGlow(CX, CY, 15 + corePulse * 5, COL_OMNI_BLUE, 25);
-  spr.fillCircle(CX, CY, 4 + corePulse * 2, COL_WHITE);
-  spr.fillCircle(CX, CY, 6 + corePulse * 2, lerpColor(COL_CYAN, COL_BG, 0.6f));
+  // ══════════════════════════════════════════════════════════════════════════
+  // SPHÈRE FILAIRE 3D HOLOGRAPHIQUE — VEILLE INTELLIGENTE
+  // ──────────────────────────────────────────────────────────────────────────
+  // Principe : sphère filaire avec latitudes + longitudes elliptiques projetées
+  // en perspective, rotation lente sur Y, inclinaison caméra fixe sur X.
+  // Coût CPU : ~9 drawEllipse + 2 drawCircle + quelques drawLine = très léger.
+  // ══════════════════════════════════════════════════════════════════════════
 
-  float R = 85.0f;          // Rayon de la sphère
-  float tiltX = 0.35f;      // Inclinaison caméra (Pitch) pour voir le volume
-  float cosX = cos(tiltX);
-  float sinX = sin(tiltX);
+  // ── 1. PHASE & BREATHING ──────────────────────────────────────────────────
+  // g_sleep_phase avance indépendamment de g_phase (pas d'accélération au réveil)
+  g_sleep_phase += 0.006f;
+  // breath : 0.0 (expire, ~4s) → 1.0 (inspire, ~4s), sinusoïde douce
+  float breath = (sin(g_sleep_phase) + 1.0f) * 0.5f;
 
-  spr.drawCircle(CX, CY, R + 10, rgb565(5, 15, 25)); // Léger halo externe
+  // ── 2. DRIFT CHROMATIQUE LENT ─────────────────────────────────────────────
+  // Cycle ~90s : cyan glacial → bleu roi → indigo → retour
+  float cc = (sin(g_sleep_phase * 0.07f) + 1.0f) * 0.5f;
+  // Couleur principale : cyan froid (veille) → bleu profond (veille profonde)
+  uint8_t cr = (uint8_t)(cc * 40);
+  uint8_t cg = (uint8_t)(120 + cc * 80);
+  uint8_t cb = (uint8_t)(200 + cc * 55);
+  g_sleep_color = rgb565(cr, cg, cb);
+  // Variante lumineuse pour les éléments au premier plan
+  uint16_t colBright = lerpColor(g_sleep_color, COL_WHITE, 0.35f + breath * 0.25f);
+  // Variante sombre pour la face arrière (effet de profondeur)
+  uint16_t colDark   = lerpColor(COL_BG, g_sleep_color, 0.18f);
+  // Couleur de l'anneau équatorial (toujours plus lumineuse)
+  uint16_t colEquator = lerpColor(g_sleep_color, COL_WHITE, 0.55f + breath * 0.3f);
 
-  // 4 ondes x 110 points = 440 points (Rentrent dans le renderBuffer de 450 sans allocation)
-  const int num_waves = 4;
-  const int points_per_wave = 110; 
+  // ── 3. PARAMÈTRES GÉOMÉTRIQUES ────────────────────────────────────────────
+  // Rayon 3D de la sphère, pulsé par la respiration (80 → 88px)
+  float R = 80.0f + breath * 8.0f;
+  // Angle de rotation Y lent (1 tour en ~210s à 30FPS)
+  float rotY = g_phase * 0.012f;
+  // Inclinaison caméra X fixe : on voit le pôle nord à ~20°
+  const float cosTX  = 0.928f;  // cos(0.38) précalculé
+  const float sinTX  = 0.371f;  // sin(0.38) précalculé
 
-  // ETAPE 1 : Calcul et Projection Mathématique (Entrecroisement)
-  int idx = 0;
-  for (int w = 0; w < num_waves; w++) {
-      float freq = 2.0f + (w * 1.5f);        // Fréquences différentes = entrelacement
-      float speed = 0.8f + (w * 0.3f);       // Vitesses différentes
-      if (w % 2 == 1) speed = -speed;        // Sens de rotation alterné
-      
-      float amp = 0.4f + (w * 0.1f);         // Amplitude de la vague (très haute)
+  // ── 4. OMBRE PORTÉE AU SOL ────────────────────────────────────────────────
+  // Ellipse sombre sous la sphère — donne instantanément l'impression de volume
+  // Rayon X = R, rayon Y = R * 0.18 (très aplati), décalé vers le bas
+  int shadowY  = CY + (int)(R * 0.72f);
+  int shadowRx = (int)(R * 0.88f);
+  int shadowRy = (int)(R * 0.13f);
+  // Dégradé de l'ombre : 3 ellipses concentriques de plus en plus sombres
+  spr.drawEllipse(CX, shadowY, shadowRx + 4, shadowRy + 2, lerpColor(COL_BG, g_sleep_color, 0.06f));
+  spr.drawEllipse(CX, shadowY, shadowRx + 2, shadowRy + 1, lerpColor(COL_BG, g_sleep_color, 0.10f));
+  spr.drawEllipse(CX, shadowY, shadowRx,     shadowRy,     lerpColor(COL_BG, g_sleep_color, 0.14f));
 
-      for (int i = 0; i < points_per_wave; i++) {
-          float theta = (i / (float)points_per_wave) * 2.0f * PI; 
-          float active_theta = theta + g_phase * speed; 
-
-          // Formule clé : toutes les ondes oscillent autour de 0 (équateur)
-          float phi = sin(theta * freq + g_phase * (speed * 1.5f)) * amp;
-
-          // Sphérique vers Cartésien
-          float bx = R * cos(phi) * cos(active_theta);
-          float by = R * sin(phi);
-          float bz = R * cos(phi) * sin(active_theta);
-
-          // Application de la caméra
-          float y = by * cosX - bz * sinX;
-          float z = by * sinX + bz * cosX;
-          float x = bx;
-
-          // Projection Perspective
-          float perspective = 200.0f / (200.0f + z);
-          renderBuffer[idx].x = CX + (int)(x * perspective);
-          renderBuffer[idx].y = CY + (int)(y * perspective);
-          renderBuffer[idx].z = z;
-          idx++;
-      }
+  // ── 5. HALO ATMOSPHÉRIQUE DE FOND ─────────────────────────────────────────
+  // Lueur très douce derrière la sphère, pulse avec la respiration
+  // 4 cercles concentriques du bord vers le centre (dégradé radial)
+  for (int r = (int)(R + 22); r > (int)(R + 4); r -= 6) {
+    float f = 1.0f - ((float)(r - R - 4) / 18.0f);
+    spr.drawCircle(CX, CY, r, lerpColor(COL_BG, g_sleep_color, f * f * (0.06f + breath * 0.05f)));
   }
 
-  // ETAPE 2 : Rendu Arrière (Z > 0)
-  // Dessin de pixels sombres isolés (pas de lignes) pour la face arrière, comme la vidéo
-  uint16_t backCol = lerpColor(COL_BG, COL_BLUE, 0.3f);
-  for (int i = 0; i < num_waves * points_per_wave; i++) {
-      if (renderBuffer[i].z > 0) {
-          spr.drawPixel(renderBuffer[i].x, renderBuffer[i].y, backCol);
-      }
+  // ── 6. SPHÈRE FILAIRE : LATITUDES (cercles horizontaux) ───────────────────
+  // 7 latitudes de -60° à +60° (pas de pôles pour garder l'aspect épuré).
+  // Chaque latitude est projetée en ellipse via la caméra inclinée.
+  // Formule : un cercle à latitude phi_lat a rayon r_lat = R*cos(phi_lat)
+  // et centre Y décalé de R*sin(phi_lat) sur l'axe Y monde.
+  // Après rotation caméra X : centre_y_proj = R*sin(phi_lat)*cosTX
+  //                            demi-axe_y    = r_lat * cosTX (raccourcissement)
+  //                            demi-axe_x    = r_lat (inchangé, rotation Y pure)
+  // La perspective est approximée par un facteur global au centre de la latitude.
+  const int NUM_LAT = 7;
+  // Latitudes en radians : -60°, -40°, -20°, 0°(équateur), +20°, +40°, +60°
+  const float lats[NUM_LAT] = { -1.047f, -0.698f, -0.349f, 0.0f, 0.349f, 0.698f, 1.047f };
+
+  for (int li = 0; li < NUM_LAT; li++) {
+    float phi_lat = lats[li];
+    float cosL = cos(phi_lat);
+    float sinL = sin(phi_lat);
+
+    // Rayon du cercle à cette latitude
+    float r_lat = R * cosL;
+
+    // Centre Y monde de cette latitude après inclinaison caméra X
+    float cy_world = R * sinL;
+    float cy_cam   = cy_world * cosTX;  // composante Y après rotation caméra
+    float cz_cam   = cy_world * sinTX;  // composante Z (profondeur) après rotation
+
+    // Facteur de perspective au centre de cette latitude
+    float persp = 200.0f / (200.0f + cz_cam);
+
+    // Demi-axes de l'ellipse projetée
+    int rx = (int)(r_lat * persp);                  // axe X inchangé par la rotation Y
+    int ry = (int)(r_lat * cosTX * persp);          // axe Y raccourci par l'inclinaison
+    int cy_screen = CY + (int)(cy_cam * persp);     // centre Y à l'écran
+
+    if (rx < 2 || ry < 1) continue;  // trop petit, skip
+
+    // Luminosité : équateur = max, pôles = min + modulation breathing
+    float latBright = 1.0f - abs(phi_lat) / 1.2f;
+    float bright = latBright * (0.45f + breath * 0.35f);
+
+    bool isEquator = (li == 3);
+    uint16_t latCol = isEquator
+      ? colEquator
+      : lerpColor(colDark, colBright, bright);
+
+    if (isEquator) {
+      // Équateur triple trait : effet néon holographique
+      spr.drawEllipse(CX, cy_screen, rx,     ry,     latCol);
+      spr.drawEllipse(CX, cy_screen, rx + 1, ry,     lerpColor(COL_BG, latCol, 0.6f));
+      spr.drawEllipse(CX, cy_screen, rx - 1, ry - 1, lerpColor(COL_BG, latCol, 0.5f));
+    } else {
+      spr.drawEllipse(CX, cy_screen, rx, ry, latCol);
+    }
   }
 
-  // ETAPE 3 : Rendu Avant (Z <= 0) - Création du ruban d'énergie dense
-  for (int w = 0; w < num_waves; w++) {
-      int offset = w * points_per_wave;
-      for (int i = 0; i < points_per_wave; i++) {
-          int current = offset + i;
-          
-          if (renderBuffer[current].z <= 0) {
-              float depth = abs(renderBuffer[current].z) / R; 
-              if (depth > 1.0f) depth = 1.0f;
-              
-              uint16_t c = lerpColor(COL_CYAN, COL_WHITE, depth);
-              
-              // Nœud épais
-              if (depth > 0.6f) {
-                  spr.fillCircle(renderBuffer[current].x, renderBuffer[current].y, 2, c);
-              } else {
-                  spr.fillCircle(renderBuffer[current].x, renderBuffer[current].y, 1, c);
-              }
+  // ── 7. MÉRIDIENS ──────────────────────────────────────────────────────────
+  // 6 méridiens espacés de 30°, tournent avec rotY.
+  // Face avant (cosinus > 0) = lumineux, face arrière = très sombre → volume.
+  const int NUM_MER = 6;
+  for (int mi = 0; mi < NUM_MER; mi++) {
+    float merAngle = rotY + (mi * PI / NUM_MER);
+    float cosMer = cos(merAngle);
+    float sinMer = sin(merAngle);
+    // Demi-axe X : largeur apparente selon l'angle de vue + perspective
+    float pz_mer = R * sinMer * sinTX;
+    float persp_mer = 200.0f / (200.0f + pz_mer);
+    int rx = (int)(abs(cosMer) * R * persp_mer);
+    int ry = (int)(R * cosTX * persp_mer);
+    if (rx < 1 || ry < 1) continue;
 
-              // Connecter au point précédent pour créer le ruban d'énergie continu
-              if (i > 0) {
-                  int prev = current - 1;
-                  // Si le point précédent est aussi devant, on trace la ligne
-                  if (renderBuffer[prev].z <= 0) {
-                      spr.drawLine(renderBuffer[prev].x, renderBuffer[prev].y, renderBuffer[current].x, renderBuffer[current].y, c);
-                      // Doubler la ligne au centre pour accentuer l'épaisseur de la vague
-                      if (depth > 0.5f) {
-                          spr.drawLine(renderBuffer[prev].x, renderBuffer[prev].y+1, renderBuffer[current].x, renderBuffer[current].y+1, c);
-                      }
-                  }
-              }
-              // Relier la fin de la boucle au début pour fermer le ruban
-              if (i == points_per_wave - 1) {
-                  int prev = offset; 
-                  if (renderBuffer[prev].z <= 0) {
-                      spr.drawLine(renderBuffer[prev].x, renderBuffer[prev].y, renderBuffer[current].x, renderBuffer[current].y, c);
-                  }
-              }
-          }
-      }
+    bool isFront = (cosMer > 0.0f);
+    float merBright = isFront
+      ? (0.28f + abs(cosMer) * 0.38f) * (0.5f + breath * 0.3f)
+      : 0.07f;
+    spr.drawEllipse(CX, CY, rx, ry, lerpColor(COL_BG, g_sleep_color, merBright));
+  }
+
+  // ── 8. CONTOUR SPHÉRIQUE + REFLET SPÉCULAIRE ──────────────────────────────
+  // Silhouette = cercle parfait. Double trait pour l'épaisseur.
+  int Ri = (int)R;
+  spr.drawCircle(CX, CY, Ri,     lerpColor(COL_BG, g_sleep_color, 0.55f + breath * 0.25f));
+  spr.drawCircle(CX, CY, Ri + 1, lerpColor(COL_BG, g_sleep_color, 0.22f + breath * 0.10f));
+  // Reflet spéculaire haut-gauche (source lumière fictive) : arc très fin
+  uint16_t specCol = lerpColor(COL_BG, COL_WHITE, 0.20f + breath * 0.15f);
+  spr.drawArc(CX - 8, CY - 8, Ri - 2, Ri - 4, 300, 360, specCol);
+  spr.drawArc(CX - 8, CY - 8, Ri - 2, Ri - 4, 0,   30,  specCol);
+
+  // ── 9. NOYAU CENTRAL PULSANT ──────────────────────────────────────────────
+  int coreR = (int)(2 + breath * 3);
+  spr.drawCircle(CX, CY, coreR + 6, lerpColor(COL_BG, g_sleep_color, 0.18f + breath * 0.14f));
+  spr.drawCircle(CX, CY, coreR + 3, lerpColor(COL_BG, g_sleep_color, 0.32f + breath * 0.18f));
+  spr.fillCircle(CX, CY, coreR,     lerpColor(g_sleep_color, COL_WHITE, breath * 0.80f));
+
+  // ── 10. PARTICULES ORBITALES ───────────────────────────────────────────────
+  // 8 particules sur orbite elliptique inclinée — coût : 8 × fillCircle(r≤2)
+  for (int i = 0; i < 8; i++) {
+    g_dust[i].angle += g_dust[i].speed;
+    float da = g_dust[i].angle;
+    float dr = g_dust[i].radius;
+    float px =  cos(da) * dr;
+    float pz =  sin(da) * dr * 0.4f;
+    float py_cam = -pz * sinTX;
+    float pz_cam =  pz * cosTX;
+    float persp  = 200.0f / (200.0f + pz_cam);
+    int sx = CX + (int)(px * persp);
+    int sy = CY + (int)(py_cam * persp);
+    float pBright = (pz_cam < 0) ? (0.28f + breath * 0.18f) : 0.07f;
+    spr.fillCircle(sx, sy, g_dust[i].size, lerpColor(COL_BG, g_sleep_color, pBright));
   }
 }
 
 void renderModeGhost() {
-  spr.fillCircle(CX, CY, 55 + sin(g_phase)*5, COL_DARK); 
+  spr.fillCircle(CX, CY, 55 + sin(g_phase)*5, COL_DARK);
   spr.fillArc(CX, CY, 110, 108, 0, 360, rgb565(30,30,30));
   for(int x=-60; x<60; x+=3) { int y = CY + sin(x*0.2f + g_phase)*15; spr.drawPixel(CX+x, y, COL_GREY); }
 }
@@ -775,12 +875,20 @@ void renderModeCalendar() {
 
 void renderTask(void *pvParameters) {
   // OPTIMISATION THERMIQUE : Framerate verrouillé à ~30 FPS (33ms)
-  const TickType_t xFrequency = pdMS_TO_TICKS(33); 
+  // Framerate de base : 30 FPS (33ms). En veille profonde (>2min), réduit à 15 FPS
+  // pour diminuer la charge thermique de l'ESP32-S3
   TickType_t xLastWakeTime = xTaskGetTickCount();
 
   for (;;) {
     ms_time = millis();
     updateLogic();
+
+    // Framerate adaptatif : 15 FPS en veille profonde (>2 min), 30 FPS sinon
+    // Réduit la dissipation thermique sans impacter la fluidité en mode actif
+    bool deepSleep = (local_state == OrbState::MODE_SCREENSAVER)
+                     && (millis() - g_screensaver_start > 120000UL);
+    TickType_t xFrequency = pdMS_TO_TICKS(deepSleep ? 66 : 33);
+
     spr.fillScreen(COL_BG); 
     
     switch (local_state) { 
