@@ -66,42 +66,12 @@ export function initWhatsAppService() {
     qrCodeData = null;
     broadcastEvent("WHATSAPP_STATUS", { status: "CONNECTED" });
 
-    // Log automatique des alias configurés et des contacts homonymes pour debug
+    // Afficher un résumé des alias configurés (sans spam de contacts)
     try {
       const aliases = loadWhatsAppAliases();
-      const contacts = await client.getContacts();
-
-      // Afficher les alias configurés
       const aliasKeys = Object.keys(aliases);
       if (aliasKeys.length > 0) {
-        console.log("📋 [WHATSAPP] Alias configurés :");
-        for (const [alias, target] of Object.entries(aliases)) {
-          console.log(`   "${alias}" → "${target}"`);
-        }
-      }
-
-      // Détecter les prénoms en doublon pour aider à configurer les alias
-      const firstNameMap = {};
-      for (const c of contacts) {
-        const name = (c.name || c.pushname || "").trim();
-        if (!name) continue;
-        const firstName = name.split(/\s+/)[0].toLowerCase();
-        if (!firstNameMap[firstName]) firstNameMap[firstName] = [];
-        firstNameMap[firstName].push({ name, id: c.id._serialized });
-      }
-      const duplicates = Object.entries(firstNameMap).filter(
-        ([, list]) => list.length > 1,
-      );
-      if (duplicates.length > 0) {
-        console.log(
-          "⚠️  [WHATSAPP] Contacts avec prénom en doublon (configurez des alias) :",
-        );
-        for (const [firstName, list] of duplicates) {
-          console.log(`   Prénom "${firstName}" :`);
-          for (const c of list) {
-            console.log(`     - "${c.name}" → ID: ${c.id}`);
-          }
-        }
+        console.log(`📋 [WHATSAPP] ${aliasKeys.length} alias configuré(s).`);
       }
     } catch {
       // Non bloquant
