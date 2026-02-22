@@ -20,6 +20,9 @@ let _oAuth2ClientSingleton = null;
 let _tokenDataCache = null; // Cache en mémoire du token courant
 let _lastTokenLogTime = 0; // Timestamp du dernier log de refresh (throttle)
 const TOKEN_LOG_THROTTLE_MS = 5 * 60 * 1000; // 1 log de refresh max toutes les 5 minutes
+// Flag levé après un invalid_grant : stoppe toutes les tentatives automatiques
+// jusqu'à ce qu'une nouvelle authentification soit effectuée via setTokenFromCode
+let _authRevoked = false;
 
 /**
  * Charge les credentials depuis le fichier
@@ -120,6 +123,15 @@ export function resetOAuth2Client() {
   _oAuth2ClientSingleton = null;
   _tokenDataCache = null;
   _lastTokenLogTime = 0;
+  _authRevoked = false;
+}
+
+/**
+ * Retourne true si l'authentification Google est révoquée (invalid_grant).
+ * Permet aux services périodiques (calendarReminder, etc.) de s'auto-suspendre.
+ */
+export function isAuthRevoked() {
+  return _authRevoked;
 }
 
 /**
@@ -145,7 +157,7 @@ export async function getAuthUrl() {
  * Appelé lors du callback OAuth2 (/api/google/callback).
  */
 export async function setTokenFromCode(code) {
-  // Réinitialiser le singleton pour forcer la recréation avec les nouvelles credentials
+  // Réinitialiser le singleton ET le flag de révocation pour permettre la reconnexion
   resetOAuth2Client();
   const oAuth2Client = await getOAuth2Client();
   const { tokens } = await oAuth2Client.getToken(code);
@@ -162,6 +174,14 @@ export async function setTokenFromCode(code) {
  * Le listener "tokens" est enregistré UNE SEULE FOIS sur le singleton (dans getOAuth2Client).
  */
 async function getAuthorizedClient() {
+  // Si le token est révoqué (invalid_grant), bloquer immédiatement sans log
+  // Les services périodiques doivent appeler isAuthRevoked() pour s'auto-suspendre
+  if (_authRevoked) {
+    throw new Error(
+      "Session Google expirée - reconnectez-vous via /api/google/auth-url",
+    );
+  }
+
   const oAuth2Client = await getOAuth2Client();
   if (!oAuth2Client) throw new Error("Client non configuré");
 
@@ -205,7 +225,14 @@ async function getAuthorizedClient() {
       }
     } catch (refreshErr) {
       console.error("❌ [Google] Échec du refresh token:", refreshErr.message);
-      // Invalider le cache pour forcer une relecture au prochain appel
+      // Si invalid_grant : le refresh token est définitivement révoqué
+      // Lever le flag pour stopper toutes les tentatives automatiques futures
+      if (refreshErr.message?.includes("invalid_grant")) {
+        _authRevoked = true;
+        console.error(
+          "🔒 [Google] Token révoqué (invalid_grant). Reconnexion requise : /api/google/auth-url",
+        );
+      }
       _tokenDataCache = null;
       throw new Error(
         "Session Google expirée - reconnectez-vous via /api/google/auth-url",

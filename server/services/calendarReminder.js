@@ -6,7 +6,7 @@
  * Évite les doublons grâce à un Set des IDs déjà notifiés.
  */
 
-import { listEvents } from "../googleService.js";
+import { listEvents, isAuthRevoked } from "../googleService.js";
 import { broadcastEvent } from "../routes/events.js";
 
 // IDs des événements déjà notifiés (évite les doublons)
@@ -37,6 +37,10 @@ function formatTimeUntil(ms) {
  * Vérifie les événements à venir et envoie des rappels SSE
  */
 async function checkUpcomingEvents() {
+  // Si le token Google est révoqué (invalid_grant), ne pas tenter d'appel API
+  // Le service reprendra automatiquement après une nouvelle authentification
+  if (isAuthRevoked()) return;
+
   try {
     // Récupérer les 10 prochains événements
     const events = await listEvents(10);
