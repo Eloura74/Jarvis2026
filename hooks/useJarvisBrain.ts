@@ -5,6 +5,7 @@
 import React, { useState, useCallback } from "react";
 import { streamCommand } from "../services/geminiService";
 import { trackCommand } from "../services/predictionEngine";
+import { getHistoryForGemini } from "../services/conversationContext";
 import {
   CommandInfo,
   StatusOverlayData,
@@ -199,127 +200,162 @@ export function useJarvisBrain(props: UseJarvisBrainProps) {
           manualContext ||
           (getConversationContext ? getConversationContext() : "");
 
+        // Récupérer l'historique natif Gemini Content[] AVANT d'ajouter le message courant.
+        // On exclut les prompts internes de bouclage (L'action précédente est terminée)
+        // pour ne pas polluer le contexte avec des artefacts système.
+        const geminiHistory = isInternalPrompt ? [] : getHistoryForGemini(8);
+
         let hasSpokenSummary = false;
         let toolCount = 0;
+        // Accumuler le texte complet de la réponse modèle pour l'historique.
+        // On NE sauvegarde PAS les chunks individuels (addConversationMessage dans onTextChunk)
+        // car cela crée des dizaines de messages "model" consécutifs → API Gemini refuse (400).
+        let fullModelResponse = "";
 
-        await streamCommand(text, appMemory, conversationContext, {
-          onTextChunk: (chunk) => {
-            speak(chunk, true); // true = append to queue for seamless playback
-            if (addConversationMessage) addConversationMessage("model", chunk);
-            setStatus(SystemStatus.PROCESSING);
-          },
-          onToolCall: async (toolCall) => {
-            toolCount++;
-            addLog(`[Tool] Executing: ${toolCall.name}`, "KERNEL", "warning");
+        await streamCommand(
+          text,
+          appMemory,
+          conversationContext,
+          {
+            onTextChunk: (chunk) => {
+              speak(chunk, true); // true = append to queue for seamless playback
+              fullModelResponse += chunk;
+              setStatus(SystemStatus.PROCESSING);
+            },
+            onToolCall: async (toolCall) => {
+              toolCount++;
+              addLog(`[Tool] Executing: ${toolCall.name}`, "KERNEL", "warning");
 
-            // 🟣 SPHERE: Trigger visual mode based on tool
-            const toolMode = modeFromTool(toolCall.name);
-            if (toolMode) setSphereMode(toolMode);
+              // 🟣 SPHERE: Trigger visual mode based on tool
+              const toolMode = modeFromTool(toolCall.name);
+              if (toolMode) setSphereMode(toolMode);
 
-            try {
-              const toolResult = (await executeTool(
-                toolCall.name,
-                toolCall.args,
-              )) as ToolResult;
+              try {
+                const toolResult = (await executeTool(
+                  toolCall.name,
+                  toolCall.args,
+                )) as ToolResult;
 
-              // Chainable tools (autonomous loop)
-              if (
-                toolResult &&
-                toolResult.status === "success" &&
-                isChainableTool(toolCall.name)
-              ) {
-                const dataStr = JSON.stringify(toolResult.data || "");
-                const toolResultMsg = `[RÉSULTAT ${toolCall.name.toUpperCase()}] : ${dataStr.substring(0, 5000)}...`;
-                if (addConversationMessage)
-                  addConversationMessage(
-                    "model",
-                    `(Internal context) ${toolResultMsg}`,
-                  );
+                // Chainable tools (autonomous loop)
+                if (
+                  toolResult &&
+                  toolResult.status === "success" &&
+                  isChainableTool(toolCall.name)
+                ) {
+                  const dataStr = JSON.stringify(toolResult.data || "");
+                  const toolResultMsg = `[RÉSULTAT ${toolCall.name.toUpperCase()}] : ${dataStr.substring(0, 5000)}...`;
+                  if (addConversationMessage)
+                    addConversationMessage(
+                      "model",
+                      `(Internal context) ${toolResultMsg}`,
+                    );
 
-                setTimeout(() => {
-                  processCommand(
-                    "IMPORTANT : L'action est TERMINÉE. Utilisez ces données pour compléter l'objectif de Monsieur. Agissez immédiatement.",
-                    `${conversationContext}\nJARVIS: ${toolResultMsg}`,
-                  );
-                }, 1000);
-              }
-
-              // Rich tools : erreur → lire le message d'erreur vocalement
-              if (
-                toolResult &&
-                toolResult.status === "error" &&
-                toolResult.message &&
-                isRichTool(toolCall.name) &&
-                !hasSpokenSummary
-              ) {
-                speak(toolResult.message as string, true);
-                hasSpokenSummary = true;
-                if (addConversationMessage)
-                  addConversationMessage("model", toolResult.message as string);
-              }
-
-              // Rich tools (intelligent summary)
-              if (
-                toolResult &&
-                toolResult.data &&
-                isRichTool(toolCall.name) &&
-                !hasSpokenSummary
-              ) {
-                let summary: string;
-                if (toolCall.name === "show_status_overlay") {
-                  const data = toolResult.data as { title?: string };
-                  summary = `Affichage du rapport pour ${data.title || "le dispositif"}, Monsieur.`;
-                  console.log("🌌 BRAIN: Using static summary for overlay.");
-                } else {
-                  const { summarizeToolResults } =
-                    await import("../services/geminiService");
-                  summary = await summarizeToolResults(
-                    toolCall.name,
-                    toolResult.data,
-                  );
+                  setTimeout(() => {
+                    processCommand(
+                      "IMPORTANT : L'action est TERMINÉE. Utilisez ces données pour compléter l'objectif de Monsieur. Agissez immédiatement.",
+                      `${conversationContext}\nJARVIS: ${toolResultMsg}`,
+                    );
+                  }, 1000);
                 }
-                speak(summary, true);
-                hasSpokenSummary = true;
-                if (addConversationMessage)
-                  addConversationMessage("model", summary);
-              }
-            } catch (e) {
-              console.error("Executor error:", e);
-            }
-          },
-          onComplete: (decision) => {
-            if (decision.toolCalls && decision.toolCalls.length > 0)
-              trackCommand(text);
-            if (decision.tokenUsage) setLastTokenUsage(decision.tokenUsage);
-            setSuccessTrigger(Date.now());
-            setCommandHistory((prev) =>
-              prev.map((c) =>
-                c.timestamp === newCommand.timestamp
-                  ? { ...c, status: "success", result: decision.text }
-                  : c,
-              ),
-            );
 
-            if (!hasSpokenSummary && decision.type !== "MIXED_RESPONSE") {
-              const msg =
-                toolCount > 1 ? `${toolCount} actions exécutées.` : "Exécuté.";
-              if (toolCount > 0) {
-                speak(msg, true);
-                if (addConversationMessage)
-                  addConversationMessage("model", msg);
-              }
-            }
+                // Rich tools : erreur → lire le message d'erreur vocalement
+                if (
+                  toolResult &&
+                  toolResult.status === "error" &&
+                  toolResult.message &&
+                  isRichTool(toolCall.name) &&
+                  !hasSpokenSummary
+                ) {
+                  speak(toolResult.message as string, true);
+                  hasSpokenSummary = true;
+                  if (addConversationMessage)
+                    addConversationMessage(
+                      "model",
+                      toolResult.message as string,
+                    );
+                }
 
-            setStatus(SystemStatus.IDLE);
+                // Rich tools (intelligent summary)
+                if (
+                  toolResult &&
+                  toolResult.data &&
+                  isRichTool(toolCall.name) &&
+                  !hasSpokenSummary
+                ) {
+                  let summary: string;
+                  if (toolCall.name === "show_status_overlay") {
+                    const data = toolResult.data as { title?: string };
+                    summary = `Affichage du rapport pour ${data.title || "le dispositif"}, Monsieur.`;
+                    console.log("🌌 BRAIN: Using static summary for overlay.");
+                  } else {
+                    const { summarizeToolResults } =
+                      await import("../services/geminiService");
+                    summary = await summarizeToolResults(
+                      toolCall.name,
+                      toolResult.data,
+                    );
+                  }
+                  speak(summary, true);
+                  hasSpokenSummary = true;
+                  if (addConversationMessage)
+                    addConversationMessage("model", summary);
+                }
+              } catch (e) {
+                console.error("Executor error:", e);
+              }
+            },
+            onComplete: (decision) => {
+              if (decision.toolCalls && decision.toolCalls.length > 0)
+                trackCommand(text);
+              if (decision.tokenUsage) setLastTokenUsage(decision.tokenUsage);
+              setSuccessTrigger(Date.now());
+              setCommandHistory((prev) =>
+                prev.map((c) =>
+                  c.timestamp === newCommand.timestamp
+                    ? { ...c, status: "success", result: decision.text }
+                    : c,
+                ),
+              );
+
+              if (!hasSpokenSummary && decision.type !== "MIXED_RESPONSE") {
+                const msg =
+                  toolCount > 1
+                    ? `${toolCount} actions exécutées.`
+                    : "Exécuté.";
+                if (toolCount > 0) {
+                  speak(msg, true);
+                  // Sauvegarder le message de complétion outil dans l'historique
+                  if (addConversationMessage)
+                    addConversationMessage("model", msg);
+                }
+              }
+
+              // Sauvegarder la réponse complète du modèle en UN SEUL message.
+              // On prend fullModelResponse (texte streamé) ou decision.text en fallback.
+              // Cela garantit l'alternance user/model dans l'historique (contrainte Gemini).
+              const finalModelText =
+                fullModelResponse.trim() || decision.text || "";
+              if (
+                finalModelText &&
+                addConversationMessage &&
+                !hasSpokenSummary
+              ) {
+                addConversationMessage("model", finalModelText);
+              }
+
+              setStatus(SystemStatus.IDLE);
+            },
+            onError: (errorMsg) => {
+              setStatus(SystemStatus.ERROR);
+              addLog(errorMsg, "SYSTEM", "error");
+              speak("Désolé, une erreur technique est survenue.");
+              setSphereMode("ERROR");
+              setTimeout(() => setSphereMode("IDLE"), 4000);
+            },
           },
-          onError: (errorMsg) => {
-            setStatus(SystemStatus.ERROR);
-            addLog(errorMsg, "SYSTEM", "error");
-            speak("Désolé, une erreur technique est survenue.");
-            setSphereMode("ERROR");
-            setTimeout(() => setSphereMode("IDLE"), 4000);
-          },
-        });
+          // Historique natif Gemini Content[] pour contexte multi-tours réel
+          geminiHistory,
+        );
       } catch (e) {
         console.error("Brain outer error:", e);
         setStatus(SystemStatus.ERROR);

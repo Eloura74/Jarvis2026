@@ -49,6 +49,9 @@ export function useJarvisInteraction({
   const lastSpeechEndTime = useRef<number>(0); // Traceur de fin de parole
   const isSpeakingRef = useRef(false);
   const isExitingRef = useRef(false); // Verrou pour éviter les boucles de fin
+  // Verrou anti-race-condition : true pendant le délai de réactivation micro en mode conversation.
+  // Empêche enableWakeWord() de prendre le micro avant que startListening() soit effectif.
+  const isConversationResumingRef = useRef(false);
   const conversationModeRef = useRef(conversationMode);
   const conversationTimeoutRef = useRef<NodeJS.Timeout | null>(null); // Timeout d'inactivité conversation
   const onCommandRef = useRef(onCommandReceived);
@@ -162,6 +165,14 @@ export function useJarvisInteraction({
       if (conversationTimeoutRef.current)
         clearTimeout(conversationTimeoutRef.current);
 
+      // A3 : Signaler PROCESSING à la sphère dès que la commande part vers Gemini
+      // (évite que la sphère reste en IDLE/LISTENING pendant le traitement IA)
+      fetch("http://localhost:3001/api/sphere/state", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ state: "PROCESSING" }),
+      }).catch(() => {});
+
       // 6. Transmission de la commande
       console.log(`✅ Commande validée : "${text}"`);
       onCommandRef.current(text);
@@ -169,10 +180,38 @@ export function useJarvisInteraction({
     // onStatusChange
     (listening) => {
       if (listening) {
+        // Lever le verrou de réactivation : le micro est maintenant actif
+        isConversationResumingRef.current = false;
         setStatus(SystemStatus.LISTENING);
       } else {
         if (status === SystemStatus.LISTENING) {
           setStatus(SystemStatus.IDLE);
+        }
+        // Relance automatique en mode conversation si le micro s'arrête seul (no-speech, aborted).
+        // On ne relance PAS si : Jarvis parle, on est en train de sortir, ou un timeout est déjà actif.
+        // Délai court (300ms) pour laisser le navigateur libérer le micro avant de le reprendre.
+        if (
+          conversationModeRef.current &&
+          !isExitingRef.current &&
+          !isSpeakingRef.current &&
+          !window.speechSynthesis.speaking
+        ) {
+          setTimeout(() => {
+            // Double vérification : toujours en mode conversation et pas en train de parler
+            if (
+              conversationModeRef.current &&
+              !isExitingRef.current &&
+              !isSpeakingRef.current &&
+              !window.speechSynthesis.speaking
+            ) {
+              console.log(
+                "🔄 Mode conversation : relance micro après arrêt (no-speech)",
+              );
+              isConversationResumingRef.current = true;
+              lastMicActivationTime.current = Date.now();
+              startListening();
+            }
+          }, 300);
         }
       }
     },
@@ -266,19 +305,42 @@ export function useJarvisInteraction({
       }
 
       if (conversationModeRef.current && !isExitingRef.current) {
+        // Poser le verrou IMMÉDIATEMENT (avant le setTimeout) pour bloquer enableWakeWord
+        isConversationResumingRef.current = true;
         setTimeout(() => {
           // Vérifier une dernière fois qu'on n'est pas en train de parler
-          if (window.speechSynthesis.speaking) return;
+          if (window.speechSynthesis.speaking) {
+            isConversationResumingRef.current = false;
+            return;
+          }
 
           console.log(
             `🎤 Mode conversation : Réactivation micro après délai adaptatif (${resumeDelay}ms, TTS: ${ttsDurationMs}ms)`,
           );
           lastMicActivationTime.current = Date.now();
           startListening();
+          // Le verrou sera levé dans onstart de useVoiceRecognition (via onStatusChange listening=true)
 
           // V2 : Feedback sonore discret pour signaler que le micro est prêt
           // Bip court (880Hz, 80ms, volume 0.15) — non capté par le micro
           playReadyBeep();
+
+          // A2 : Feedback vocal court "Je vous écoute" après réactivation micro
+          // Seulement si la réponse précédente était longue (> 3s) pour éviter
+          // le spam sur les échanges rapides. Utilise speechSynthesis directement
+          // (hors queue TTS) pour ne pas déclencher les callbacks onStart/onEnd.
+          if (ttsDurationMs > 3000) {
+            const hint = new SpeechSynthesisUtterance("Je vous écoute.");
+            hint.lang = "fr-FR";
+            hint.volume = 0.6;
+            hint.rate = 1.1;
+            // Délai court pour laisser le bip se terminer avant la phrase
+            setTimeout(() => {
+              if (!window.speechSynthesis.speaking) {
+                window.speechSynthesis.speak(hint);
+              }
+            }, 150);
+          }
 
           // Timeout d'inactivité : si personne ne parle dans les 15s, on quitte le mode conversation
           if (conversationTimeoutRef.current)
@@ -379,9 +441,16 @@ export function useJarvisInteraction({
 
   // Gestion intelligente du Wake Word
   // Désactive le wake word quand on est déjà en train d'écouter ou que Jarvis parle,
-  // ou si l'option est désactivée dans les paramètres
+  // ou si l'option est désactivée dans les paramètres.
+  // IMPORTANT : on bloque aussi si isConversationResumingRef est true pour éviter la
+  // race condition où le wake word prend le micro avant que startListening() soit effectif.
   useEffect(() => {
-    if (wakeWordEnabled && !isListening && status === SystemStatus.IDLE) {
+    if (
+      wakeWordEnabled &&
+      !isListening &&
+      status === SystemStatus.IDLE &&
+      !isConversationResumingRef.current
+    ) {
       enableWakeWord();
     } else {
       disableWakeWord();

@@ -55,17 +55,25 @@ async function waitIfNecessary() {
  * @param {boolean} useFallback - Utiliser le modèle de fallback directement
  * @returns {AsyncIterable} Flux de chunks Gemini
  */
-async function generateStreamWithFallback(contents, config, useFallback = false) {
+async function generateStreamWithFallback(
+  contents,
+  config,
+  useFallback = false,
+) {
   const model = useFallback ? FALLBACK_MODEL : PRIMARY_MODEL;
   try {
     return await ai.models.generateContentStream({ model, contents, config });
   } catch (error) {
     const isRetryable =
-      error.status === 429 || error.status === 503 || error.status === 500 ||
+      error.status === 429 ||
+      error.status === 503 ||
+      error.status === 500 ||
       error.message?.includes("429");
 
     if (isRetryable && !useFallback) {
-      console.warn(`⚠️ [Gemini Proxy] ${PRIMARY_MODEL} indisponible → bascule sur ${FALLBACK_MODEL}`);
+      console.warn(
+        `⚠️ [Gemini Proxy] ${PRIMARY_MODEL} indisponible → bascule sur ${FALLBACK_MODEL}`,
+      );
       return await ai.models.generateContentStream({
         model: FALLBACK_MODEL,
         contents,
@@ -89,10 +97,19 @@ export async function handleGeminiStream(req, res) {
   res.setHeader("Connection", "keep-alive");
   res.setHeader("Access-Control-Allow-Origin", "*");
 
-  const { input, systemInstruction, tools, temperature, maxOutputTokens } = req.body;
+  const {
+    input,
+    systemInstruction,
+    tools,
+    temperature,
+    maxOutputTokens,
+    history,
+  } = req.body;
 
   if (!input) {
-    res.write(`data: ${JSON.stringify({ type: "error", message: "Paramètre 'input' manquant" })}\n\n`);
+    res.write(
+      `data: ${JSON.stringify({ type: "error", message: "Paramètre 'input' manquant" })}\n\n`,
+    );
     res.end();
     return;
   }
@@ -107,7 +124,32 @@ export async function handleGeminiStream(req, res) {
       ...(maxOutputTokens !== undefined && { maxOutputTokens }),
     };
 
-    const stream = await generateStreamWithFallback(input, config);
+    // Construction du tableau contents :
+    // - Si un historique multi-tours est fourni (format GeminiContent[]), on l'utilise
+    //   comme contexte natif. Gemini comprend nativement les rôles user/model.
+    // - On ajoute le message courant en dernier (rôle "user").
+    // - Si pas d'historique, on passe juste le message courant (comportement précédent).
+    let contents;
+    if (Array.isArray(history) && history.length > 0) {
+      // Validation défensive : chaque entrée doit avoir role et parts[0].text
+      const validHistory = history.filter(
+        (h) =>
+          (h.role === "user" || h.role === "model") &&
+          Array.isArray(h.parts) &&
+          h.parts.length > 0 &&
+          typeof h.parts[0].text === "string",
+      );
+      // Ajouter le message courant en dernier
+      contents = [...validHistory, { role: "user", parts: [{ text: input }] }];
+      console.log(
+        `📚 [Gemini Proxy] Historique multi-tours: ${validHistory.length} tours + message courant`,
+      );
+    } else {
+      // Comportement précédent : message seul
+      contents = input;
+    }
+
+    const stream = await generateStreamWithFallback(contents, config);
 
     // Consommer le flux et envoyer chaque chunk au client via SSE
     for await (const chunk of stream) {
@@ -120,7 +162,9 @@ export async function handleGeminiStream(req, res) {
         .join("");
 
       if (textParts) {
-        res.write(`data: ${JSON.stringify({ type: "text", text: textParts })}\n\n`);
+        res.write(
+          `data: ${JSON.stringify({ type: "text", text: textParts })}\n\n`,
+        );
       }
 
       // Appels d'outils (function calls)
@@ -130,7 +174,9 @@ export async function handleGeminiStream(req, res) {
 
       for (const call of functionCalls) {
         if (call.name && call.args) {
-          res.write(`data: ${JSON.stringify({ type: "tool", name: call.name, args: call.args })}\n\n`);
+          res.write(
+            `data: ${JSON.stringify({ type: "tool", name: call.name, args: call.args })}\n\n`,
+          );
         }
       }
     }
@@ -143,10 +189,14 @@ export async function handleGeminiStream(req, res) {
 
     // Signaler l'erreur au client via SSE avant de fermer
     if (!res.headersSent) {
-      res.write(`data: ${JSON.stringify({ type: "error", message: error.message })}\n\n`);
+      res.write(
+        `data: ${JSON.stringify({ type: "error", message: error.message })}\n\n`,
+      );
     } else {
       try {
-        res.write(`data: ${JSON.stringify({ type: "error", message: error.message })}\n\n`);
+        res.write(
+          `data: ${JSON.stringify({ type: "error", message: error.message })}\n\n`,
+        );
       } catch {
         // Connexion déjà fermée
       }
@@ -164,7 +214,8 @@ export async function handleGeminiStream(req, res) {
  */
 export async function handleGeminiSummarize(req, res) {
   const { prompt } = req.body;
-  if (!prompt) return res.status(400).json({ error: "Paramètre 'prompt' manquant" });
+  if (!prompt)
+    return res.status(400).json({ error: "Paramètre 'prompt' manquant" });
 
   try {
     await waitIfNecessary();
@@ -173,7 +224,9 @@ export async function handleGeminiSummarize(req, res) {
       contents: [{ role: "user", parts: [{ text: prompt }] }],
       config: { temperature: 0.1, maxOutputTokens: 200 },
     });
-    const text = response.candidates?.[0]?.content?.parts?.[0]?.text || "Exécuté, Monsieur.";
+    const text =
+      response.candidates?.[0]?.content?.parts?.[0]?.text ||
+      "Exécuté, Monsieur.";
     res.json({ text });
   } catch (error) {
     console.error("❌ [Gemini Proxy] Erreur summarize:", error.message);
@@ -190,14 +243,19 @@ export async function handleGeminiSummarize(req, res) {
  */
 export async function handleGeminiQMS(req, res) {
   const { prompt } = req.body;
-  if (!prompt) return res.status(400).json({ error: "Paramètre 'prompt' manquant" });
+  if (!prompt)
+    return res.status(400).json({ error: "Paramètre 'prompt' manquant" });
 
   try {
     await waitIfNecessary();
     const response = await ai.models.generateContent({
       model: PRIMARY_MODEL,
       contents: [{ role: "user", parts: [{ text: prompt }] }],
-      config: { temperature: 0.1, responseMimeType: "application/json", maxOutputTokens: 300 },
+      config: {
+        temperature: 0.1,
+        responseMimeType: "application/json",
+        maxOutputTokens: 300,
+      },
     });
     const text = response.candidates?.[0]?.content?.parts?.[0]?.text;
     res.json(text ? JSON.parse(text) : { hasSuggestion: false });

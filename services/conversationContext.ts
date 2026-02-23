@@ -122,7 +122,8 @@ export function clearHistory(): void {
 }
 
 /**
- * Formate l'historique pour injection dans system prompt
+ * Formate l'historique pour injection dans system prompt (texte brut)
+ * Conservé pour compatibilité avec les anciens appels.
  */
 export function formatHistoryForPrompt(): string {
   const history = getHistory(5); // 5 derniers pour contexte
@@ -135,6 +136,77 @@ export function formatHistoryForPrompt(): string {
     .reverse() // Ordre chronologique
     .map((m) => `${m.role === "user" ? "User" : "JARVIS"}: ${m.content}`)
     .join("\n");
+}
+
+// ============================================================================
+// FORMAT GEMINI NATIF (Content[])
+// ============================================================================
+
+/**
+ * Structure d'un tour de conversation au format natif Gemini API.
+ * Compatible avec le champ `contents` de generateContentStream.
+ */
+export interface GeminiContent {
+  role: "user" | "model";
+  parts: Array<{ text: string }>;
+}
+
+/**
+ * Exporte l'historique au format natif Gemini Content[].
+ *
+ * Contrairement à formatHistoryForPrompt() (texte brut dans le system prompt),
+ * cette fonction retourne un tableau de tours de conversation que l'API Gemini
+ * comprend nativement comme contexte multi-tours.
+ *
+ * Règles :
+ * - L'historique est retourné en ordre CHRONOLOGIQUE (plus ancien en premier)
+ * - Le rôle "assistant" est mappé vers "model" (convention Gemini)
+ * - Le dernier message doit être "user" (sinon Gemini refuse) → on tronque si besoin
+ * - Limité aux N derniers tours pour éviter de dépasser la fenêtre de contexte
+ *
+ * @param maxTurns - Nombre maximum de tours à inclure (défaut: 10 = 20 messages)
+ * @returns Tableau de GeminiContent prêt à passer dans le champ `history`
+ */
+export function getHistoryForGemini(maxTurns = 10): GeminiContent[] {
+  // getHistory retourne les messages du plus récent au plus ancien → on inverse
+  const history = getHistory(maxTurns * 2).reverse();
+
+  if (history.length === 0) return [];
+
+  // Mapper les rôles : "assistant" → "model" (convention Gemini)
+  const mapped: GeminiContent[] = history.map((m) => ({
+    role: m.role === "user" ? "user" : "model",
+    parts: [{ text: m.content }],
+  }));
+
+  // CONSOLIDATION DÉFENSIVE : fusionner les messages consécutifs du même rôle.
+  // L'API Gemini exige une alternance stricte user/model.
+  // Des messages "model" consécutifs peuvent apparaître si des résumés d'outils
+  // ou des notifications proactives ont été sauvegardés séparément.
+  const consolidated: GeminiContent[] = [];
+  for (const msg of mapped) {
+    const last = consolidated[consolidated.length - 1];
+    if (last && last.role === msg.role) {
+      // Fusionner avec le message précédent du même rôle
+      last.parts[0].text += "\n" + msg.parts[0].text;
+    } else {
+      consolidated.push({
+        role: msg.role,
+        parts: [{ text: msg.parts[0].text }],
+      });
+    }
+  }
+
+  // Gemini exige que le dernier message du tableau history soit "user"
+  // (le message courant sera ajouté séparément dans contents par le backend)
+  while (
+    consolidated.length > 0 &&
+    consolidated[consolidated.length - 1].role === "model"
+  ) {
+    consolidated.pop();
+  }
+
+  return consolidated;
 }
 
 // ============================================================================

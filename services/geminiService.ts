@@ -5,6 +5,7 @@ import {
   generateContentStreamProxy,
   generateSummarizeProxy,
   generateQMSProxy,
+  GeminiHistoryEntry,
 } from "./geminiProxyClient"; // S1 : Proxy backend — clé API hors bundle JS
 
 // ============================================================================
@@ -693,6 +694,59 @@ export const summarizeToolResults = async (
       return result?.message || "Message WhatsApp envoyé, Monsieur.";
     }
 
+    if (toolName === "get_weather") {
+      const w = resultData as {
+        temperature?: number;
+        condition?: string;
+        city?: string;
+        windSpeed?: number;
+        humidity?: number;
+        precipitation?: number;
+      } | null;
+
+      if (!w || w.condition === "Offline") {
+        return "Je n'ai pas pu récupérer la météo, Monsieur. Vérifiez votre connexion.";
+      }
+
+      const city = w.city || "votre position";
+      const temp =
+        w.temperature !== undefined
+          ? `${w.temperature}°C`
+          : "température inconnue";
+      const cond = w.condition || "conditions inconnues";
+      const wind =
+        w.windSpeed !== undefined ? `vent à ${w.windSpeed} km/h` : null;
+      const humidity =
+        w.humidity !== undefined ? `humidité à ${w.humidity}%` : null;
+
+      // Construire une phrase naturelle et complète
+      let response = `Monsieur, à ${city}, il fait actuellement ${temp}, ${cond}.`;
+      if (wind && humidity) {
+        response += ` ${wind}, ${humidity}.`;
+      } else if (wind) {
+        response += ` ${wind}.`;
+      }
+      if (w.precipitation && w.precipitation > 0) {
+        response += ` Probabilité de précipitations : ${w.precipitation}%.`;
+      }
+      return response;
+    }
+
+    if (toolName === "get_travel_time") {
+      const t = resultData as {
+        duration?: string;
+        distance?: string;
+        destination?: string;
+        trafficInfo?: string;
+      } | null;
+      if (!t) return "Impossible de calculer le trajet, Monsieur.";
+      const dest = t.destination ? ` vers ${t.destination}` : "";
+      const dur = t.duration || "durée inconnue";
+      const dist = t.distance ? `, soit ${t.distance}` : "";
+      const traffic = t.trafficInfo ? ` ${t.trafficInfo}.` : ".";
+      return `Monsieur, le trajet${dest} prend environ ${dur}${dist}${traffic}`;
+    }
+
     // Prompt générique pour les autres outils — via proxy backend (S1)
     const prompt =
       "Synthétise ces résultats de l'outil '" +
@@ -798,11 +852,20 @@ export const streamCommand = async (
   memories: AppMemory[],
   conversationContext: string = "",
   callbacks: StreamCallbacks,
+  /**
+   * Historique de conversation au format natif Gemini Content[].
+   * Quand fourni, Gemini reçoit les tours précédents comme contexte multi-tours
+   * natif (bien supérieur à l'injection texte dans le system prompt).
+   * Le message courant (input) est ajouté en dernier par le backend.
+   */
+  history: GeminiHistoryEntry[] = [],
 ) => {
   await waitIfNecessary();
 
   try {
-    console.log(`Appel Gemini STREAM pour "${input}"`);
+    console.log(
+      `Appel Gemini STREAM pour "${input}" (historique: ${history.length} tours)`,
+    );
 
     let memSum = "No prior usage.";
     if (memories.length > 0) {
@@ -827,11 +890,13 @@ export const streamCommand = async (
 
     // S1 : Appel via proxy backend (clé API sécurisée côté serveur)
     // Le proxy gère le fallback 2.5-flash → 1.5-flash automatiquement
+    // On passe l'historique natif Gemini pour un contexte multi-tours réel
     const responseStream = generateContentStreamProxy(input, {
       systemInstruction: config.systemInstruction as string,
       tools: toolDeclarations,
       temperature: config.temperature as number,
       maxOutputTokens: config.maxOutputTokens as number | undefined,
+      history: history.length > 0 ? history : undefined,
     });
 
     let fullText = "";

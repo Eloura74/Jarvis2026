@@ -82,16 +82,26 @@ function scheduleReconnect() {
 }
 
 /**
+ * Table de mapping : états logiques → modes visuels ESP32.
+ * Certains états (ex: PROCESSING) n'ont pas de mode dédié dans le firmware.
+ * On les redirige vers le mode visuel le plus proche.
+ */
+const STATE_TO_FIRMWARE = {
+  PROCESSING: "RECEIVING", // Spirale de réception = traitement IA en cours
+  NOTIFICATION: "NOTIF", // Alias court attendu par le firmware
+};
+
+/**
  * Change l'état ou le mode de la sphère
- * @param {string} state - IDLE, LISTENING, SPEAKING, ERROR, WEATHER, HOME, SYSTEM, SEARCH, MATRIX
+ * @param {string} state - IDLE, LISTENING, SPEAKING, PROCESSING, ERROR, WEATHER, HOME, etc.
  */
 export function setSphereState(state) {
   if (!isConnected || !port) return;
   try {
-    // Allow both STATE and MODE keyword, but main.cpp handles both via "STATE X" or "MODE X" logic?
-    // Actually main.cpp implementation I wrote handles both if line.startsWith("STATE ") || line.startsWith("MODE ")
-    // Let's stick to MODE for semantic modes, but STATE is fine too.
-    const cmd = `MODE ${state.toUpperCase()}\n`;
+    const normalized = state.toUpperCase();
+    // Appliquer le mapping si l'état n'est pas directement supporté par le firmware
+    const firmwareMode = STATE_TO_FIRMWARE[normalized] || normalized;
+    const cmd = `MODE ${firmwareMode}\n`;
     port.write(cmd);
   } catch (error) {
     console.error("Error writing to sphere:", error);

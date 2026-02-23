@@ -24,11 +24,27 @@ export interface ProxyStreamChunk {
   message?: string;
 }
 
+/**
+ * Un tour de conversation au format natif Gemini (role + parts).
+ * Transmis tel quel au backend qui le passe à l'API Gemini.
+ */
+export interface GeminiHistoryEntry {
+  role: "user" | "model";
+  parts: Array<{ text: string }>;
+}
+
 export interface ProxyStreamConfig {
   systemInstruction?: string;
   tools?: unknown[];
   temperature?: number;
   maxOutputTokens?: number;
+  /**
+   * Historique de conversation au format natif Gemini Content[].
+   * Permet à Gemini de comprendre le contexte multi-tours nativement,
+   * au lieu d'un texte brut injecté dans le system prompt.
+   * Le message courant (input) sera ajouté en dernier par le backend.
+   */
+  history?: GeminiHistoryEntry[];
 }
 
 // ============================================================================
@@ -54,7 +70,9 @@ export async function* generateContentStreamProxy(
   });
 
   if (!response.ok || !response.body) {
-    throw new Error(`Gemini proxy error: ${response.status} ${response.statusText}`);
+    throw new Error(
+      `Gemini proxy error: ${response.status} ${response.statusText}`,
+    );
   }
 
   const reader = response.body.getReader();
@@ -107,7 +125,7 @@ export async function generateSummarizeProxy(prompt: string): Promise<string> {
       body: JSON.stringify({ prompt }),
     });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const data = await response.json() as { text: string };
+    const data = (await response.json()) as { text: string };
     return data.text || "Exécuté, Monsieur.";
   } catch (err) {
     console.error("❌ [Gemini Proxy Client] Erreur summarize:", err);

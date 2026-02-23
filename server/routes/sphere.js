@@ -9,6 +9,7 @@ const VALID_STATES = [
   "STANDBY",
   "LISTENING",
   "SPEAKING",
+  "PROCESSING",
   "RECEIVING",
   "ERROR",
   "WEATHER",
