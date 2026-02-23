@@ -159,14 +159,14 @@ export const APPS_DATABASE: Record<string, AppEntry> = {
     category: "3d-printing",
     keywords: ["3d", "printing", "printer", "slicer", "3d printing", "bambu"],
     description: "Bambu Studio - 3D printing slicer",
-    aliases: ["bambu studio", "bambu slicer"],
+    aliases: ["bambu studio", "bambu slicer", "bambou", "bambou studio"],
   },
   "bambu studio": {
     path: "A:\\Logiciels\\Bambu Studio\\bambu-studio.exe",
     category: "3d-printing",
     keywords: ["3d", "printing", "printer", "slicer", "3d printing", "bambu"],
     description: "Bambu Studio - 3D printing slicer",
-    aliases: ["bambu"],
+    aliases: ["bambu", "bambou", "bambou studio"],
   },
   photoshop: {
     path: "C:\\Program Files\\Adobe\\Adobe Photoshop 2024\\Photoshop.exe",
@@ -312,7 +312,7 @@ export const searchApps = (query: string, maxResults: number = 5): string[] => {
     else if (
       appData.keywords.some(
         (keyword) =>
-          queryLower.includes(keyword) || keyword.includes(queryLower)
+          queryLower.includes(keyword) || keyword.includes(queryLower),
       )
     ) {
       score = 50;
