@@ -174,12 +174,13 @@ export const SearchResultsOverlay: React.FC<SearchResultsOverlayProps> = ({
             }}
           />
 
-          {/* Panneau principal */}
+          {/* Panneau principal — stopPropagation pour bloquer la remontée vers le backdrop */}
           <motion.div
             initial={{ scale: 0.88, opacity: 0, y: 30 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.9, opacity: 0, y: 20, filter: "blur(10px)" }}
             transition={{ type: "spring", damping: 28, stiffness: 260 }}
+            onClick={(e) => e.stopPropagation()}
             style={{
               pointerEvents: "auto",
               position: "relative",
@@ -274,15 +275,26 @@ export const SearchResultsOverlay: React.FC<SearchResultsOverlayProps> = ({
                 </p>
               ) : (
                 results.map((result, idx) => (
-                  <motion.a
+                  <motion.div
                     key={idx}
-                    href={result.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
                     initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: idx * 0.06 }}
-                    onClick={(e) => e.stopPropagation()}
+                    onClick={() => {
+                      // Ouvre via le backend pour contourner les blocages popup navigateur
+                      fetch("http://localhost:3001/api/web/open-url", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ url: result.url }),
+                      }).catch(() => {
+                        // Fallback direct si backend indisponible
+                        window.open(
+                          result.url,
+                          "_blank",
+                          "noopener,noreferrer",
+                        );
+                      });
+                    }}
                     style={{
                       display: "flex",
                       gap: "14px",
@@ -292,12 +304,11 @@ export const SearchResultsOverlay: React.FC<SearchResultsOverlayProps> = ({
                       borderRadius: "8px",
                       textDecoration: "none",
                       cursor: "pointer",
-                      transition: "all 0.15s ease",
                     }}
                     whileHover={{
                       background: "rgba(0, 243, 255, 0.08)",
-                      borderColor: "rgba(0, 243, 255, 0.3)",
                       x: 4,
+                      boxShadow: "inset 0 0 0 1px rgba(0, 243, 255, 0.35)",
                     }}
                   >
                     {/* Numéro */}
@@ -390,7 +401,7 @@ export const SearchResultsOverlay: React.FC<SearchResultsOverlayProps> = ({
                         </p>
                       )}
                     </div>
-                  </motion.a>
+                  </motion.div>
                 ))
               )}
             </div>

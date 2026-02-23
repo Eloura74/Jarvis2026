@@ -13,3 +13,7 @@
 # reunir tout les .env
 
 # verifie si on peux close application diverse
+
+# quand demande stl --- sur screen mettr eune nouvelle animation de stl
+
+# améliore recherche stl et vue des 5meilleur par la suite avec minuature de chaque stl etc
