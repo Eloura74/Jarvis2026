@@ -29,6 +29,16 @@ interface UseJarvisInteractionProps {
   isDialogActiveRef?: React.RefObject<boolean>;
 }
 
+// Helper : envoie un état à la Sphere via le backend (fire-and-forget)
+// Appelé à chaque transition d'état significative pour synchroniser l'orb physique
+function sendSphereState(state: string): void {
+  fetch("http://localhost:3001/api/sphere/state", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ state }),
+  }).catch(() => {});
+}
+
 export function useJarvisInteraction({
   status,
   setStatus,
@@ -100,6 +110,8 @@ export function useJarvisInteraction({
           // 2. On met à jour l'état
           isSpeakingRef.current = false;
           setStatus(SystemStatus.IDLE);
+          // Signaler IDLE à la Sphere : interruption barge-in
+          sendSphereState("IDLE");
           addLog("🛑 Interruption vocale", "VOICE", "info");
           return;
         }
@@ -109,19 +121,14 @@ export function useJarvisInteraction({
       // (c'est la voix de Jarvis captée par le micro, pas l'utilisateur)
       // Seul un mot STOP explicite (bloc ci-dessus) peut interrompre.
       if (isCurrentlySpeaking) {
-        console.log(
-          "🔇 Transcription ignorée (Jarvis parle) :",
-          text.substring(0, 30),
-        );
+        // Transcription ignorée (Jarvis parle) — log supprimé
         return;
       }
 
       // 3. Période de sécurité (Echo cancellation temporelle)
       const timeSinceSpeech = Date.now() - lastSpeechEndTime.current;
       if (timeSinceSpeech < 3500) {
-        console.log(
-          `⏳ Écho filtré (Security period: ${timeSinceSpeech}ms < 3500ms)`,
-        );
+        // Écho filtré — log supprimé
         return;
       }
 
@@ -152,6 +159,8 @@ export function useJarvisInteraction({
         setConversationMode(false);
         stopListening(); // 🛑 Coupe le micro immédiatement pour éviter l'écho
         // speak("À bientôt !"); // Géré dans le hook complet via rawSpeak plus bas
+        // Signaler IDLE directement : onEnd du TTS ne sera jamais atteint si speak() est inactif
+        sendSphereState("IDLE");
         addLog("👋 Mode conversation désactivé", "SYSTEM", "info");
         return;
       }
@@ -167,11 +176,7 @@ export function useJarvisInteraction({
 
       // A3 : Signaler PROCESSING à la sphère dès que la commande part vers Gemini
       // (évite que la sphère reste en IDLE/LISTENING pendant le traitement IA)
-      fetch("http://localhost:3001/api/sphere/state", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ state: "PROCESSING" }),
-      }).catch(() => {});
+      sendSphereState("PROCESSING");
 
       // 6. Transmission de la commande
       console.log(`✅ Commande validée : "${text}"`);
@@ -204,9 +209,6 @@ export function useJarvisInteraction({
               !isSpeakingRef.current &&
               !window.speechSynthesis.speaking
             ) {
-              console.log(
-                "🔄 Mode conversation : relance micro après arrêt (no-speech)",
-              );
               isConversationResumingRef.current = true;
               lastMicActivationTime.current = Date.now();
               startListening();
@@ -234,6 +236,8 @@ export function useJarvisInteraction({
           window.speechSynthesis.cancel();
           isSpeakingRef.current = false;
           setStatus(SystemStatus.IDLE);
+          // Signaler IDLE à la Sphere : interruption barge-in prioritaire
+          sendSphereState("IDLE");
           addLog("🛑 Interruption immédiate", "VOICE", "info");
         }
       }
@@ -262,6 +266,8 @@ export function useJarvisInteraction({
     onStart: async () => {
       isSpeakingRef.current = true;
       setStatus(SystemStatus.SPEAKING);
+      // Signaler SPEAKING à la Sphere
+      sendSphereState("SPEAKING");
 
       // On force le réveil du micro 100ms après le début de la parole (pour contrer la coupure navigateur)
       setTimeout(() => {
@@ -269,8 +275,10 @@ export function useJarvisInteraction({
       }, 100);
     },
     onEnd: (ttsDurationMs: number) => {
-      console.log(`🔊 Fin parole Jarvis (durée: ${ttsDurationMs}ms)`);
+      // Fin parole Jarvis — log supprimé
       setStatus(SystemStatus.IDLE);
+      // Signaler IDLE à la Sphere : le timer screensaver peut redémarrer
+      sendSphereState("IDLE");
       lastSpeechEndTime.current = Date.now(); // Marquer le moment exact
 
       // Stocker la durée TTS pour le délai adaptatif (V1)
@@ -279,9 +287,7 @@ export function useJarvisInteraction({
       // PROTECTION CRITIQUE : Si la file d'attente vocale a encore des choses à dire,
       // on ne réactive PAS encore le micro (on attendra le prochain onEnd)
       if (window.speechSynthesis.speaking) {
-        console.log(
-          "⏳ Parole encore en cours (file d'attente), attente fin réelle...",
-        );
+        // Parole encore en cours — log supprimé
         return;
       }
 
@@ -314,11 +320,11 @@ export function useJarvisInteraction({
             return;
           }
 
-          console.log(
-            `🎤 Mode conversation : Réactivation micro après délai adaptatif (${resumeDelay}ms, TTS: ${ttsDurationMs}ms)`,
-          );
+          // Réactivation micro — log supprimé
           lastMicActivationTime.current = Date.now();
           startListening();
+          // Signaler LISTENING à la Sphere
+          sendSphereState("LISTENING");
           // Le verrou sera levé dans onstart de useVoiceRecognition (via onStatusChange listening=true)
 
           // V2 : Feedback sonore discret pour signaler que le micro est prêt
@@ -350,17 +356,19 @@ export function useJarvisInteraction({
               conversationModeRef.current &&
               !window.speechSynthesis.speaking
             ) {
-              console.log(
-                "⏰ Timeout inactivité conversation (15s) → retour Wake Word",
-              );
+              // Timeout inactivité conversation — log supprimé
               setConversationMode(false);
               stopListening();
+              // Signaler IDLE à la Sphere : plus personne ne parle
+              sendSphereState("IDLE");
             }
           }, 15000);
         }, resumeDelay);
       } else if (isExitingRef.current) {
         console.log("👋 Fin de session confirmée, micro reste coupé.");
         isExitingRef.current = false; // Reset pour la prochaine fois
+        // Signaler IDLE à la Sphere : fin de session, screensaver peut s'activer
+        sendSphereState("IDLE");
       }
     },
   });
@@ -378,7 +386,7 @@ export function useJarvisInteraction({
   // ========================================
   useEffect(() => {
     const interval = setInterval(() => {
-      // Si le système pense qu'il parle, mais que le navigateur ne parle plus
+      // CAS 1 : Statut SPEAKING bloqué alors que le navigateur ne parle plus
       if (
         status === SystemStatus.SPEAKING &&
         !window.speechSynthesis.speaking
@@ -398,10 +406,27 @@ export function useJarvisInteraction({
           startListening();
         }
       }
+
+      // CAS 2 : isConversationResumingRef bloqué à true alors que le micro est inactif
+      // Cela empêche le wake word de se réactiver (useEffect ligne ~455 bloque enableWakeWord)
+      // Symptôme : status=IDLE, isListening=false, mais wake word ne démarre pas
+      if (
+        isConversationResumingRef.current &&
+        !isListening &&
+        status === SystemStatus.IDLE &&
+        !window.speechSynthesis.speaking
+      ) {
+        console.warn(
+          "⚠️ Watchdog: isConversationResumingRef bloqué, reset forcé",
+        );
+        isConversationResumingRef.current = false;
+        // Forcer un micro-changement de status pour retriggerer le useEffect du wake word
+        setStatus(SystemStatus.IDLE);
+      }
     }, 500); // Vérification toutes les 500ms
 
     return () => clearInterval(interval);
-  }, [status, setStatus, conversationModeRef, startListening]);
+  }, [status, isListening, setStatus, conversationModeRef, startListening]);
 
   // ========================================
   // WAKE WORD

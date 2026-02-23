@@ -45,7 +45,7 @@ export interface StatusStat {
 export interface StatusOverlayData {
   id: string;
   title: string;
-  type: "printer" | "system" | "custom" | "traffic" | "fleet";
+  type: "printer" | "system" | "custom" | "traffic" | "fleet" | "search";
   lastUpdate: string;
   image?: string;
   stats: Array<{
@@ -71,6 +71,15 @@ export interface StatusOverlayData {
   speed?: number;
   printDuration?: number;
   eta?: number;
+
+  // Search Results Data
+  searchResults?: Array<{
+    title: string;
+    url: string;
+    description: string;
+    image: string | null;
+    source: string;
+  }>;
 
   // Traffic Data
   origin?: string;

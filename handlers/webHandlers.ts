@@ -152,6 +152,99 @@ export const handleShowImages = async (
 };
 
 /**
+ * Recherche visuelle : retourne 5 résultats enrichis (titre, url, description, image)
+ * sans ouvrir le navigateur — affichés dans l'overlay holographique StatusOverlay.
+ * Utilisé quand l'utilisateur demande "X en STL", "image de X", "trouve X" sans "recherche".
+ */
+export const handleSearchResultsVisual = async (
+  args: { query: string },
+  ctx: HandlerContext,
+) => {
+  const { query } = args;
+  const { addLog, setStatus, setStatusOverlay } = ctx as HandlerContext & {
+    setStatusOverlay?: (data: unknown) => void;
+  };
+
+  addLog(`🔍 Recherche visuelle: "${query}"`, "OMNI", "info");
+  setStatus(SystemStatus.NETWORKING);
+
+  try {
+    const response = await fetch(
+      "http://localhost:3001/api/web/search-results",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query }),
+      },
+    );
+
+    const data = await response.json();
+
+    if (!data.success || !data.results?.length) {
+      throw new Error(data.error || "Aucun résultat");
+    }
+
+    const lastUpdate = new Date().toLocaleTimeString("fr-FR");
+
+    // Construire les stats pour l'overlay : chaque résultat = une stat avec titre + url
+    const stats = data.results.map(
+      (r: {
+        title: string;
+        url: string;
+        description: string;
+        source: string;
+      }) => ({
+        label: r.source || "Web",
+        value: r.title,
+        // On stocke l'URL dans unit pour pouvoir l'afficher
+        unit: r.url,
+        status: "normal" as const,
+      }),
+    );
+
+    // Image du premier résultat qui en a une
+    const firstWithImage = data.results.find(
+      (r: { image: string | null }) => r.image,
+    );
+
+    const overlayData = {
+      id: `search-${Date.now()}`,
+      title: `Résultats : ${query}`,
+      type: "search" as const,
+      image: firstWithImage?.image || null,
+      stats,
+      lastUpdate,
+      // On stocke les résultats complets pour un affichage enrichi
+      searchResults: data.results,
+    };
+
+    if (setStatusOverlay) {
+      setStatusOverlay(overlayData);
+    }
+
+    addLog(
+      `✅ ${data.results.length} résultats pour "${query}"`,
+      "SYSTEM",
+      "success",
+    );
+    setStatus(SystemStatus.IDLE);
+
+    return {
+      status: "success",
+      data: overlayData,
+      message: `${data.results.length} résultats trouvés pour "${query}", Monsieur.`,
+    };
+  } catch (error) {
+    addLog(`❌ Recherche visuelle échouée: ${error}`, "SYSTEM", "error");
+    setStatus(SystemStatus.IDLE);
+    return {
+      status: "error",
+      message: `Impossible d'effectuer la recherche : ${error}`,
+    };
+  }
+};
+
+/**
  * Générer une image via Web (Bing/DALL-E)
  */
 export const handleGenerateImage = async (

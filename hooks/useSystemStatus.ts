@@ -53,8 +53,9 @@ export function useSystemStatus(
         return;
       }
 
-      // Log du changement d'état pour debug
-      console.log(`🔄 Changement état système: ${status} → ${newStatus}`);
+      // Log uniquement si l'état change réellement (pas IDLE→IDLE)
+      if (status !== newStatus)
+        console.log(`🔄 État: ${status} → ${newStatus}`);
 
       setStatusInternal(newStatus);
     },

@@ -309,7 +309,13 @@ export const handleShowStatusOverlay = async (
     if (
       query.includes("porte") ||
       query.includes("door") ||
-      query.includes("sécurité")
+      query.includes("sécurité") ||
+      query.includes("securite") ||
+      query.includes("capteur") ||
+      query.includes("perimetre") ||
+      query.includes("périmètre") ||
+      query.includes("ouvert") ||
+      query.includes("fermé")
     ) {
       const doorStats = HA_ENTITIES.DOORS.map((d) => {
         const state = states[d.id]?.state === "on" ? "OUVERT" : "FERMÉ";
@@ -321,7 +327,7 @@ export const handleShowStatusOverlay = async (
         data: {
           id: `security-${Date.now()}`,
           title: "Sécurité Périmètre",
-          type: "door",
+          type: "custom",
           image:
             "https://images.unsplash.com/photo-1558002038-1a221295b214?auto=format&fit=crop&q=80&w=800",
           stats: doorStats.map((s) => ({
@@ -351,7 +357,7 @@ export const handleShowStatusOverlay = async (
         data: {
           id: `climate-${Date.now()}`,
           title: "Analyse Climatique",
-          type: "sensor",
+          type: "custom" as const,
           image:
             "https://images.unsplash.com/photo-1502472545331-5079a499312c?auto=format&fit=crop&q=80&w=800",
           stats: tempStats.map((s) => ({ ...s, status: "normal" as const })),
@@ -377,8 +383,9 @@ export const handleShowStatusOverlay = async (
       return {
         status: "success",
         data: {
+          id: `entity-${found.id}-${Date.now()}`,
           title: found.label,
-          type: found.type || "general",
+          type: "custom" as const,
           image:
             "https://images.unsplash.com/photo-1557683316-973673baf926?auto=format&fit=crop&q=80&w=800",
           stats: [

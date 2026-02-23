@@ -119,6 +119,8 @@ export function useToolExecutor({
           // === WEB ===
           case "search_web":
             return await handlers.handleSearchWeb(toolArgs, ctx);
+          case "search_results_visual":
+            return await handlers.handleSearchResultsVisual(toolArgs, ctx);
           case "open_url":
             return await handlers.handleOpenUrl(toolArgs, ctx);
           case "read_web_page":

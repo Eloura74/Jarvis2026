@@ -24,7 +24,6 @@ import {
   Mic,
 } from "lucide-react";
 
-import { VoiceSettingsTab } from "./VoiceSettingsTab";
 import { MemoryTab } from "./MemoryTab";
 import { ConfigLocations } from "./ConfigLocations";
 
@@ -33,6 +32,7 @@ import { ShortcutsTab } from "./ConfigPanel/Tabs/ShortcutsTab";
 import { CommandsTab } from "./ConfigPanel/Tabs/CommandsTab";
 import { GoogleTab } from "./ConfigPanel/Tabs/GoogleTab";
 import { NeuralTab } from "./ConfigPanel/Tabs/NeuralTab";
+import { SettingsTab } from "./ConfigPanel/Tabs/SettingsTab";
 import { TabButton } from "./ConfigPanel/UI/TabButton";
 
 // Types
@@ -50,11 +50,22 @@ type TabType =
   | "apps"
   | "shortcuts"
   | "commands"
-  | "voice"
+  | "settings"
   | "google"
   | "neural"
   | "memory"
   | "navigation";
+
+const TAB_LABELS: Record<TabType, string> = {
+  apps: "Applications",
+  shortcuts: "Raccourcis",
+  commands: "Commandes",
+  settings: "Paramètres",
+  google: "Google Beta",
+  neural: "Neural Stats",
+  memory: "Mémoire (RAG)",
+  navigation: "Navigation",
+};
 
 export const ConfigPanelCRUD: React.FC<ConfigPanelCRUDProps> = ({
   isOpen,
@@ -62,6 +73,7 @@ export const ConfigPanelCRUD: React.FC<ConfigPanelCRUDProps> = ({
   tokenUsage,
 }) => {
   const [activeTab, setActiveTab] = useState<TabType>("apps");
+  const activeLabel = TAB_LABELS[activeTab];
 
   if (!isOpen) return null;
 
@@ -75,107 +87,122 @@ export const ConfigPanelCRUD: React.FC<ConfigPanelCRUDProps> = ({
         onClick={onClose}
       >
         <motion.div
-          initial={{ scale: 0.9, opacity: 0 }}
+          initial={{ scale: 0.95, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
-          exit={{ scale: 0.9, opacity: 0 }}
-          className="bg-slate-900/95 backdrop-blur-xl border border-cyan-400/30 rounded-2xl w-full max-w-7xl h-[85vh] flex flex-row overflow-hidden shadow-[0_0_50px_rgba(0,229,255,0.3)]"
+          exit={{ scale: 0.95, opacity: 0 }}
+          transition={{ duration: 0.2, ease: "easeOut" }}
+          className="bg-slate-950/98 backdrop-blur-xl border border-cyan-400/20 rounded-2xl w-full max-w-7xl h-[88vh] flex flex-row overflow-hidden shadow-[0_0_60px_rgba(0,229,255,0.15),0_0_120px_rgba(0,229,255,0.05)]"
           onClick={(e) => e.stopPropagation()}
         >
           {/* ================= SIDEBAR GAUCHE ================= */}
-          <div className="w-72 bg-slate-900/80 border-r border-cyan-400/20 flex flex-col p-4 shrink-0">
+          <div className="w-64 bg-slate-900/60 border-r border-cyan-400/10 flex flex-col shrink-0">
             {/* Header Sidebar */}
-            <div className="mb-8 px-2 pt-2">
-              <h2 className="text-xl font-bold text-cyan-300 tracking-wider flex items-center gap-2">
-                <div className="w-2 h-2 bg-cyan-400 rounded-full animate-pulse" />
-                CONFIGURATION
-              </h2>
-              <p className="text-xs text-cyan-500/60 uppercase tracking-widest mt-1 pl-4">
-                J.A.R.V.I.S. SYSTEM
+            <div className="px-5 py-5 border-b border-cyan-400/10">
+              <div className="flex items-center gap-2.5 mb-1">
+                <div className="w-2 h-2 bg-cyan-400 rounded-full animate-pulse shadow-[0_0_6px_rgba(0,229,255,0.8)]" />
+                <h2 className="text-sm font-bold text-cyan-300 tracking-[0.2em] uppercase">
+                  Configuration
+                </h2>
+              </div>
+              <p className="text-[10px] text-cyan-500/40 font-mono tracking-widest pl-4">
+                J.A.R.V.I.S. SYSTEM v2.5
               </p>
             </div>
 
             {/* Navigation Tabs */}
-            <div className="flex flex-col gap-2 overflow-y-auto flex-1 pr-1 custom-scrollbar">
+            <div className="flex flex-col gap-1 overflow-y-auto flex-1 p-3 custom-scrollbar">
+              {/* Groupe principal */}
+              <p className="text-[9px] text-slate-600 uppercase tracking-widest px-3 pt-1 pb-1 font-semibold">
+                Gestion
+              </p>
               <TabButton
                 active={activeTab === "apps"}
                 onClick={() => setActiveTab("apps")}
-                icon={<Folder size={18} />}
+                icon={<Folder size={16} />}
                 label="Applications"
               />
               <TabButton
                 active={activeTab === "shortcuts"}
                 onClick={() => setActiveTab("shortcuts")}
-                icon={<Keyboard size={18} />}
+                icon={<Keyboard size={16} />}
                 label="Raccourcis"
               />
               <TabButton
                 active={activeTab === "commands"}
                 onClick={() => setActiveTab("commands")}
-                icon={<Zap size={18} />}
+                icon={<Zap size={16} />}
                 label="Commandes"
               />
+
+              <p className="text-[9px] text-slate-600 uppercase tracking-widest px-3 pt-3 pb-1 font-semibold">
+                Paramètres
+              </p>
               <TabButton
-                active={activeTab === "voice"}
-                onClick={() => setActiveTab("voice")}
-                icon={<Mic size={18} />}
-                label="Voix & Synthèse"
-              />
-              <TabButton
-                active={activeTab === "google"}
-                onClick={() => setActiveTab("google")}
-                icon={<Shield size={18} />}
-                label="Google Beta"
+                active={activeTab === "settings"}
+                onClick={() => setActiveTab("settings")}
+                icon={<Mic size={16} />}
+                label="Paramètres"
               />
               <TabButton
                 active={activeTab === "navigation"}
                 onClick={() => setActiveTab("navigation")}
-                icon={<MapPin size={18} />}
+                icon={<MapPin size={16} />}
                 label="Navigation"
               />
+              <TabButton
+                active={activeTab === "google"}
+                onClick={() => setActiveTab("google")}
+                icon={<Shield size={16} />}
+                label="Google Beta"
+              />
 
-              <div className="my-2 border-t border-cyan-500/10 mx-2" />
-
+              <p className="text-[9px] text-slate-600 uppercase tracking-widest px-3 pt-3 pb-1 font-semibold">
+                Diagnostics
+              </p>
               <TabButton
                 active={activeTab === "neural"}
                 onClick={() => setActiveTab("neural")}
-                icon={<Brain size={18} />}
+                icon={<Brain size={16} />}
                 label="Neural Stats"
               />
               <TabButton
                 active={activeTab === "memory"}
                 onClick={() => setActiveTab("memory")}
-                icon={<FolderSearch size={18} />}
+                icon={<FolderSearch size={16} />}
                 label="Mémoire (RAG)"
               />
             </div>
 
-            {/* Version ou Info bas de page */}
-            <div className="mt-4 pt-4 border-t border-cyan-500/10 text-center">
-              <p className="text-[10px] text-cyan-500/30 font-mono">
-                OMNI UI v2.4.0
+            {/* Footer */}
+            <div className="px-5 py-3 border-t border-cyan-500/10">
+              <p className="text-[9px] text-cyan-500/20 font-mono">
+                OMNI UI v2.5.0
               </p>
             </div>
           </div>
 
           {/* ================= CONTENU PRINCIPAL (DROITE) ================= */}
-          <div className="flex-1 flex flex-col min-w-0 bg-gradient-to-br from-transparent to-cyan-900/5 relative">
-            {/* Bouton Fermer (Absolu ou dans une TopBar) */}
-            <div className="absolute top-4 right-4 z-10">
+          <div className="flex-1 flex flex-col min-w-0">
+            {/* TopBar avec titre de l'onglet actif + bouton fermer */}
+            <div className="flex items-center justify-between px-8 py-4 border-b border-cyan-400/10 bg-slate-900/30 shrink-0">
+              <h1 className="text-lg font-bold text-slate-100 tracking-wide">
+                {activeLabel}
+              </h1>
               <button
                 onClick={onClose}
-                className="p-2 bg-slate-800/50 hover:bg-red-500/20 border border-transparent hover:border-red-500/50 rounded-lg transition-all text-gray-400 hover:text-red-400 shadow-lg"
+                className="p-2 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/10 border border-transparent hover:border-red-500/20 transition-all"
                 title="Fermer"
               >
-                <X size={20} />
+                <X size={18} />
               </button>
             </div>
 
             {/* Zone de contenu scrollable */}
-            <div className="flex-1 overflow-y-auto p-8 pt-12 custom-scrollbar">
+            <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
               {activeTab === "apps" && <AppsTab />}
               {activeTab === "shortcuts" && <ShortcutsTab />}
               {activeTab === "commands" && <CommandsTab />}
-              {activeTab === "voice" && <VoiceSettingsTab />}
+              {activeTab === "settings" && <SettingsTab />}
               {activeTab === "google" && <GoogleTab />}
               {activeTab === "neural" && <NeuralTab tokenUsage={tokenUsage} />}
               {activeTab === "memory" && <MemoryTab />}

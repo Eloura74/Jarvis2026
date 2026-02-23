@@ -238,26 +238,18 @@ export function useVoiceRecognition(
             }
             // CAS 2 : Résultat INTERIM → preview et commandes rapides
             else {
-              const confidence = lastResult[0].confidence || 0;
-
               // RESET TIMER SILENCE (car on entend quelque chose)
               if (silenceTimerRef.current)
                 clearTimeout(silenceTimerRef.current);
 
               // Nouveau timer : Si plus rien ne change pendant 1.5s, on considère que c'est fini
               silenceTimerRef.current = setTimeout(() => {
-                console.log("🤫 Silence détecté (1.5s) -> Arrêt forcé");
                 recognition.stop();
               }, 1500);
 
               // Éviter log spam (seulement si changement significatif)
               if (transcript !== lastInterimTranscript) {
-                // Log pour débug Monsieur : voir ce que Jarvis entend pendant qu'il parle
-                if (window.speechSynthesis.speaking) {
-                  console.log(
-                    `🎤 [SPEAKING] Conf: ${(confidence * 100).toFixed(0)}% | Entendu: "${transcript}"`,
-                  );
-                }
+                // Fragments intermédiaires non loggés (trop verbeux)
 
                 lastInterimTranscript = transcript;
 
@@ -383,7 +375,7 @@ export function useVoiceRecognition(
   const forceResumeListening = useCallback(() => {
     if (recognitionRef.current) {
       try {
-        console.log("⚡ FORCE RESUME MICROPHONE (Bypass locks)");
+        // FORCE RESUME (log supprimé)
         isStartingRef.current = true;
         recognitionRef.current.start();
       } catch {
@@ -403,18 +395,16 @@ export function useVoiceRecognition(
     return new Promise<void>((resolve) => {
       // Si pas de reconnaissance active ou déjà arrêté, résoudre immédiatement
       if (!recognitionRef.current || !isListeningRef.current) {
-        console.log("✅ stopAndWait : déjà arrêté, résolution immédiate");
+        // stopAndWait : déjà arrêté
         resolve();
         return;
       }
 
-      console.log(
-        "🛑 stopAndWait : arrêt en cours, attente événement onend...",
-      );
+      // stopAndWait : arrêt en cours
 
       // Créer un handler unique pour cet arrêt
       const onEndHandler = () => {
-        console.log("✅ stopAndWait : événement onend reçu");
+        // stopAndWait : onend reçu
         // Retirer le listener pour éviter les fuites mémoire
         recognitionRef.current?.removeEventListener("end", onEndHandler);
         // ✅ Forcer ref à false immédiatement (le state sera mis à jour par recognition.onend)

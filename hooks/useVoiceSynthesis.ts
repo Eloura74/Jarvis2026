@@ -146,7 +146,7 @@ export function useVoiceSynthesis({
 
       // Synchronisation avec l'état du système
       utterance.onstart = () => {
-        console.log("🔊 TTS Start:", text.substring(0, 20) + "...");
+        // TTS Start (log supprimé)
         speechStartTimeRef.current = Date.now(); // Marquer le début pour calcul durée
         onStart?.();
         // 🟣 SPHERE: SPEAKING
@@ -157,8 +157,8 @@ export function useVoiceSynthesis({
         }).catch(() => {});
       };
 
-      const handleEndOrError = (type: string) => {
-        console.log(`🔊 TTS ${type}`);
+      const handleEndOrError = (_type: string) => {
+        // TTS End/Error (log supprimé)
         currentUtteranceRef.current = null;
 
         // Calculer la durée totale de parole (pour délai anti-écho adaptatif V1)
@@ -226,9 +226,7 @@ export function useVoiceSynthesis({
     (text: string, queue: boolean = false) => {
       if (!enabled) return;
 
-      console.log(
-        `🗣️ Speak request: "${text.substring(0, 20)}..." (Queue: ${queue})`,
-      );
+      // Speak request (log supprimé)
 
       if (queue) {
         // Ajouter à la file d'attente
@@ -241,7 +239,7 @@ export function useVoiceSynthesis({
         }
       } else {
         // Annuler tout et parler immédiatement
-        console.log("🛑 Force speak: cancelling previous audio");
+        // Force speak: cancel (log supprimé)
         window.speechSynthesis.cancel();
 
         // Timeout pour laisser le cancel se propager et nettoyer l'état

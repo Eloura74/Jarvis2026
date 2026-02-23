@@ -106,6 +106,10 @@ export async function listWindows() {
  * @returns {Promise<object|null>} Fenêtre trouvée ou null
  */
 async function findWindow(partialTitle, maxRetries = 5) {
+  if (!partialTitle || typeof partialTitle !== "string") {
+    console.warn("[findWindow] partialTitle invalide:", partialTitle);
+    return null;
+  }
   const query = partialTitle.toLowerCase();
   const queryWords = query.split(/[\s\-_]+/).filter((w) => w.length >= 2);
 

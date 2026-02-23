@@ -28,8 +28,11 @@ async function ensureConfigDir() {
 const DEFAULT_SETTINGS = {
   wakeWordEnabled: true,
   wakeWordThreshold: 0.8,
-  voiceLanguage: "fr-FR",
+  voiceURI: null,
+  voicePitch: 1.0,
+  voiceRate: 1.0,
   voiceVolume: 1.0,
+  voiceLanguage: "fr-FR",
   theme: "ironman",
   ghostModeEnabled: false,
   psychProfileEnabled: true,
@@ -69,13 +72,20 @@ router.post("/settings", async (req, res) => {
 
     const settings = { ...DEFAULT_SETTINGS, ...req.body };
 
-    // Validation basique
-    if (
-      typeof settings.wakeWordThreshold !== "number" ||
-      settings.wakeWordThreshold < 0 ||
-      settings.wakeWordThreshold > 1
-    ) {
-      return res.status(400).json({ error: "Invalid wakeWordThreshold" });
+    // Validation des champs numériques bornés
+    const numChecks = [
+      { key: "wakeWordThreshold", min: 0, max: 1 },
+      { key: "voicePitch", min: 0.1, max: 2.0 },
+      { key: "voiceRate", min: 0.5, max: 2.0 },
+      { key: "voiceVolume", min: 0, max: 1 },
+    ];
+    for (const { key, min, max } of numChecks) {
+      const val = settings[key];
+      if (typeof val !== "number" || val < min || val > max) {
+        return res
+          .status(400)
+          .json({ error: `Invalid ${key}: must be between ${min} and ${max}` });
+      }
     }
 
     await fs.writeFile(

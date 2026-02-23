@@ -55,7 +55,10 @@ export const toolDeclarations: FunctionDeclaration[] = [
   },
   {
     name: "search_web",
-    description: "Search on Google, YouTube, GitHub.",
+    description:
+      "Open a search in the browser (Google, YouTube, GitHub). " +
+      "Use ONLY when the user explicitly says 'recherche', 'cherche sur Google', 'ouvre YouTube', etc. " +
+      "Do NOT use this for 'trouve-moi X', 'montre-moi X', 'X en STL', 'image de X' — use search_results_visual instead.",
     parameters: {
       type: Type.OBJECT,
       properties: {
@@ -66,6 +69,25 @@ export const toolDeclarations: FunctionDeclaration[] = [
         query: { type: Type.STRING },
       },
       required: ["engine", "query"],
+    },
+  },
+  {
+    name: "search_results_visual",
+    description:
+      "Show 5 search results visually (title, URL, description, image) in a holographic overlay WITHOUT opening the browser. " +
+      "Use this when the user asks to FIND or SEE something without explicitly saying 'recherche': " +
+      "'support de téléphone S5 en STL', 'image de X', 'trouve-moi X', 'montre-moi des X', 'fichiers STL de X'. " +
+      "Also use for 3D model searches (STL, Thingiverse, Printables) and image lookups.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        query: {
+          type: Type.STRING,
+          description:
+            "The search query. Be specific, include relevant keywords like 'STL', 'fichier 3D', etc.",
+        },
+      },
+      required: ["query"],
     },
   },
   {
@@ -276,14 +298,20 @@ export const toolDeclarations: FunctionDeclaration[] = [
   },
   {
     name: "show_status_overlay",
-    description: "Show a holographic status overlay for a device.",
+    description:
+      "Show a holographic status overlay for ANY device, sensor group, or home automation category. " +
+      "Use this for: 3D printers (e.g. 'VZ330', 'fleet'), door/security sensors (e.g. 'Portes', 'sécurité', 'capteurs porte'), " +
+      "temperature/climate sensors (e.g. 'température', 'climat'), or any specific HA entity. " +
+      "ALWAYS call this tool when the user asks about the state, status, or condition of any physical device or sensor.",
     parameters: {
       type: Type.OBJECT,
       properties: {
         target: {
           type: Type.STRING,
           description:
-            "Device name (e.g. 'VZ330'). To show all 3D printers at once, use 'fleet'.",
+            "What to display. Examples: 'VZ330' (printer), 'fleet' (all printers), " +
+            "'Portes' (door sensors), 'sécurité' (security perimeter), " +
+            "'température' (climate sensors). Use the most relevant keyword from the user's request.",
         },
       },
       required: ["target"],

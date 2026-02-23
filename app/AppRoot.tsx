@@ -7,6 +7,7 @@ import { MemoryProvider } from "../contexts/MemoryContext";
 import { StartOverlay } from "../components/StartOverlay";
 import { IntroSequence } from "../components/IntroSequence";
 import JarvisShell from "./JarvisShell";
+import { ErrorBoundary } from "../components/ErrorBoundary";
 
 export default function AppRoot() {
   const [showStart, setShowStart] = useState(true);
@@ -54,7 +55,9 @@ export default function AppRoot() {
           )}
         </AnimatePresence>
 
-        <JarvisShell shouldGreet={introFinished} />
+        <ErrorBoundary>
+          <JarvisShell shouldGreet={introFinished} />
+        </ErrorBoundary>
       </MemoryProvider>
     </KernelProvider>
   );

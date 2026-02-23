@@ -8,9 +8,14 @@ export interface JarvisSettings {
   wakeWordEnabled: boolean;
   wakeWordThreshold: number;
 
-  // Voice
-  voiceLanguage: "fr-FR" | "en-US" | "en-GB";
+  // Synthèse vocale (TTS)
+  voiceURI: string | null;
+  voicePitch: number;
+  voiceRate: number;
   voiceVolume: number;
+
+  // Reconnaissance vocale (STT)
+  voiceLanguage: "fr-FR" | "en-US" | "en-GB";
 
   // UI
   theme: "classic" | "ironman" | "matrix";
@@ -23,11 +28,14 @@ export interface JarvisSettings {
   savedLocations?: Record<string, string>;
 }
 
-const DEFAULT_SETTINGS: JarvisSettings = {
+export const DEFAULT_SETTINGS: JarvisSettings = {
   wakeWordEnabled: true,
   wakeWordThreshold: 0.8,
-  voiceLanguage: "fr-FR",
+  voiceURI: null,
+  voicePitch: 1.0,
+  voiceRate: 1.0,
   voiceVolume: 1.0,
+  voiceLanguage: "fr-FR",
   theme: "ironman",
   ghostModeEnabled: false,
   psychProfileEnabled: true,

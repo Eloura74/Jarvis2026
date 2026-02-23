@@ -10,12 +10,8 @@ import {
   KernelContextType,
   VoiceSettings,
 } from "./KernelContextDefinition";
-import {
-  storageGet,
-  storageSet,
-  STORAGE_KEYS,
-  runStorageCleanup,
-} from "../services/storageService";
+import { runStorageCleanup } from "../services/storageService";
+import { useAppSettings } from "../hooks/useAppSettings";
 
 // ========================================
 // PROVIDER
@@ -85,30 +81,37 @@ export const KernelProvider: React.FC<KernelProviderProps> = ({ children }) => {
     runStorageCleanup();
   }, []);
 
-  // 6. Paramètres Voix
-  const [voiceSettings, setVoiceSettingsState] = useState<VoiceSettings>(() =>
-    storageGet<VoiceSettings>(STORAGE_KEYS.VOICE_SETTINGS, {
-      voiceURI: null,
-      pitch: 1.0,
-      rate: 1.0,
-      volume: 1.0,
-    }),
+  // 6 & 7. Paramètres centralisés via backend (useAppSettings)
+  const { settings: appSettings, updateSettings } = useAppSettings();
+
+  // Adaptateur VoiceSettings → format attendu par les composants existants
+  const voiceSettings: VoiceSettings = {
+    voiceURI: appSettings.voiceURI,
+    pitch: appSettings.voicePitch,
+    rate: appSettings.voiceRate,
+    volume: appSettings.voiceVolume,
+  };
+
+  const setVoiceSettings = useCallback(
+    (settings: VoiceSettings) => {
+      updateSettings({
+        voiceURI: settings.voiceURI,
+        voicePitch: settings.pitch,
+        voiceRate: settings.rate,
+        voiceVolume: settings.volume,
+      });
+    },
+    [updateSettings],
   );
 
-  const setVoiceSettings = useCallback((settings: VoiceSettings) => {
-    setVoiceSettingsState(settings);
-    storageSet(STORAGE_KEYS.VOICE_SETTINGS, settings);
-  }, []);
+  const wakeWordEnabled = appSettings.wakeWordEnabled;
 
-  // 7. Gestion du Wake Word
-  const [wakeWordEnabled, setWakeWordEnabledState] = useState<boolean>(() =>
-    storageGet<boolean>(STORAGE_KEYS.WAKE_WORD_ENABLED, true),
+  const setWakeWordEnabled = useCallback(
+    (enabled: boolean) => {
+      updateSettings({ wakeWordEnabled: enabled });
+    },
+    [updateSettings],
   );
-
-  const setWakeWordEnabled = useCallback((enabled: boolean) => {
-    setWakeWordEnabledState(enabled);
-    storageSet(STORAGE_KEYS.WAKE_WORD_ENABLED, enabled);
-  }, []);
 
   // Valeur exposée
   const value: KernelContextType = {

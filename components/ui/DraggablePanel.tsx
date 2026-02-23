@@ -50,7 +50,11 @@ export const DraggablePanel: React.FC<DraggablePanelProps> = ({
         </div>
 
         <button
-          onClick={onClose}
+          onClick={(e) => {
+            e.stopPropagation();
+            e.nativeEvent.stopImmediatePropagation();
+            onClose();
+          }}
           className="text-cyan-600 hover:text-red-400 transition-colors text-lg leading-none px-2"
         >
           ×
