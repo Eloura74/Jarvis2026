@@ -11,6 +11,107 @@ interface SearchResultsOverlayProps {
 }
 
 /**
+ * Miniature d'un résultat de recherche.
+ * Cascade : image réelle → favicon Google du domaine → placeholder SVG coloré.
+ */
+const SOURCE_COLORS: Record<string, string> = {
+  thingiverse: "#248bfb",
+  printables: "#fa6831",
+  cults3d: "#e63946",
+  myminifactory: "#00b4d8",
+  google: "#4285f4",
+  youtube: "#ff0000",
+  wikipedia: "#a8a8a8",
+  amazon: "#ff9900",
+  github: "#6e40c9",
+  web: "#00f3ff",
+};
+
+function ResultThumbnail({
+  result,
+}: {
+  result: { title: string; url: string; image: string | null; source: string };
+}) {
+  const [imgSrc, setImgSrc] = React.useState<string | null>(result.image);
+  const [stage, setStage] = React.useState<"image" | "favicon" | "placeholder">(
+    result.image ? "image" : "favicon",
+  );
+
+  // Extraire le domaine pour le favicon
+  let domain = "";
+  try {
+    domain = new URL(result.url).hostname;
+  } catch {
+    domain = "";
+  }
+  const faviconUrl = domain
+    ? `https://www.google.com/s2/favicons?domain=${domain}&sz=64`
+    : null;
+
+  const color = SOURCE_COLORS[result.source.toLowerCase()] || "#00f3ff";
+  const initial = result.source.charAt(0).toUpperCase();
+
+  const handleError = () => {
+    if (stage === "image" && faviconUrl) {
+      setImgSrc(faviconUrl);
+      setStage("favicon");
+    } else {
+      setImgSrc(null);
+      setStage("placeholder");
+    }
+  };
+
+  const isFavicon = stage === "favicon";
+  const thumbStyle: React.CSSProperties = {
+    width: "56px",
+    height: "56px",
+    borderRadius: "6px",
+    border: "1px solid rgba(0,243,255,0.15)",
+    flexShrink: 0,
+    objectFit: (isFavicon
+      ? "contain"
+      : "cover") as React.CSSProperties["objectFit"],
+    background: isFavicon ? "rgba(0,0,0,0.4)" : undefined,
+    padding: isFavicon ? "8px" : undefined,
+  };
+
+  if (imgSrc && stage !== "placeholder") {
+    return (
+      <img
+        src={imgSrc}
+        alt={result.title}
+        style={thumbStyle}
+        onError={handleError}
+      />
+    );
+  }
+
+  // Placeholder SVG coloré avec initiale de la source
+  return (
+    <div
+      style={{
+        width: "56px",
+        height: "56px",
+        borderRadius: "6px",
+        border: `1px solid ${color}40`,
+        flexShrink: 0,
+        background: `${color}15`,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        fontFamily: '"JetBrains Mono", monospace',
+        fontSize: "18px",
+        fontWeight: 700,
+        color,
+        letterSpacing: "0",
+      }}
+    >
+      {initial}
+    </div>
+  );
+}
+
+/**
  * Overlay holographique dédié aux résultats de recherche visuelle.
  * Affiche 5 résultats avec titre, source, description et lien cliquable
  * sans ouvrir le navigateur automatiquement.
@@ -221,24 +322,8 @@ export const SearchResultsOverlay: React.FC<SearchResultsOverlayProps> = ({
                       {idx + 1}
                     </div>
 
-                    {/* Image miniature si disponible */}
-                    {result.image && (
-                      <img
-                        src={result.image}
-                        alt={result.title}
-                        style={{
-                          width: "56px",
-                          height: "56px",
-                          objectFit: "cover",
-                          borderRadius: "6px",
-                          border: "1px solid rgba(0,243,255,0.15)",
-                          flexShrink: 0,
-                        }}
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).style.display = "none";
-                        }}
-                      />
-                    )}
+                    {/* Miniature : image réelle → favicon → placeholder thématique */}
+                    <ResultThumbnail result={result} />
 
                     {/* Contenu texte */}
                     <div style={{ flex: 1, minWidth: 0 }}>

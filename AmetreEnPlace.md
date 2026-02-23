@@ -12,4 +12,4 @@
 
 # reunir tout les .env
 
-#
+# verifie si on peux close application diverse
