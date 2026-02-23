@@ -185,7 +185,7 @@ export function useJarvisBrain(props: UseJarvisBrainProps) {
         timestamp: Date.now(),
         status: "pending",
       };
-      setCommandHistory((prev) => [newCommand, ...prev]);
+      setCommandHistory((prev) => [newCommand, ...prev].slice(0, 50));
       setStatus(SystemStatus.PROCESSING);
       addLog(`Analyzing: "${text}"`, "USER", "info");
 

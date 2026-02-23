@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>JARVIS OS - Galerie V7.2</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#050a10;color:#e0f8ff;font-family:"Segoe UI",sans-serif;padding:24px;min-height:100vh}
+header{text-align:center;margin-bottom:28px}
+header h1{font-size:1rem;color:#00f0ff;text-transform:uppercase;letter-spacing:4px;font-weight:400}
+header p{font-size:.7rem;color:#3a5a70;margin-top:5px}
+.gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(165px,1fr));gap:22px;max-width:1400px;margin:0 auto}
+.card{display:flex;flex-direction:column;align-items:center;gap:9px;cursor:pointer;transition:transform .15s}
+.card:hover{transform:scale(1.05)}
+.card-label{font-size:.62rem;text-transform:uppercase;letter-spacing:1.5px;color:#3a5a70;transition:color .2s}
+.card:hover .card-label{color:#00f0ff}
+.bezel-sm{width:160px;height:160px;background:radial-gradient(circle,#2a2a2a 0%,#111 70%,#000 100%);border-radius:50%;display:flex;justify-content:center;align-items:center;box-shadow:0 8px 24px rgba(0,0,0,.85);border:2px solid transparent;transition:border-color .2s}
+.card:hover .bezel-sm{border-color:rgba(0,240,255,.25)}
+.screen-sm{width:136px;height:136px;background:#020305;border-radius:50%;overflow:hidden}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:200;justify-content:center;align-items:center;flex-direction:column;gap:22px;backdrop-filter:blur(8px)}
+.modal-overlay.open{display:flex}
+.modal-bezel{width:310px;height:310px;background:radial-gradient(circle,#2a2a2a 0%,#111 70%,#000 100%);border-radius:50%;display:flex;justify-content:center;align-items:center;box-shadow:0 20px 60px rgba(0,0,0,.95),0 0 50px rgba(0,240,255,.12)}
+.modal-screen{width:268px;height:268px;background:#020305;border-radius:50%;overflow:hidden}
+.modal-info{text-align:center}
+.modal-info h2{font-size:.9rem;color:#00f0ff;text-transform:uppercase;letter-spacing:3px;font-weight:400;margin-bottom:12px}
+.modal-info input{background:#0d1826;border:1px solid #0055cc;color:#fff;padding:8px 14px;font-family:monospace;font-size:.8rem;border-radius:4px;outline:none;width:268px;margin-bottom:12px}
+.modal-close{background:transparent;color:#3a5a70;border:1px solid #1a2b45;padding:7px 22px;cursor:pointer;font-size:.72rem;text-transform:uppercase;letter-spacing:1px;border-radius:4px;transition:all .2s}
+.modal-close:hover{color:#00f0ff;border-color:#00f0ff}
+</style>
+</head>
+<body>
+<header>
+  <h1>JARVIS OS - Galerie des Modes V7.2</h1>
+  <p>Cliquez sur un mode pour le voir en plein ecran - Simulation GC9A01 240x240</p>
+</header>
+<div class="gallery" id="gallery"></div>
+<div class="modal-overlay" id="modal" onclick="onOvClick(event)">
+  <div class="modal-bezel"><div class="modal-screen"><canvas id="mc" width="268" height="268"></canvas></div></div>
+  <div class="modal-info">
+    <h2 id="mtitle">MODE</h2>
+    <input type="text" id="minput" placeholder="local_text" oninput="onMText()"/><br>
+    <button class="modal-close" onclick="closeModal()">Fermer</button>
+  </div>
+</div>
+<script>
+var DEG=Math.PI/180;
+var C={BG:{r:2,g:3,b:5},CYAN:{r:0,g:240,b:255},BLUE:{r:0,g:100,b:255},OBLUE:{r:0,g:140,b:255},ORED:{r:255,g:10,b:30},WHITE:{r:240,g:248,b:255},GREEN:{r:0,g:255,b:120},YELL:{r:255,g:200,b:0},ORA:{r:255,g:120,b:0},PURP:{r:180,g:50,b:255},PINK:{r:255,g:0,b:127},RED:{r:255,g:40,b:60},DBLUE:{r:5,g:15,b:30},GREY:{r:100,g:110,b:120},DARK:{r:10,g:15,b:20}};
+var SNODES=450,SB=[];
+(function(){var phi=Math.PI*(3-Math.sqrt(5));for(var i=0;i<SNODES;i++){var y=1-(i/(SNODES-1))*2,r=Math.sqrt(1-y*y),t=phi*i;SB.push({x:Math.cos(t)*r,y:y,z:Math.sin(t)*r});}})();
+var DTXT={IDLE:"STANDBY",LISTENING:"STANDBY",SPEAKING:"STANDBY",WEATHER:"24C",PRINT:"220|60|45",WHATSAPP:"Maman",GMAIL:"INBOX",CALENDAR:"RAPPEL"};

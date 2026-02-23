@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { LogEntry } from "../types";
 import { StatusOverlayData } from "../types/app.types";
+import { subscribe, SSEPayload } from "../services/sseClient"; // B1 : Singleton SSE
 
 interface UseProactiveEventsProps {
   speak: (text: string) => void;
@@ -33,19 +34,11 @@ export function useProactiveEvents({
   }, [speak, addLog, setStatusOverlay, onProactiveEvent]);
 
   useEffect(() => {
-    const sseUrl = "http://localhost:3001/api/events";
-    const eventSource = new EventSource(sseUrl);
-
-    eventSource.onopen = () => {
-      console.log(
-        `🔌 [SSE] Connected to JARVIS Push Notifications at ${sseUrl}`,
-      );
-    };
-
-    eventSource.onmessage = (event) => {
+    // B1 : Utilisation du singleton SSE — une seule connexion partagée entre tous les hooks
+    const unsubscribe = subscribe((payload: SSEPayload) => {
       try {
-        const payload = JSON.parse(event.data);
-        const { type, payload: data, messageToSpeak } = payload;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { type, payload: data, messageToSpeak } = payload as any;
 
         // Déléguer la parole et le HUD au brain via callback
         if (messageToSpeak && onProactiveEventRef.current) {
@@ -189,18 +182,9 @@ export function useProactiveEvents({
       } catch (err) {
         console.error("❌ Erreur parsing SSE dans useProactiveEvents:", err);
       }
-    };
+    });
 
-    eventSource.onerror = (err) => {
-      console.error(
-        "❌ Erreur SSE Push Notifications (reconnexion auto).",
-        err,
-      );
-    };
-
-    return () => {
-      console.log("🔌 [SSE] Fermeture connexion Push Notifications.");
-      eventSource.close();
-    };
+    // Cleanup : désabonnement du singleton (ne ferme la connexion que si plus aucun abonné)
+    return unsubscribe;
   }, []);
 }

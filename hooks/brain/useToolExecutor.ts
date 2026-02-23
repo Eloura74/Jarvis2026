@@ -335,6 +335,36 @@ export function useToolExecutor({
                 );
               }
 
+              // Envoyer l'animation MAP sur la sphère ESP32
+              // Format TEXT : "DESTINATION|DISTANCE|ETA" (max 63 chars pour le buffer C++)
+              try {
+                const destShort = route.endAddress
+                  .split(",")[0]
+                  .substring(0, 20);
+                const distShort = (route.distance || "--").substring(0, 10);
+                const etaShort = (
+                  route.durationInTraffic ||
+                  route.duration ||
+                  "--"
+                ).substring(0, 10);
+                const sphereText =
+                  `${destShort}|${distShort}|${etaShort}`.substring(0, 63);
+                const BASE = "http://localhost:3001";
+                fetch(`${BASE}/api/sphere/state`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ state: "MAP" }),
+                }).catch((e) => console.warn("⚠️ Sphere STATE MAP:", e));
+                fetch(`${BASE}/api/sphere/text`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ text: sphereText }),
+                }).catch((e) => console.warn("⚠️ Sphere TEXT MAP:", e));
+                console.log("🗺️ Sphere MAP activé:", sphereText);
+              } catch (sphereErr) {
+                console.warn("⚠️ Sphere MAP non envoyé:", sphereErr);
+              }
+
               // Délai de sécurité pour laisser le temps à l'UI de se mettre à jour
               // sans interrompre le thread vocal immédiatement
               setTimeout(() => {

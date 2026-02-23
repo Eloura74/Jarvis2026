@@ -205,10 +205,26 @@ export const setLightBrightness = async (
   return await callHAService("light", "turn_on", entityId, { brightness });
 };
 
+// Cache mémoire pour getHAContext — TTL 30 secondes
+// Évite une requête HTTP HA à chaque commande Gemini (gain 1-3s de latence)
+let haContextCache: { data: string; ts: number } | null = null;
+const HA_CACHE_TTL_MS = 30_000;
+
+/** Invalide manuellement le cache HA (ex: après une action domotique) */
+export const invalidateHACache = (): void => {
+  haContextCache = null;
+};
+
 /**
  * Récupère le contexte complet des appareils pour Gemini
+ * Résultat mis en cache 30s pour éviter les requêtes répétées
  */
 export const getHAContext = async (): Promise<string> => {
+  // Retourner le cache si encore valide
+  if (haContextCache && Date.now() - haContextCache.ts < HA_CACHE_TTL_MS) {
+    return haContextCache.data;
+  }
+
   const states = await fetchHAStates();
 
   const lights = HA_ENTITIES.LIGHTS.map((l) => {
@@ -233,7 +249,7 @@ export const getHAContext = async (): Promise<string> => {
     return `- ${p.name}: Progress ${prog}%, Bed ${bed}°C, Extruder ${ext}°C`;
   }).join("\n");
 
-  return `
+  const result = `
 **HOME AUTOMATION STATUS (LIVE DATA):**
 [INSTRUCTIONS]
 - When replying, use the device LABEL.
@@ -252,4 +268,8 @@ ${doors}
 [3D PRINTERS]
 ${printers}
 `;
+
+  // Mettre en cache le résultat avec timestamp
+  haContextCache = { data: result, ts: Date.now() };
+  return result;
 };

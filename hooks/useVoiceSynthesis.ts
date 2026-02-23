@@ -31,8 +31,8 @@ interface UseVoiceSynthesisOptions {
   enabled: boolean;
   /** Callback appelé au début de la lecture */
   onStart?: () => void;
-  /** Callback appelé à la fin de la lecture */
-  onEnd?: () => void;
+  /** Callback appelé à la fin de la lecture — reçoit la durée totale de parole en ms */
+  onEnd?: (durationMs: number) => void;
   /** Volume de la voix (0-1), par défaut 1.0 */
   volume?: number;
   /** Hauteur de la voix (0-2), par défaut 1.0 */
@@ -41,8 +41,6 @@ interface UseVoiceSynthesisOptions {
   rate?: number;
   /** URI de la voix spécifique à utiliser */
   voiceURI?: string | null;
-  /** Callback to forcibly resume listening */
-  forceResumeListening?: () => void;
 }
 
 interface UseVoiceSynthesisReturn {
@@ -62,7 +60,6 @@ export function useVoiceSynthesis({
   pitch = 1.0,
   rate = 1.0,
   voiceURI = null,
-  forceResumeListening,
 }: UseVoiceSynthesisOptions): UseVoiceSynthesisReturn {
   /**
    * Prononce le texte fourni avec la voix J.A.R.V.I.S.-like
@@ -79,6 +76,9 @@ export function useVoiceSynthesis({
 
   // Ref pour stocker la fonction speakImmediate et éviter les cycles
   const speakImmediateRef = useRef<(text: string) => void>(() => {});
+
+  // Timestamp de début de parole (pour calcul durée → délai anti-écho adaptatif V1)
+  const speechStartTimeRef = useRef<number>(0);
 
   /**
    * Traite le prochain message de la queue
@@ -147,11 +147,8 @@ export function useVoiceSynthesis({
       // Synchronisation avec l'état du système
       utterance.onstart = () => {
         console.log("🔊 TTS Start:", text.substring(0, 20) + "...");
+        speechStartTimeRef.current = Date.now(); // Marquer le début pour calcul durée
         onStart?.();
-        // FORCE RESUME MIC HERE IF PROVIDED
-        setTimeout(() => {
-          forceResumeListening?.();
-        }, 100);
         // 🟣 SPHERE: SPEAKING
         fetch("http://localhost:3001/api/sphere/state", {
           method: "POST",
@@ -164,13 +161,20 @@ export function useVoiceSynthesis({
         console.log(`🔊 TTS ${type}`);
         currentUtteranceRef.current = null;
 
+        // Calculer la durée totale de parole (pour délai anti-écho adaptatif V1)
+        const durationMs =
+          speechStartTimeRef.current > 0
+            ? Date.now() - speechStartTimeRef.current
+            : 0;
+        speechStartTimeRef.current = 0;
+
         // Délai avant le prochain message
         setTimeout(() => {
           processNextInQueue();
 
           // 🟣 SPHERE: IDLE uniquement si la queue est vide (sinon SPEAKING du msg suivant sera écrasé)
           if (messageQueue.current.length === 0 && !isProcessingQueue.current) {
-            onEnd?.(); // Signal fin à l'UI
+            onEnd?.(durationMs); // Signal fin à l'UI avec durée réelle
             fetch("http://localhost:3001/api/sphere/state", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
@@ -210,7 +214,6 @@ export function useVoiceSynthesis({
       rate,
       voiceURI,
       processNextInQueue,
-      forceResumeListening,
     ],
   );
 
@@ -257,7 +260,8 @@ export function useVoiceSynthesis({
     messageQueue.current = [];
     isProcessingQueue.current = false;
     currentUtteranceRef.current = null;
-    onEnd?.();
+    speechStartTimeRef.current = 0;
+    onEnd?.(0);
   }, [onEnd]);
 
   // Utilisation d'un getter pour l'état en temps réel

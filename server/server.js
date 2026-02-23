@@ -8,8 +8,11 @@ import cors from "cors";
 import dotenv from "dotenv";
 import { spawn } from "child_process";
 
-// Charger les variables d'environnement (depuis la racine)
+// Charger les variables d'environnement
+// 1. Racine du projet (Home Assistant, WhatsApp, etc.)
 dotenv.config({ path: "../.env.local" });
+// 2. Dossier server/ (GEMINI_API_KEY et secrets backend uniquement)
+dotenv.config({ path: "./.env.local" });
 
 // DISPATCHER PLATEFORME
 import {
@@ -45,6 +48,7 @@ import whatsappRoutes from "./routes/whatsapp.js";
 import sleepRoutes from "./routes/sleep.js";
 import briefingRoutes from "./routes/briefing.js";
 import cameraRoutes from "./routes/camera.js";
+import geminiRoutes from "./routes/gemini.js"; // S1 : Proxy Gemini (clé API côté serveur)
 
 const app = express();
 const PORT = 3001;
@@ -70,6 +74,7 @@ app.use("/api/whatsapp", whatsappRoutes); // WhatsApp Auth and Status
 app.use("/api/sleep", sleepRoutes); // Mode Veille Intelligente
 app.use("/api/briefing", briefingRoutes); // Briefing Vocal Matinal
 app.use("/api/camera", cameraRoutes); // Snapshots Webcam HA
+app.use("/api/gemini", geminiRoutes); // S1 : Proxy Gemini (clé API sécurisée côté serveur)
 
 // Index des applications (chargé en mémoire)
 let appsIndex = [];

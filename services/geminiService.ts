@@ -1,17 +1,18 @@
-import { GoogleGenAI, FunctionDeclaration, Type } from "@google/genai";
+import { FunctionDeclaration, Type } from "@google/genai";
 import { AppMemory } from "../types";
 import { OmniDecision } from "../types/app.types";
+import {
+  generateContentStreamProxy,
+  generateSummarizeProxy,
+  generateQMSProxy,
+} from "./geminiProxyClient"; // S1 : Proxy backend — clé API hors bundle JS
 
 // ============================================================================
 // CONFIGURATION GEMINI
 // ============================================================================
-
-const geminiApiKey = import.meta.env.VITE_GEMINI_API_KEY;
-if (!geminiApiKey) {
-  console.error("❌ CLÉ API GEMINI MANQUANTE DANS LE .ENV");
-}
-
-const ai = new GoogleGenAI({ apiKey: geminiApiKey });
+// S1 : La clé API n'est plus utilisée côté client.
+// Tous les appels Gemini passent par le backend via /api/gemini/*
+// La variable VITE_GEMINI_API_KEY peut être retirée du .env.local frontend.
 
 const decisionCache: Record<string, OmniDecision> = {};
 
@@ -470,6 +471,82 @@ const toolDeclarations: FunctionDeclaration[] = [
 ];
 
 // ============================================================================
+// DÉTECTION DE COMPLEXITÉ — maxOutputTokens adaptatif (A7)
+// ============================================================================
+
+/**
+ * Estime le nombre de tokens de sortie approprié selon la nature de la requête.
+ * - Requête simple (question directe, météo, heure) → 300 tokens (~3-4 phrases)
+ * - Requête complexe (analyse, rapport, liste, résumé) → 600 tokens (~6-8 phrases)
+ * - Requête avec tool call probable → undefined (pas de limite, Gemini gère)
+ *
+ * L'objectif est de réduire les réponses verbales sans jamais tronquer une réponse
+ * en cours de construction (le token limit est une limite haute, pas une cible).
+ */
+const estimateMaxOutputTokens = (input: string): number | undefined => {
+  const t = input.toLowerCase();
+
+  // Mots-clés indiquant une réponse potentiellement longue → 600 tokens
+  const complexKeywords = [
+    "analyse",
+    "rapport",
+    "résumé",
+    "liste",
+    "détail",
+    "explique",
+    "compare",
+    "historique",
+    "bilan",
+    "synthèse",
+    "décris",
+    "raconte",
+    "quels sont",
+    "donne-moi tous",
+    "tout ce que",
+  ];
+  if (complexKeywords.some((k) => t.includes(k))) return 600;
+
+  // Mots-clés indiquant un tool call probable → pas de limite (Gemini doit construire l'appel)
+  const toolKeywords = [
+    "ouvre",
+    "lance",
+    "allume",
+    "éteins",
+    "envoie",
+    "réponds",
+    "crée",
+    "ajoute",
+    "supprime",
+    "ferme",
+    "minimise",
+    "maximise",
+    "cherche",
+    "navigue",
+    "va sur",
+    "montre",
+    "affiche",
+    "capture",
+    "timer",
+    "minuteur",
+    "volume",
+    "mute",
+    "veille",
+    "briefing",
+    "météo",
+    "agenda",
+    "calendrier",
+    "mail",
+    "gmail",
+    "whatsapp",
+    "spotify",
+  ];
+  if (toolKeywords.some((k) => t.includes(k))) return undefined;
+
+  // Requête simple par défaut → 300 tokens (réponse concise)
+  return 300;
+};
+
+// ============================================================================
 // LOGIQUE DE PARSING
 // ============================================================================
 
@@ -539,64 +616,6 @@ export const resetNeuralShield = () => {
   localStorage.removeItem("jarvis_last_429");
   console.log("🔓 Neural Shield manually reset by user.");
 };
-
-const MAX_RETRIES = 3;
-const INITIAL_RETRY_DELAY = 1000;
-
-/**
- * Wrapper avec retry exponentiel et FALLBACK pour les appels Gemini
- */
-async function generateContentWithFallback(
-  input: string | any[],
-  config: any,
-  retries = MAX_RETRIES,
-  delay = INITIAL_RETRY_DELAY,
-  useFallback = false,
-): Promise<any> {
-  // Stratégie : D'abord 2.5-flash, si 429/500 -> 1.5-flash (plus stable)
-  const currentModel = useFallback ? "gemini-1.5-flash" : "gemini-2.5-flash";
-
-  try {
-    return await ai.models.generateContent({
-      model: currentModel,
-      contents: input,
-      config: config,
-    });
-  } catch (error: any) {
-    const isRetryable =
-      error.status === 429 ||
-      error.code === 429 ||
-      error.status === 503 ||
-      error.status === 500 ||
-      error.message?.includes("429");
-
-    if (isRetryable) {
-      console.warn(
-        `⚠️ Error with ${currentModel} (Code: ${error.status || "Unknown"}).`,
-      );
-
-      // Si on est déjà sur le fallback et qu'il reste des retries, on attend
-      if (useFallback && retries > 0) {
-        console.log(`⏳ Retrying fallback in ${delay}ms...`);
-        await new Promise((resolve) => setTimeout(resolve, delay));
-        return generateContentWithFallback(
-          input,
-          config,
-          retries - 1,
-          delay * 2,
-          true,
-        );
-      }
-
-      // Si on était sur le modèle principal, on passe au FALLBACK immédiatement
-      if (!useFallback) {
-        console.warn("🛡️ SWITCHING TO FALLBACK MODEL (Gemini 1.5 Flash)");
-        return generateContentWithFallback(input, config, retries, delay, true);
-      }
-    }
-    throw error;
-  }
-}
 
 export const summarizeToolResults = async (
   toolName: string,
@@ -674,7 +693,7 @@ export const summarizeToolResults = async (
       return result?.message || "Message WhatsApp envoyé, Monsieur.";
     }
 
-    // Prompt générique pour les autres outils
+    // Prompt générique pour les autres outils — via proxy backend (S1)
     const prompt =
       "Synthétise ces résultats de l'outil '" +
       toolName +
@@ -683,13 +702,7 @@ export const summarizeToolResults = async (
       JSON.stringify(resultData).substring(0, 2000) +
       "\nRÈGLES: répondre en français, s'adresser comme 'Monsieur', ne pas lire les emails complets.";
 
-    const response = await generateContentWithFallback(
-      [{ role: "user", parts: [{ text: prompt }] }],
-      { temperature: 0.1 },
-    );
-    return (
-      response.candidates?.[0].content?.parts?.[0].text || "Exécuté, Monsieur."
-    );
+    return await generateSummarizeProxy(prompt);
   } catch (err: unknown) {
     console.error("Erreur summarize:", err);
     return "J'ai les résultats, Monsieur.";
@@ -717,13 +730,9 @@ export const getQMSAnalysis = async (
       "\n\n" +
       "RÉPONDRE UNIQUEMENT EN JSON avec structure: { hasSuggestion: boolean, tool: string, args: object, explanation: string }";
 
-    const response = await generateContentWithFallback(
-      [{ role: "user", parts: [{ text: prompt }] }],
-      { temperature: 0.1, responseMimeType: "application/json" },
-    );
-    const text = response.candidates?.[0].content?.parts?.[0].text;
-    return text ? JSON.parse(text) : { hasSuggestion: false };
-  } catch (err: unknown) {
+    // Via proxy backend (S1)
+    return await generateQMSProxy(prompt);
+  } catch {
     /* Silently fail QMS if overloaded */
     return { hasSuggestion: false };
   }
@@ -761,14 +770,8 @@ export const getNeuralBriefing = async ({
       "CONTEXTE: " +
       task;
 
-    const response = await generateContentWithFallback(
-      [{ role: "user", parts: [{ text: prompt }] }],
-      { temperature: 0.7 },
-    );
-
-    return (
-      response.candidates?.[0].content?.parts?.[0].text || "Rien à signaler."
-    );
+    // Via proxy backend (S1)
+    return await generateSummarizeProxy(prompt);
   } catch (err: unknown) {
     const error = err as Error;
     if (error.message?.includes("429")) record429();
@@ -810,75 +813,61 @@ export const streamCommand = async (
 
     const haContext = await getHAContext();
 
+    // Adapter maxOutputTokens selon la complexité de la requête (A7)
+    // undefined = pas de limite (tool calls), 300 = simple, 600 = complexe
+    const maxOutputTokens = estimateMaxOutputTokens(input);
+
     const config = {
       systemInstruction:
         generateSystemInstruction(memSum, conversationContext) + haContext,
       tools: [{ functionDeclarations: toolDeclarations }],
       temperature: 0.1,
+      ...(maxOutputTokens !== undefined && { maxOutputTokens }),
     };
 
-    let responseStream;
-    try {
-      responseStream = await ai.models.generateContentStream({
-        model: "gemini-2.5-flash",
-        contents: input,
-        config: config,
-      });
-    } catch (e: any) {
-      console.warn(
-        "🛡️ FALLBACK STREAMING (Gemini 1.5 Flash) suite à erreur:",
-        e.message,
-      );
-      responseStream = await ai.models.generateContentStream({
-        model: "gemini-1.5-flash",
-        contents: input,
-        config: config,
-      });
-    }
+    // S1 : Appel via proxy backend (clé API sécurisée côté serveur)
+    // Le proxy gère le fallback 2.5-flash → 1.5-flash automatiquement
+    const responseStream = generateContentStreamProxy(input, {
+      systemInstruction: config.systemInstruction as string,
+      tools: toolDeclarations,
+      temperature: config.temperature as number,
+      maxOutputTokens: config.maxOutputTokens as number | undefined,
+    });
 
     let fullText = "";
     let accumulatedTextChunk = "";
     const allToolCalls: Array<{ name: string; args: Record<string, unknown> }> =
       [];
 
-    // On consomme le flux au fur et à mesure avec for await
+    // Consommer les chunks du proxy SSE
     for await (const chunk of responseStream) {
-      const parts = chunk.candidates?.[0]?.content?.parts || [];
-
-      // Extraction des appels d'outils
-      const functionCalls = parts
-        .filter((p: any) => p.functionCall)
-        .map((p: any) => p.functionCall);
-      if (functionCalls.length > 0) {
-        for (const call of functionCalls) {
-          if (call.name && call.args) {
-            const validCall = {
-              name: call.name,
-              args: call.args as Record<string, unknown>,
-            };
-            allToolCalls.push(validCall);
-            if (callbacks.onToolCall) await callbacks.onToolCall(validCall);
-          }
-        }
+      if (chunk.type === "error") {
+        throw new Error(chunk.message || "Erreur proxy Gemini");
       }
 
-      // Extraction et accumulation du texte
-      const textPart = parts
-        .filter((p: any) => p.text)
-        .map((p: any) => p.text)
-        .join("");
-      if (textPart) {
+      if (chunk.type === "tool" && chunk.name && chunk.args) {
+        const validCall = { name: chunk.name, args: chunk.args };
+        allToolCalls.push(validCall);
+        if (callbacks.onToolCall) await callbacks.onToolCall(validCall);
+      }
+
+      if (chunk.type === "text" && chunk.text) {
+        const textPart = chunk.text;
         fullText += textPart;
         accumulatedTextChunk += textPart;
 
-        // Découper la phrase lorsqu'une ponctuation forte ou moyenne est rencontrée
-        const match = accumulatedTextChunk.match(/([.!?\n,:;]+)/);
+        // Découper la phrase sur ponctuation forte/moyenne, en ignorant :
+        // - Les points dans les nombres (3.5, 192.168.1.1, v2.0)
+        // - Les abréviations courantes (M., Dr., etc.)
+        // - Les URLs (http://..., www.)
+        const SMART_SPLIT_REGEX =
+          /(?<![0-9])(?<!(?:^|\s)[A-Z])(?<!www)(?<!Dr)(?<!Mr)(?<!Mme?)(?<!etc)[.!?;:]\s+/;
+        const match = accumulatedTextChunk.match(SMART_SPLIT_REGEX);
         if (match && match.index !== undefined) {
           const splitPos = match.index + match[0].length;
           const chunkToSpeak = accumulatedTextChunk
             .substring(0, splitPos)
             .trim();
-
           if (chunkToSpeak && callbacks.onTextChunk) {
             callbacks.onTextChunk(chunkToSpeak);
           }

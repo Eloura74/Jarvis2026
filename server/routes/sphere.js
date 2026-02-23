@@ -28,6 +28,8 @@ const VALID_STATES = [
   "WHATSAPP",
   "GMAIL",
   "CALENDAR",
+  "MAP",
+  "TRAJET",
 ];
 
 // POST /api/sphere/state OR /api/sphere/mode

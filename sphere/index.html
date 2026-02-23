@@ -1,960 +1,1357 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="fr">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>JARVIS OS - Simulateur Physique V7.2</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>JARVIS OS - Galerie V7.2</title>
     <style>
-      :root {
-        --bg-color: #050a10;
-        --panel-bg: #0a111c;
-        --primary: #00f0ff;
-        --text-main: #e0f8ff;
-        --font-stack: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-      }
-
-      body {
-        background-color: var(--bg-color);
-        color: var(--text-main);
-        font-family: var(--font-stack);
-        margin: 0;
-        padding: 20px;
-        display: flex;
-        justify-content: center;
-        align-items: flex-start;
-        gap: 40px;
-        height: 100vh;
+      * {
         box-sizing: border-box;
+        margin: 0;
+        padding: 0;
       }
-
-      /* --- HARDWARE SIMULATION --- */
-      .hardware-wrapper {
+      body {
+        background: #050a10;
+        color: #e0f8ff;
+        font-family: "Segoe UI", sans-serif;
+        padding: 24px;
+        min-height: 100vh;
+      }
+      header {
+        text-align: center;
+        margin-bottom: 28px;
+      }
+      header h1 {
+        font-size: 1rem;
+        color: #00f0ff;
+        text-transform: uppercase;
+        letter-spacing: 4px;
+        font-weight: 400;
+      }
+      header p {
+        font-size: 0.7rem;
+        color: #3a5a70;
+        margin-top: 5px;
+      }
+      .gallery {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(165px, 1fr));
+        gap: 22px;
+        max-width: 1400px;
+        margin: 0 auto;
+      }
+      .card {
         display: flex;
         flex-direction: column;
         align-items: center;
-        gap: 20px;
+        gap: 9px;
+        cursor: pointer;
+        transition: transform 0.15s;
       }
-
-      .bezel {
-        width: 280px;
-        height: 280px;
+      .card:hover {
+        transform: scale(1.05);
+      }
+      .card-label {
+        font-size: 0.62rem;
+        text-transform: uppercase;
+        letter-spacing: 1.5px;
+        color: #3a5a70;
+        transition: color 0.2s;
+      }
+      .card:hover .card-label {
+        color: #00f0ff;
+      }
+      .bezel-sm {
+        width: 160px;
+        height: 160px;
+        background: radial-gradient(circle, #2a2a2a 0%, #111 70%, #000 100%);
+        border-radius: 50%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.85);
+        border: 2px solid transparent;
+        transition: border-color 0.2s;
+      }
+      .card:hover .bezel-sm {
+        border-color: rgba(0, 240, 255, 0.25);
+      }
+      .screen-sm {
+        width: 136px;
+        height: 136px;
+        background: #020305;
+        border-radius: 50%;
+        overflow: hidden;
+      }
+      .modal-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.88);
+        z-index: 200;
+        justify-content: center;
+        align-items: center;
+        flex-direction: column;
+        gap: 22px;
+        backdrop-filter: blur(8px);
+      }
+      .modal-overlay.open {
+        display: flex;
+      }
+      .modal-bezel {
+        width: 310px;
+        height: 310px;
         background: radial-gradient(circle, #2a2a2a 0%, #111 70%, #000 100%);
         border-radius: 50%;
         display: flex;
         justify-content: center;
         align-items: center;
         box-shadow:
-          0 15px 35px rgba(0, 0, 0, 0.8),
-          inset 0 2px 5px rgba(255, 255, 255, 0.1);
+          0 20px 60px rgba(0, 0, 0, 0.95),
+          0 0 50px rgba(0, 240, 255, 0.12);
       }
-
-      .screen {
-        width: 240px;
-        height: 240px;
-        background-color: #020305;
+      .modal-screen {
+        width: 268px;
+        height: 268px;
+        background: #020305;
         border-radius: 50%;
-        overflow: hidden; /* Masque matériel GC9A01 */
-        box-shadow: inset 0 0 15px rgba(0, 0, 0, 0.9);
-        position: relative;
+        overflow: hidden;
       }
-
-      canvas {
-        display: block;
+      .modal-info {
+        text-align: center;
       }
-
-      /* --- CONTROL PANEL --- */
-      .control-panel {
-        background-color: var(--panel-bg);
-        border: 1px solid #1a2b45;
-        border-radius: 8px;
-        padding: 20px;
-        width: 400px;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
-        max-height: 90vh;
-        overflow-y: auto;
-      }
-
-      h2 {
-        margin-top: 0;
-        font-size: 1rem;
-        color: var(--primary);
+      .modal-info h2 {
+        font-size: 0.9rem;
+        color: #00f0ff;
         text-transform: uppercase;
-        letter-spacing: 1px;
-        border-bottom: 1px solid #1a2b45;
-        padding-bottom: 8px;
+        letter-spacing: 3px;
+        font-weight: 400;
+        margin-bottom: 12px;
       }
-
-      .btn-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 10px;
-        margin-bottom: 25px;
-      }
-
-      button {
-        background: transparent;
-        color: var(--primary);
-        border: 1px solid var(--primary);
-        padding: 8px;
-        cursor: pointer;
-        font-family: var(--font-stack);
-        font-size: 0.75rem;
-        font-weight: bold;
-        text-transform: uppercase;
-        border-radius: 4px;
-        transition: all 0.2s ease;
-      }
-
-      button:hover {
-        background: rgba(0, 240, 255, 0.1);
-      }
-      button.active {
-        background: var(--primary);
-        color: var(--bg-color);
-      }
-
-      .btn-danger {
-        color: #ff283c;
-        border-color: #ff283c;
-      }
-      .btn-danger:hover {
-        background: rgba(255, 40, 60, 0.1);
-      }
-      .btn-success {
-        color: #00ff78;
-        border-color: #00ff78;
-      }
-      .btn-success:hover {
-        background: rgba(0, 255, 120, 0.1);
-      }
-
-      input[type="text"] {
-        width: calc(100% - 22px);
+      .modal-info input {
         background: #0d1826;
-        border: 1px solid #0064ff;
-        color: white;
-        padding: 10px;
+        border: 1px solid #0055cc;
+        color: #fff;
+        padding: 8px 14px;
         font-family: monospace;
+        font-size: 0.8rem;
         border-radius: 4px;
         outline: none;
-        margin-bottom: 10px;
+        width: 268px;
+        margin-bottom: 12px;
+      }
+      .modal-close {
+        background: transparent;
+        color: #3a5a70;
+        border: 1px solid #1a2b45;
+        padding: 7px 22px;
+        cursor: pointer;
+        font-size: 0.72rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        border-radius: 4px;
+        transition: all 0.2s;
+      }
+      .modal-close:hover {
+        color: #00f0ff;
+        border-color: #00f0ff;
       }
     </style>
   </head>
   <body>
-    <div class="hardware-wrapper">
-      <div class="bezel">
-        <div class="screen">
-          <canvas id="display" width="240" height="240"></canvas>
+    <header>
+      <h1>JARVIS OS - Galerie des Modes V7.2</h1>
+      <p>
+        Cliquez sur un mode pour le voir en plein ecran - Simulation GC9A01
+        240x240
+      </p>
+    </header>
+    <div class="gallery" id="gallery"></div>
+    <div class="modal-overlay" id="modal" onclick="onOvClick(event)">
+      <div class="modal-bezel">
+        <div class="modal-screen">
+          <canvas id="mc" width="268" height="268"></canvas>
         </div>
       </div>
-      <div style="color: #666; font-family: monospace">
-        Simulation GC9A01 - V7.2
+      <div class="modal-info">
+        <h2 id="mtitle">MODE</h2>
+        <input
+          type="text"
+          id="minput"
+          placeholder="local_text"
+          oninput="onMText()"
+        /><br />
+        <button class="modal-close" onclick="closeModal()">Fermer</button>
       </div>
     </div>
-
-    <div class="control-panel">
-      <h2>Données Locales (local_text)</h2>
-      <input
-        type="text"
-        id="textInput"
-        placeholder="Ex: 220|60|45 ou STANDBY"
-        value="STANDBY"
-      />
-      <button style="width: 100%; margin-bottom: 20px" onclick="updateText()">
-        Mettre à jour le texte
-      </button>
-
-      <h2>Noyau & Modes Généraux</h2>
-      <div class="btn-grid" id="core-btns">
-        <button onclick="setMode('IDLE')" class="active">IDLE (Standby)</button>
-        <button onclick="setMode('LISTENING')">Listening</button>
-        <button onclick="setMode('SPEAKING')">Speaking</button>
-        <button onclick="setMode('SCREENSAVER')">Screensaver</button>
-        <button onclick="setMode('SEARCH')">Search</button>
-        <button onclick="setMode('GHOST')">Ghost</button>
-        <button class="btn-danger" onclick="setMode('ERROR')">Error</button>
-        <button class="btn-success" onclick="setMode('SUCCESS')">
-          Success
-        </button>
-      </div>
-
-      <h2>Applications & Domotique</h2>
-      <div class="btn-grid" id="app-btns">
-        <button onclick="setMode('SYSTEM')">System</button>
-        <button onclick="setMode('HOME')">Home</button>
-        <button onclick="setMode('VISION')">Vision AI</button>
-        <button onclick="setMode('MATRIX')">Matrix</button>
-        <button onclick="setMode('MEDIA')">Media</button>
-        <button onclick="setMode('TIMER')">Timer</button>
-        <button onclick="setMode('WEATHER')">Weather</button>
-        <button onclick="setMode('PRINT')">3D Print</button>
-        <button onclick="setMode('APPS')">Apps (Lock)</button>
-        <button class="btn-success" onclick="setMode('WHATSAPP')">
-          WhatsApp
-        </button>
-        <button class="btn-danger" onclick="setMode('SECURITY')">
-          Security
-        </button>
-      </div>
-    </div>
-
     <script>
-      // ==============================================================================
-      // MOTEUR DE RENDU JS (PORTAGE EXACT DU CODE C++ ESP32 V7.2)
-      // ==============================================================================
-      const canvas = document.getElementById("display");
-      const ctx = canvas.getContext("2d", { alpha: false });
-
-      const CX = 120;
-      const CY = 120;
-      const DEG_TO_RAD = 0.0174532925;
-
-      let local_state = "IDLE";
-      let local_text = "STANDBY";
-      let g_phase = 0.0;
-      let ms_time = 0;
-
-      const COLORS = {
+      var DEG = Math.PI / 180;
+      var C = {
         BG: { r: 2, g: 3, b: 5 },
         CYAN: { r: 0, g: 240, b: 255 },
         BLUE: { r: 0, g: 100, b: 255 },
-        OMNI_BLUE: { r: 0, g: 140, b: 255 },
-        OMNI_RED: { r: 255, g: 10, b: 30 },
+        OBLUE: { r: 0, g: 140, b: 255 },
+        ORED: { r: 255, g: 10, b: 30 },
         WHITE: { r: 240, g: 248, b: 255 },
         GREEN: { r: 0, g: 255, b: 120 },
-        YELLOW: { r: 255, g: 200, b: 0 },
-        ORANGE: { r: 255, g: 120, b: 0 },
-        PURPLE: { r: 180, g: 50, b: 255 },
+        YELL: { r: 255, g: 200, b: 0 },
+        ORA: { r: 255, g: 120, b: 0 },
+        PURP: { r: 180, g: 50, b: 255 },
         PINK: { r: 255, g: 0, b: 127 },
         RED: { r: 255, g: 40, b: 60 },
-        DEEP_BLUE: { r: 5, g: 15, b: 30 },
+        DBLUE: { r: 5, g: 15, b: 30 },
         GREY: { r: 100, g: 110, b: 120 },
         DARK: { r: 10, g: 15, b: 20 },
       };
-
-      let dyn_radius = 65.0;
-      let v_radius = 0.0;
-      let dyn_speed = 0.05;
-      let v_speed = 0.0;
-      let dyn_color = COLORS.OMNI_BLUE;
-
-      const SPHERE_NODES = 450;
-      const sphereBase = [];
-
-      function init3DGeometry() {
-        const phi = Math.PI * (3.0 - Math.sqrt(5.0));
-        for (let i = 0; i < SPHERE_NODES; i++) {
-          let y = 1.0 - (i / (SPHERE_NODES - 1)) * 2.0;
-          let radius = Math.sqrt(1.0 - y * y);
-          let theta = phi * i;
-          sphereBase.push({
-            x: Math.cos(theta) * radius,
-            y: y,
-            z: Math.sin(theta) * radius,
-          });
+      var SNODES = 450,
+        SB = [];
+      (function () {
+        var phi = Math.PI * (3 - Math.sqrt(5));
+        for (var i = 0; i < SNODES; i++) {
+          var y = 1 - (i / (SNODES - 1)) * 2,
+            r = Math.sqrt(1 - y * y),
+            t = phi * i;
+          SB.push({ x: Math.cos(t) * r, y: y, z: Math.sin(t) * r });
         }
-      }
-      init3DGeometry();
+      })();
+      var DTXT = {
+        IDLE: "STANDBY",
+        LISTENING: "STANDBY",
+        SPEAKING: "STANDBY",
+        WEATHER: "24C",
+        PRINT: "220|60|45",
+        WHATSAPP: "Maman",
+        GMAIL: "INBOX",
+        CALENDAR: "RAPPEL",
+      };
 
-      // Outils Mathématiques & Dessin
-      function lerpColor(c1, c2, t) {
-        t = Math.max(0, Math.min(1, t));
-        return {
-          r: Math.round(c1.r + (c2.r - c1.r) * t),
-          g: Math.round(c1.g + (c2.g - c1.g) * t),
-          b: Math.round(c1.b + (c2.b - c1.b) * t),
-        };
-      }
-      function toCss(c) {
-        return `rgb(${c.r}, ${c.g}, ${c.b})`;
-      }
-
-      function drawCircle(x, y, r, color, fill = false) {
-        if (r <= 0) return;
-        ctx.beginPath();
-        ctx.arc(x, y, r, 0, Math.PI * 2);
-        if (fill) {
-          ctx.fillStyle = toCss(color);
-          ctx.fill();
-        } else {
-          ctx.strokeStyle = toCss(color);
-          ctx.lineWidth = 1;
-          ctx.stroke();
+      function createRenderer(canvas, mode, size) {
+        var ctx = canvas.getContext("2d", { alpha: false }),
+          SC = size / 240;
+        var gp = Math.random() * Math.PI * 2,
+          sp = Math.random() * Math.PI * 2,
+          mst = 0,
+          lt = DTXT[mode] || "";
+        var dr = 65,
+          vr = 0,
+          ds = 0.05,
+          vs = 0,
+          dc = { r: C.OBLUE.r, g: C.OBLUE.g, b: C.OBLUE.b };
+        function p(v) {
+          return v * SC;
         }
-      }
-
-      function drawLine(x1, y1, x2, y2, color, width = 1) {
-        ctx.beginPath();
-        ctx.moveTo(x1, y1);
-        ctx.lineTo(x2, y2);
-        ctx.strokeStyle = toCss(color);
-        ctx.lineWidth = width;
-        ctx.stroke();
-      }
-
-      function fillRect(x, y, w, h, color) {
-        ctx.fillStyle = toCss(color);
-        ctx.fillRect(x, y, w, h);
-      }
-
-      function drawRect(x, y, w, h, color) {
-        ctx.strokeStyle = toCss(color);
-        ctx.lineWidth = 1;
-        ctx.strokeRect(x, y, w, h);
-      }
-
-      function fillTriangle(x1, y1, x2, y2, x3, y3, color) {
-        ctx.beginPath();
-        ctx.moveTo(x1, y1);
-        ctx.lineTo(x2, y2);
-        ctx.lineTo(x3, y3);
-        ctx.fillStyle = toCss(color);
-        ctx.fill();
-      }
-
-      // Correction de l'erreur IndexSizeError avec Math.max(0)
-      function drawGlow(x, y, radius, color, intensity) {
-        radius = Math.max(0, radius);
-        intensity = Math.max(0, intensity);
-        if (radius + intensity <= 0) return;
-        const grad = ctx.createRadialGradient(
-          x,
-          y,
-          radius,
-          x,
-          y,
-          radius + intensity,
-        );
-        grad.addColorStop(0, toCss(color));
-        grad.addColorStop(1, toCss(COLORS.BG));
-        ctx.beginPath();
-        ctx.arc(x, y, radius + intensity, 0, Math.PI * 2);
-        ctx.fillStyle = grad;
-        ctx.fill();
-      }
-
-      // Simulation exacte de fillArc de LovyanGFX
-      function drawSegmentedRing(
-        x,
-        y,
-        r,
-        thickness,
-        segments,
-        phase,
-        gapRatio,
-        color,
-      ) {
-        let angleStep = 360.0 / segments;
-        let gap = angleStep * gapRatio;
-        ctx.strokeStyle = toCss(color);
-        ctx.lineWidth = thickness;
-        for (let i = 0; i < segments; i++) {
-          let startAngle = (i * angleStep + phase) * DEG_TO_RAD;
-          let endAngle = (i * angleStep + phase + angleStep - gap) * DEG_TO_RAD;
+        function cs(c) {
+          return "rgb(" + c.r + "," + c.g + "," + c.b + ")";
+        }
+        function lerp(a, b, t) {
+          t = t < 0 ? 0 : t > 1 ? 1 : t;
+          return {
+            r: Math.round(a.r + (b.r - a.r) * t),
+            g: Math.round(a.g + (b.g - a.g) * t),
+            b: Math.round(a.b + (b.b - a.b) * t),
+          };
+        }
+        function fR(x, y, w, h, c) {
+          ctx.fillStyle = cs(c);
+          ctx.fillRect(p(x), p(y), p(w), p(h));
+        }
+        function dR(x, y, w, h, c) {
+          ctx.strokeStyle = cs(c);
+          ctx.lineWidth = p(1);
+          ctx.strokeRect(p(x), p(y), p(w), p(h));
+        }
+        function dC(x, y, r, c, f) {
+          if (r <= 0) return;
           ctx.beginPath();
-          ctx.arc(x, y, Math.max(0, r - thickness / 2), startAngle, endAngle);
+          ctx.arc(p(x), p(y), p(r), 0, Math.PI * 2);
+          if (f) {
+            ctx.fillStyle = cs(c);
+            ctx.fill();
+          } else {
+            ctx.strokeStyle = cs(c);
+            ctx.lineWidth = p(1);
+            ctx.stroke();
+          }
+        }
+        function dL(x1, y1, x2, y2, c, w) {
+          ctx.beginPath();
+          ctx.moveTo(p(x1), p(y1));
+          ctx.lineTo(p(x2), p(y2));
+          ctx.strokeStyle = cs(c);
+          ctx.lineWidth = p(w || 1);
           ctx.stroke();
         }
-      }
-      function fillArc(x, y, r, r_inner, startDeg, endDeg, color) {
-        ctx.beginPath();
-        let thickness = r - r_inner;
-        ctx.arc(
-          x,
-          y,
-          Math.max(0, r - thickness / 2),
-          startDeg * DEG_TO_RAD,
-          endDeg * DEG_TO_RAD,
-        );
-        ctx.lineWidth = thickness;
-        ctx.strokeStyle = toCss(color);
-        ctx.stroke();
-      }
-
-      function drawText(text, x, y, color, size = "12px", align = "center") {
-        ctx.font = `${size} sans-serif`;
-        ctx.fillStyle = toCss(color);
-        ctx.textAlign = align;
-        ctx.fillText(text, x, y);
-      }
-
-      // ==============================================================================
-      // LOGIQUE D'ANIMATION ET VUES
-      // ==============================================================================
-
-      function updateLogic() {
-        let tr = 65.0,
-          ts = 0.03,
-          tc = COLORS.OMNI_BLUE;
-
-        if (local_state === "SPEAKING") {
-          tr = 75.0 + Math.sin(g_phase * 1.5) * 12.0;
-          ts = 0.08;
-          tc = COLORS.OMNI_RED;
-        } else if (local_state === "LISTENING") {
-          tr = 70.0 + Math.sin(g_phase * 0.8) * 6.0;
-          ts = 0.04;
-          tc = COLORS.CYAN;
-        } else if (local_state === "IDLE") {
-          tr = 65.0 + Math.sin(g_phase * 0.5) * 3.0;
-          ts = 0.02;
-          tc = COLORS.OMNI_BLUE;
-        } else {
-          switch (local_state) {
-            case "ERROR":
-              tr = 20.0;
-              ts = 0.0;
-              tc = COLORS.RED;
-              break;
-            case "HOME":
-              tr = 0.0;
-              ts = 0.08;
-              tc = COLORS.BLUE;
-              break;
-            case "VISION":
-              tr = 0.0;
-              ts = 0.1;
-              tc = COLORS.RED;
-              break;
-            case "GHOST":
-              tr = 10.0;
-              ts = 0.01;
-              tc = COLORS.GREY;
-              break;
-            case "MEDIA":
-              tr = 20.0;
-              ts = 0.1;
-              tc = COLORS.PINK;
-              break;
-            case "SUCCESS":
-              tr = 0.0;
-              ts = 0.05;
-              tc = COLORS.GREEN;
-              break;
-            case "SCREENSAVER":
-              tr = 0.0;
-              ts = 0.015;
-              tc = COLORS.CYAN;
-              break;
-            case "WHATSAPP":
-              tr = 10.0;
-              ts = 0.06;
-              tc = COLORS.GREEN;
-              break;
-            default:
-              tr = 30.0;
-              ts = 0.05;
-              tc = COLORS.CYAN;
-              break;
-          }
+        function fT(x1, y1, x2, y2, x3, y3, c) {
+          ctx.beginPath();
+          ctx.moveTo(p(x1), p(y1));
+          ctx.lineTo(p(x2), p(y2));
+          ctx.lineTo(p(x3), p(y3));
+          ctx.fillStyle = cs(c);
+          ctx.fill();
         }
-
-        const tension = 0.08,
-          dampening = 0.75;
-        v_radius = (v_radius + (tr - dyn_radius) * tension) * dampening;
-        dyn_radius += v_radius;
-        v_speed = (v_speed + (ts - dyn_speed) * tension) * dampening;
-        dyn_speed += v_speed;
-        dyn_color = lerpColor(dyn_color, tc, 0.15);
-        g_phase += dyn_speed;
-      }
-
-      function renderOmniSphere() {
-        let centerGlowCol = lerpColor(COLORS.BG, dyn_color, 0.12);
-        for (let r = 120; r > 30; r -= 4) {
-          let f = 1.0 - r / 120.0;
-          drawCircle(
-            CX,
-            CY,
-            r,
-            lerpColor(COLORS.BG, centerGlowCol, f * f * f),
-            false,
+        function dG(x, y, r, c, i) {
+          r = r < 0 ? 0 : r;
+          i = i < 1 ? 1 : i;
+          var g = ctx.createRadialGradient(
+            p(x),
+            p(y),
+            p(r),
+            p(x),
+            p(y),
+            p(r + i),
           );
+          g.addColorStop(0, cs(c));
+          g.addColorStop(1, cs(C.BG));
+          ctx.beginPath();
+          ctx.arc(p(x), p(y), p(r + i), 0, Math.PI * 2);
+          ctx.fillStyle = g;
+          ctx.fill();
         }
-
-        for (
-          let r = Math.floor(dyn_radius * 0.85) + 25;
-          r > Math.floor(dyn_radius * 0.85);
-          r -= 3
-        ) {
-          let f = 1.0 - (r - dyn_radius * 0.85) / 25.0;
-          drawCircle(CX, CY, r, lerpColor(COLORS.BG, dyn_color, f * f), false);
-        }
-
-        let rotY = g_phase * 1.5,
-          rotX = Math.sin(g_phase * 0.4) * 0.4;
-        let cosY = Math.cos(rotY),
-          sinY = Math.sin(rotY),
-          cosX = Math.cos(rotX),
-          sinX = Math.sin(rotX);
-        let freq = local_state === "SPEAKING" ? 3.5 : 2.0;
-        let waveAmp = local_state === "SPEAKING" ? 0.3 : 0.12;
-        let pulsePhase = g_phase * 2.5;
-
-        let buffer = [];
-        for (let i = 0; i < SPHERE_NODES; i++) {
-          let bx = sphereBase[i].x,
-            by = sphereBase[i].y,
-            bz = sphereBase[i].z;
-          let n1 =
-            Math.sin(bx * freq + pulsePhase) * Math.cos(by * freq - pulsePhase);
-          let n2 = Math.sin(bz * (freq * 1.2) - pulsePhase * 1.2);
-          let r = dyn_radius * (1.0 + (n1 + n2) * waveAmp);
-          let x = bx * r,
-            y = by * r,
-            z = bz * r;
-
-          let x_rot = x * cosY - z * sinY,
-            z_rot = x * sinY + z * cosY;
-          let y_rot = y * cosX - z_rot * sinX;
-          z_rot = y * sinX + z_rot * cosX;
-
-          let persp = 200.0 / (200.0 + z_rot);
-          buffer.push({
-            x: CX + x_rot * persp,
-            y: CY + y_rot * persp,
-            z: z_rot,
-          });
-        }
-
-        let backCol = lerpColor(COLORS.BG, dyn_color, 0.15);
-        buffer.forEach((pt) => {
-          if (pt.z > 0) drawCircle(pt.x, pt.y, 1, backCol, true);
-        });
-        buffer.forEach((pt) => {
-          if (pt.z <= 0) {
-            let depth = Math.min(1.0, Math.abs(pt.z) / dyn_radius);
-            let baseCol = lerpColor(dyn_color, COLORS.WHITE, depth * 0.8);
-            let light = (pt.y - CY) / dyn_radius;
-            if (light > 0) baseCol = lerpColor(baseCol, COLORS.BG, light * 0.6);
-            else
-              baseCol = lerpColor(baseCol, COLORS.WHITE, Math.abs(light) * 0.3);
-            drawCircle(
-              pt.x,
-              pt.y,
-              depth > 0.65 ? 3 : depth > 0.25 ? 2 : 1,
-              baseCol,
-              true,
-            );
-          }
-        });
-      }
-
-      // ---------- TOUS LES MODES SPÉCIFIQUES V7.2 ----------
-      function renderPersistentHUD() {
-        fillArc(CX, CY, 119, 118, 0, 360, COLORS.DEEP_BLUE);
-        fillRect(CX - 1, 0, 2, 6, COLORS.GREY);
-        fillRect(CX - 1, 234, 2, 6, COLORS.GREY);
-        fillRect(0, CY - 1, 6, 2, COLORS.GREY);
-        fillRect(234, CY - 1, 6, 2, COLORS.GREY);
-        let ledCol =
-          Math.sin(g_phase * 5.0) > 0 ? COLORS.GREEN : { r: 0, g: 40, b: 0 };
-        fillRect(115, 6, 4, 3, ledCol);
-        fillRect(121, 6, 4, 3, ledCol);
-        fillRect(127, 6, 4, 3, { r: 20, g: 20, b: 20 });
-        drawText(local_text, CX, 215, dyn_color);
-      }
-
-      function renderModeScreensaver() {
-        let corePulse = (Math.sin(g_phase * 2.0) + 1.0) * 0.5;
-        drawGlow(CX, CY, 15 + corePulse * 5, COLORS.OMNI_BLUE, 25);
-        drawCircle(CX, CY, 4 + corePulse * 2, COLORS.WHITE, true);
-        drawCircle(
-          CX,
-          CY,
-          6 + corePulse * 2,
-          lerpColor(COLORS.CYAN, COLORS.BG, 0.6),
-          true,
-        );
-
-        let R = 85.0,
-          tiltX = 0.35,
-          cosX = Math.cos(tiltX),
-          sinX = Math.sin(tiltX);
-        drawCircle(CX, CY, R + 10, { r: 5, g: 15, b: 25 }, false);
-
-        const num_waves = 4,
-          pts = 110;
-        let buffer = [];
-
-        for (let w = 0; w < num_waves; w++) {
-          let freq = 2.0 + w * 1.5,
-            speed = 0.8 + w * 0.3;
-          if (w % 2 === 1) speed = -speed;
-          let amp = 0.4 + w * 0.1;
-
-          for (let i = 0; i < pts; i++) {
-            let theta = (i / pts) * 2.0 * Math.PI,
-              active_theta = theta + g_phase * speed;
-            let phi = Math.sin(theta * freq + g_phase * (speed * 1.5)) * amp;
-            let bx = R * Math.cos(phi) * Math.cos(active_theta),
-              by = R * Math.sin(phi),
-              bz = R * Math.cos(phi) * Math.sin(active_theta);
-            let y = by * cosX - bz * sinX,
-              z = by * sinX + bz * cosX;
-            let persp = 200.0 / (200.0 + z);
-            buffer.push({ x: CX + bx * persp, y: CY + y * persp, z: z });
+        function dSR(x, y, r, th, seg, ph, gap, c) {
+          var st = 360 / seg,
+            gp2 = st * gap;
+          ctx.strokeStyle = cs(c);
+          ctx.lineWidth = p(th);
+          for (var i = 0; i < seg; i++) {
+            var sa = (i * st + ph) * DEG,
+              ea = (i * st + ph + st - gp2) * DEG;
+            ctx.beginPath();
+            ctx.arc(p(x), p(y), p(Math.max(0, r - th / 2)), sa, ea);
+            ctx.stroke();
           }
         }
+        function fA(x, y, r, ri, sd, ed, c) {
+          var th = r - ri;
+          ctx.beginPath();
+          ctx.arc(p(x), p(y), p(Math.max(0, r - th / 2)), sd * DEG, ed * DEG);
+          ctx.lineWidth = p(th);
+          ctx.strokeStyle = cs(c);
+          ctx.stroke();
+        }
+        function dTx(txt, x, y, c, sz, al) {
+          ctx.font = p(sz || 10) + "px sans-serif";
+          ctx.fillStyle = cs(c);
+          ctx.textAlign = al || "center";
+          ctx.fillText(txt, p(x), p(y));
+        }
 
-        let backCol = lerpColor(COLORS.BG, COLORS.BLUE, 0.3);
-        buffer.forEach((pt) => {
-          if (pt.z > 0) fillRect(pt.x, pt.y, 1, 1, backCol);
-        });
+        // Update
+        function upd() {
+          var tr = 65,
+            ts = 0.03,
+            tc = C.OBLUE;
+          if (mode === "IDLE") {
+            tr = 65 + Math.sin(gp * 0.5) * 3;
+            ts = 0.02;
+            tc = C.OBLUE;
+          } else if (mode === "LISTENING") {
+            tr = 70 + Math.sin(gp * 0.8) * 6;
+            ts = 0.04;
+            tc = C.CYAN;
+          } else if (mode === "SPEAKING") {
+            tr = 75 + Math.sin(gp * 1.5) * 12;
+            ts = 0.08;
+            tc = C.ORED;
+          } else if (mode === "ERROR") {
+            tr = 20;
+            ts = 0;
+            tc = C.RED;
+          } else if (mode === "HOME") {
+            tr = 0;
+            ts = 0.08;
+            tc = C.BLUE;
+          } else if (mode === "VISION") {
+            tr = 0;
+            ts = 0.1;
+            tc = C.RED;
+          } else if (mode === "GHOST") {
+            tr = 10;
+            ts = 0.01;
+            tc = C.GREY;
+          } else if (mode === "MEDIA") {
+            tr = 20;
+            ts = 0.1;
+            tc = C.PINK;
+          } else if (mode === "SUCCESS") {
+            tr = 0;
+            ts = 0.05;
+            tc = C.GREEN;
+          } else if (mode === "SCREENSAVER") {
+            tr = 0;
+            ts = 0.015;
+            tc = C.CYAN;
+          } else if (mode === "WHATSAPP") {
+            tr = 10;
+            ts = 0.06;
+            tc = C.GREEN;
+          } else if (mode === "GMAIL") {
+            tr = 5;
+            ts = 0.07;
+            tc = C.RED;
+          } else if (mode === "CALENDAR") {
+            tr = 5;
+            ts = 0.05;
+            tc = C.CYAN;
+          } else if (mode === "MAP") {
+            tr = 0;
+            ts = 0.04;
+            tc = C.CYAN;
+          } else if (mode === "DOORS") {
+            tr = 0;
+            ts = 0.04;
+            tc = C.CYAN;
+          } else {
+            tr = 30;
+            ts = 0.05;
+            tc = C.CYAN;
+          }
+          var tn = 0.08,
+            dm = 0.75;
+          vr = (vr + (tr - dr) * tn) * dm;
+          dr += vr;
+          vs = (vs + (ts - ds) * tn) * dm;
+          ds += vs;
+          dc = lerp(dc, tc, 0.15);
+          gp += ds;
+        }
 
-        for (let w = 0; w < num_waves; w++) {
-          let off = w * pts;
-          for (let i = 0; i < pts; i++) {
-            let curr = buffer[off + i];
-            if (curr.z <= 0) {
-              let d = Math.min(1.0, Math.abs(curr.z) / R);
-              let c = lerpColor(COLORS.CYAN, COLORS.WHITE, d);
-              drawCircle(curr.x, curr.y, d > 0.6 ? 2 : 1, c, true);
-              if (i > 0) {
-                let prev = buffer[off + i - 1];
-                if (prev.z <= 0) {
-                  drawLine(prev.x, prev.y, curr.x, curr.y, c);
-                  if (d > 0.5)
-                    drawLine(prev.x, prev.y + 1, curr.x, curr.y + 1, c);
-                }
-              }
-              if (i === pts - 1 && buffer[off].z <= 0)
-                drawLine(buffer[off].x, buffer[off].y, curr.x, curr.y, c);
+        // ================== MODE SPHERE ==================
+        function rSphere() {
+          var cg = lerp(C.BG, dc, 0.12),
+            r,
+            f,
+            i,
+            buf = [];
+          for (r = 120; r > 30; r -= 4) {
+            f = 1 - r / 120;
+            dC(120, 120, r, lerp(C.BG, cg, f * f * f), false);
+          }
+          for (
+            r = Math.floor(dr * 0.85) + 25;
+            r > Math.floor(dr * 0.85);
+            r -= 3
+          ) {
+            f = 1 - (r - dr * 0.85) / 25;
+            dC(120, 120, r, lerp(C.BG, dc, f * f), false);
+          }
+          var ry = gp * 1.5,
+            rx = Math.sin(gp * 0.4) * 0.4,
+            cy = Math.cos(ry),
+            sy = Math.sin(ry),
+            cx2 = Math.cos(rx),
+            sx = Math.sin(rx);
+          var freq = mode === "SPEAKING" ? 3.5 : 2,
+            wa = mode === "SPEAKING" ? 0.3 : 0.12,
+            pp = gp * 2.5;
+          for (i = 0; i < SNODES; i++) {
+            var bx = SB[i].x,
+              by = SB[i].y,
+              bz = SB[i].z,
+              n =
+                (Math.sin(bx * freq + pp) * Math.cos(by * freq - pp) +
+                  Math.sin(bz * freq * 1.2 - pp * 1.2)) *
+                wa;
+            var r2 = dr * (1 + n),
+              x = bx * r2,
+              y = by * r2,
+              z = bz * r2,
+              xr = x * cy - z * sy,
+              zr = x * sy + z * cy,
+              yr = y * cx2 - zr * sx;
+            zr = y * sx + zr * cx2;
+            var pe = 200 / (200 + zr);
+            buf.push({ x: 120 + xr * pe, y: 120 + yr * pe, z: zr });
+          }
+          var bc = lerp(C.BG, dc, 0.15);
+          for (i = 0; i < buf.length; i++) {
+            if (buf[i].z > 0) dC(buf[i].x, buf[i].y, 1, bc, true);
+          }
+          for (i = 0; i < buf.length; i++) {
+            if (buf[i].z <= 0) {
+              var d = Math.min(1, Math.abs(buf[i].z) / dr),
+                c = lerp(dc, C.WHITE, d * 0.8),
+                lf = (buf[i].y - 120) / dr;
+              c =
+                lf > 0
+                  ? lerp(c, C.BG, lf * 0.6)
+                  : lerp(c, C.WHITE, Math.abs(lf) * 0.3);
+              dC(buf[i].x, buf[i].y, d > 0.65 ? 3 : d > 0.25 ? 2 : 1, c, true);
             }
           }
         }
-      }
 
-      function renderModeSystem() {
-        drawSegmentedRing(CX, CY, 110, 8, 8, g_phase * 50.0, 0.1, COLORS.CYAN);
-        drawSegmentedRing(CX, CY, 95, 2, 36, -g_phase * 80.0, 0.5, COLORS.BLUE);
-        drawText("SYS.OPT", CX, CY - 15, COLORS.WHITE, "16px");
-        let load = 40 + Math.sin(g_phase * 5.0) * 20;
-        drawRect(CX - 40, CY, 80, 12, COLORS.CYAN);
-        fillRect(CX - 38, CY + 2, (76 * load) / 100, 8, COLORS.CYAN);
-        drawText("RAM: 1.2G", CX, CY + 40, COLORS.GREEN);
-      }
-
-      function renderModeVision() {
-        for (let i = -120; i <= 120; i += 25) {
-          drawLine(CX + i, 0, CX + i, 240, { r: 40, g: 0, b: 0 });
-          drawLine(0, CY + i, 240, CY + i, { r: 40, g: 0, b: 0 });
+        // ================== MODE HUD ==================
+        function rHUD() {
+          fA(120, 120, 119, 118, 0, 360, C.DBLUE);
+          fR(119, 0, 2, 6, C.GREY);
+          fR(119, 234, 2, 6, C.GREY);
+          fR(0, 119, 6, 2, C.GREY);
+          fR(234, 119, 6, 2, C.GREY);
+          var led = Math.sin(gp * 5) > 0 ? C.GREEN : { r: 0, g: 40, b: 0 };
+          fR(115, 6, 4, 3, led);
+          fR(121, 6, 4, 3, led);
+          fR(127, 6, 4, 3, { r: 20, g: 20, b: 20 });
+          dTx(lt, 120, 215, dc, 9);
         }
-        let tr = 90 + Math.sin(g_phase * 10.0) * 5;
-        drawLine(CX - tr, CY - tr / 2, CX - tr, CY - tr, COLORS.RED);
-        drawLine(CX - tr, CY - tr, CX - tr / 2, CY - tr, COLORS.RED);
-        drawLine(CX + tr, CY - tr / 2, CX + tr, CY - tr, COLORS.RED);
-        drawLine(CX + tr, CY - tr, CX + tr / 2, CY - tr, COLORS.RED);
-        drawLine(CX - tr, CY + tr / 2, CX - tr, CY + tr, COLORS.RED);
-        drawLine(CX - tr, CY + tr, CX - tr / 2, CY + tr, COLORS.RED);
-        drawLine(CX + tr, CY + tr / 2, CX + tr, CY + tr, COLORS.RED);
-        drawLine(CX + tr, CY + tr, CX + tr / 2, CY + tr, COLORS.RED);
-        let scanY = CY + Math.sin(g_phase * 4.0) * 115;
-        fillRect(CX - 110, scanY - 2, 220, 4, COLORS.RED);
-        drawText("AI_LOCK", CX, CY - 30, COLORS.RED);
-      }
 
-      function renderModeHome() {
-        fillArc(CX, CY, 50, 49, 0, 360, COLORS.BLUE);
-        fillArc(CX, CY, 100, 99, 0, 360, COLORS.BLUE);
-        let scanA = g_phase * 2.0;
-        fillTriangle(
-          CX,
-          CY,
-          CX + Math.cos(scanA) * 120,
-          CY + Math.sin(scanA) * 120,
-          CX + Math.cos(scanA - 0.2) * 120,
-          CY + Math.sin(scanA - 0.2) * 120,
-          { r: 0, g: 50, b: 100 },
-        );
-        drawLine(
-          CX,
-          CY,
-          CX + Math.cos(scanA) * 120,
-          CY + Math.sin(scanA) * 120,
-          COLORS.CYAN,
-        );
-        let nodes = [
-          { a: 0.5, d: 55, nm: "LIV" },
-          { a: 2.1, d: 95, nm: "KIT" },
-          { a: 4.8, d: 80, nm: "BED" },
-        ];
-        nodes.forEach((n) => {
-          let x = CX + Math.cos(n.a) * n.d,
-            y = CY + Math.sin(n.a) * n.d;
-          drawCircle(x, y, 4, COLORS.CYAN, true);
-          drawText(n.nm, x, y - 10, COLORS.WHITE);
-        });
-      }
+        // ================== MODE SAVES ==================
+        function rSaver() {
+          // Arc Reactor Hologram — traduction fidèle du C++ (main copy 2.cpp)
+          // sp = phase dédiée au screensaver (indépendante de gp, comme g_sleep_phase en C++)
+          sp += 0.015;
+          var rot = sp * 0.4;
+          var explode = (Math.sin(sp * 0.6) + 1) * 0.5;
 
-      function renderModeMedia() {
-        let bars = 45,
-          radius = 55;
-        for (let i = 0; i < bars; i++) {
-          let angle = ((i * 360.0) / bars) * DEG_TO_RAD + g_phase;
-          let val =
-            10 +
-            Math.abs(Math.sin(g_phase * 4.0 + i * 0.4) * 45.0) +
-            Math.sin(i * 132.0) * 5.0;
-          let col = lerpColor(COLORS.PINK, COLORS.PURPLE, i / bars);
-          drawLine(
-            CX + Math.cos(angle) * radius,
-            CY + Math.sin(angle) * radius,
-            CX + Math.cos(angle) * (radius + val),
-            CY + Math.sin(angle) * (radius + val),
-            col,
-            2,
-          );
-        }
-        drawGlow(CX, CY, 25 + Math.sin(g_phase * 5.0) * 5.0, COLORS.PINK, 15);
-        drawCircle(
-          CX,
-          CY,
-          20 + Math.sin(g_phase * 5.0) * 5.0,
-          COLORS.WHITE,
-          true,
-        );
-      }
+          // Palette "Stark Industries" — drift cyan→cobalt
+          var cc = (Math.sin(sp * 0.07) + 1) * 0.5;
+          var colNeon = {
+            r: Math.round(cc * 60),
+            g: Math.round(180 + cc * 60),
+            b: Math.round(235 + cc * 20),
+          };
+          var colCore = C.WHITE;
+          var colDark = lerp(C.BG, colNeon, 0.15);
+          var colWire = lerp(C.BG, colNeon, 0.4);
 
-      function renderModeTimer() {
-        let r = 80,
-          angleEnd = ((ms_time % 60000) / 60000.0) * 360.0;
-        fillArc(CX, CY, r, r - 5, 0, 360, { r: 50, g: 50, b: 0 });
-        fillArc(CX, CY, r, r - 5, 0, angleEnd, COLORS.YELLOW);
-        for (let i = 0; i < 12; i++) {
-          let a = i * 30 * DEG_TO_RAD;
-          drawCircle(
-            CX + Math.cos(a) * (r + 15),
-            CY + Math.sin(a) * (r + 15),
-            3,
-            COLORS.ORANGE,
-            true,
-          );
-        }
-        drawText("TIMER", CX, CY + 10, COLORS.WHITE, "24px");
-      }
+          var tilt = 0.45;
+          var maxZ = 50;
+          var CX = p(120),
+            CY = p(120);
 
-      function renderModeWeather() {
-        drawGlow(CX, CY, 40, COLORS.YELLOW, 20);
-        drawCircle(CX, CY, 40, COLORS.YELLOW, true);
-        drawSegmentedRing(CX, CY, 60, 4, 8, g_phase * 20.0, 0.4, COLORS.YELLOW);
-        drawText(local_text, CX, CY, COLORS.BG, "16px bold");
-      }
+          var y_base = CY + p(maxZ * explode);
+          var y_coilB = CY + p(maxZ * 0.5 * explode);
+          var y_core = CY;
+          var y_coilT = CY - p(maxZ * 0.5 * explode);
+          var y_top = CY - p(maxZ * explode);
 
-      function renderModePrint() {
-        drawRect(CX - 70, CY - 50, 140, 120, { r: 40, g: 45, b: 50 });
-        let currentY = CY + 30 - ((Math.sin(g_phase * 0.2) + 1.0) / 2.0) * 60.0;
-        drawLine(
-          CX - 68,
-          currentY - 20,
-          CX + 68,
-          currentY - 20,
-          { r: 70, g: 75, b: 80 },
-          1,
-        );
-        let bedY = CY + 40;
-        drawGlow(CX, bedY, 50, COLORS.RED, 10);
-        fillRect(CX - 60, bedY, 120, 6, { r: 120, g: 120, b: 120 });
-        for (let y = bedY - 2; y >= currentY; y -= 3)
-          drawLine(CX - 25, y, CX + 25, y, COLORS.GREEN);
-        let nozzleX = CX + Math.sin(g_phase * 2.5) * 35.0;
-        fillRect(nozzleX - 10, currentY - 25, 20, 15, {
-          r: 180,
-          g: 180,
-          b: 190,
-        });
-        fillTriangle(
-          nozzleX - 4,
-          currentY - 10,
-          nozzleX + 4,
-          currentY - 10,
-          nozzleX,
-          currentY,
-          COLORS.ORANGE,
-        );
-        drawLine(nozzleX, CY - 50, nozzleX, currentY - 25, COLORS.WHITE);
-
-        let t = "--",
-          b = "--",
-          p = "--";
-        if (local_text === "FLOTTE") {
-          t = "N/A";
-          b = "N/A";
-          p = "FLOTTE";
-        } else if (local_text.includes("|")) {
-          let pts = local_text.split("|");
-          t = pts[0];
-          b = pts[1];
-          p = pts[2];
-        }
-        drawText(`T: ${t}C`, CX - 40, CY - 60, COLORS.ORANGE);
-        drawText(`B: ${b}C`, CX + 40, CY - 60, COLORS.RED);
-        drawText(
-          p !== "FLOTTE" && p !== "--" ? `${p}%` : p,
-          CX,
-          CY + 75,
-          COLORS.CYAN,
-        );
-      }
-
-      function renderModeMatrix() {
-        ctx.font = "14px monospace";
-        ctx.fillStyle = toCss(COLORS.GREEN);
-        for (let i = 0; i < 18; i++) {
-          ctx.fillText(
-            Math.random() > 0.5 ? "1" : "0",
-            (i * 20) % 240,
-            (ms_time / 15 + i * 40) % 240,
-          );
-        }
-      }
-
-      function renderModeGhost() {
-        drawCircle(CX, CY, 55 + Math.sin(g_phase) * 5, COLORS.DARK, true);
-        fillArc(CX, CY, 110, 108, 0, 360, { r: 30, g: 30, b: 30 });
-        for (let x = -60; x < 60; x += 3) {
-          fillRect(
-            CX + x,
-            CY + Math.sin(x * 0.2 + g_phase) * 15,
-            1,
-            1,
-            COLORS.GREY,
-          );
-        }
-      }
-
-      function renderModeError() {
-        drawText(
-          "ERROR",
-          CX + (Math.random() * 10 - 5),
-          CY + (Math.random() * 10 - 5),
-          COLORS.RED,
-          "24px",
-        );
-        for (let i = 0; i < 8; i++)
-          fillRect(0, Math.random() * 240, 240, 4, { r: 150, g: 0, b: 0 });
-      }
-
-      function renderModeSuccess() {
-        drawSegmentedRing(CX, CY, 85, 4, 1, 0, 0, COLORS.GREEN);
-        drawLine(CX - 30, CY, CX - 5, CY + 25, COLORS.GREEN, 2);
-        drawLine(CX - 29, CY, CX - 4, CY + 25, COLORS.WHITE);
-        drawLine(CX - 5, CY + 25, CX + 40, CY - 30, COLORS.GREEN, 2);
-        drawLine(CX - 4, CY + 25, CX + 41, CY - 30, COLORS.WHITE);
-      }
-
-      function renderModeWhatsapp() {
-        drawSegmentedRing(CX, CY, 85, 4, 12, g_phase * 30.0, 0.3, COLORS.GREEN);
-        drawGlow(CX, CY, 30 + Math.sin(g_phase * 4.0) * 5, COLORS.GREEN, 20);
-        drawCircle(
-          CX,
-          CY,
-          25 + Math.sin(g_phase * 4.0) * 5,
-          { r: 10, g: 80, b: 20 },
-          true,
-        );
-        drawText("MESSAGE", CX, CY - 40, COLORS.WHITE, "14px bold");
-      }
-
-      function renderDefaultLocked() {
-        drawSegmentedRing(CX, CY, 100, 5, 4, g_phase * 50.0, 0.2, dyn_color);
-        drawSegmentedRing(CX, CY, 80, 3, 8, -g_phase * 70.0, 0.4, COLORS.WHITE);
-        drawText("LOCKED", CX, CY + 5, COLORS.WHITE, "16px");
-      }
-
-      // ==============================================================================
-      // BOUCLE D'ANIMATION (Equivalent renderTask)
-      // ==============================================================================
-      let lastTime = 0;
-      function renderLoop(timestamp) {
-        if (timestamp - lastTime >= 33) {
-          // Limitation ~30 FPS comme V7.2
-          ms_time = timestamp;
-          lastTime = timestamp;
-
-          updateLogic();
-          fillRect(0, 0, 240, 240, COLORS.BG); // clear screen
-
-          switch (local_state) {
-            case "IDLE":
-            case "LISTENING":
-            case "SPEAKING":
-              renderOmniSphere();
-              break;
-            case "SYSTEM":
-              renderModeSystem();
-              break;
-            case "VISION":
-              renderModeVision();
-              break;
-            case "HOME":
-              renderModeHome();
-              break;
-            case "GHOST":
-              renderModeGhost();
-              break;
-            case "ERROR":
-              renderModeError();
-              break;
-            case "SUCCESS":
-              renderModeSuccess();
-              break;
-            case "MEDIA":
-              renderModeMedia();
-              break;
-            case "WEATHER":
-              renderModeWeather();
-              break;
-            case "TIMER":
-              renderModeTimer();
-              break;
-            case "PRINT":
-              renderModePrint();
-              break;
-            case "MATRIX":
-              renderModeMatrix();
-              break;
-            case "SCREENSAVER":
-              renderModeScreensaver();
-              break;
-            case "WHATSAPP":
-              renderModeWhatsapp();
-              break;
-            default:
-              renderDefaultLocked();
-              break;
+          // Phase A : lignes d'éclatement
+          if (explode > 0.05) {
+            ctx.strokeStyle = cs(lerp(C.BG, colWire, 0.5));
+            ctx.lineWidth = p(1);
+            ctx.beginPath();
+            ctx.moveTo(CX, y_base);
+            ctx.lineTo(CX, y_top);
+            ctx.stroke();
+            for (var i = 0; i < 4; i++) {
+              var a = i * (Math.PI / 2) + rot;
+              var px2 = CX + p(Math.cos(a) * 45);
+              ctx.strokeStyle = cs(lerp(C.BG, colWire, 0.3));
+              ctx.beginPath();
+              ctx.moveTo(px2, y_base + p(Math.sin(a) * 45 * tilt));
+              ctx.lineTo(px2, y_top + p(Math.sin(a) * 45 * tilt));
+              ctx.stroke();
+            }
           }
 
-          if (local_state !== "SCREENSAVER") renderPersistentHUD();
+          // Phase B : radiateur inférieur
+          ctx.fillStyle = cs(lerp(C.BG, colDark, 0.5));
+          ctx.beginPath();
+          ctx.ellipse(CX, y_base, p(75), p(75 * tilt), 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = cs(colWire);
+          ctx.lineWidth = p(1);
+          ctx.beginPath();
+          ctx.ellipse(CX, y_base, p(75), p(75 * tilt), 0, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.strokeStyle = cs(colDark);
+          ctx.beginPath();
+          ctx.ellipse(CX, y_base, p(65), p(65 * tilt), 0, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.strokeStyle = cs(colDark);
+          ctx.lineWidth = p(1);
+          for (var i = 0; i < 12; i++) {
+            var a = i * (Math.PI / 6) - rot;
+            ctx.beginPath();
+            ctx.moveTo(
+              CX + p(Math.cos(a) * 20),
+              y_base + p(Math.sin(a) * 20 * tilt),
+            );
+            ctx.lineTo(
+              CX + p(Math.cos(a) * 75),
+              y_base + p(Math.sin(a) * 75 * tilt),
+            );
+            ctx.stroke();
+          }
+
+          // Phase C : support inférieur bobines
+          ctx.strokeStyle = cs(colWire);
+          ctx.lineWidth = p(1);
+          ctx.beginPath();
+          ctx.ellipse(CX, y_coilB, p(85), p(85 * tilt), 0, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.ellipse(CX, y_coilB, p(45), p(45 * tilt), 0, 0, Math.PI * 2);
+          ctx.stroke();
+
+          // Phase D : bobines + cœur (2 passes pour effet 3D)
+          function drawCoil(angle, isFront) {
+            var cA = Math.cos(angle),
+              sA = Math.sin(angle);
+            var x_in = CX + p(cA * 45),
+              y_in = y_core + p(sA * 45 * tilt);
+            var x_out = CX + p(cA * 85),
+              y_out = y_core + p(sA * 85 * tilt);
+            var cColor = isFront ? colNeon : colDark;
+            ctx.strokeStyle = cs(cColor);
+            ctx.lineWidth = p(1);
+            ctx.beginPath();
+            ctx.moveTo(x_in, y_in);
+            ctx.lineTo(x_out, y_out);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(x_in, y_in - p(1));
+            ctx.lineTo(x_out, y_out - p(1));
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(x_in, y_in + p(1));
+            ctx.lineTo(x_out, y_out + p(1));
+            ctx.stroke();
+            ctx.fillStyle = cs(isFront ? colCore : colWire);
+            ctx.beginPath();
+            ctx.arc(x_in, y_in, p(2), 0, Math.PI * 2);
+            ctx.fill();
+          }
+          // Passe 1 : bobines arrière
+          for (var i = 0; i < 10; i++) {
+            var a = i * (Math.PI / 5) + rot;
+            if (Math.sin(a) < 0) drawCoil(a, false);
+          }
+          // Chambre centrale
+          ctx.fillStyle = cs(C.BG);
+          ctx.beginPath();
+          ctx.ellipse(CX, y_core, p(40), p(40 * tilt), 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = cs(colNeon);
+          ctx.lineWidth = p(1);
+          ctx.beginPath();
+          ctx.ellipse(CX, y_core, p(40), p(40 * tilt), 0, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.strokeStyle = cs(colWire);
+          ctx.beginPath();
+          ctx.ellipse(CX, y_core, p(30), p(30 * tilt), 0, 0, Math.PI * 2);
+          ctx.stroke();
+          // Passe 2 : bobines avant
+          for (var i = 0; i < 10; i++) {
+            var a = i * (Math.PI / 5) + rot;
+            if (Math.sin(a) >= 0) drawCoil(a, true);
+          }
+
+          // Phase E : anneau de confinement supérieur
+          ctx.strokeStyle = cs(colWire);
+          ctx.lineWidth = p(1);
+          ctx.beginPath();
+          ctx.ellipse(CX, y_coilT, p(85), p(85 * tilt), 0, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.strokeStyle = cs(colNeon);
+          ctx.beginPath();
+          ctx.ellipse(CX, y_coilT, p(45), p(45 * tilt), 0, 0, Math.PI * 2);
+          ctx.stroke();
+
+          // Phase F : lentille Palladium supérieure
+          ctx.strokeStyle = cs(colNeon);
+          ctx.lineWidth = p(1);
+          ctx.beginPath();
+          ctx.ellipse(CX, y_top, p(50), p(50 * tilt), 0, 0, Math.PI * 2);
+          ctx.stroke();
+          for (var r2 = 25; r2 > 5; r2 -= 4) {
+            var f = r2 / 25;
+            ctx.strokeStyle = cs(lerp(colNeon, C.BG, f));
+            ctx.beginPath();
+            ctx.ellipse(CX, y_top, p(r2), p(r2 * tilt), 0, 0, Math.PI * 2);
+            ctx.stroke();
+          }
+          ctx.fillStyle = cs(colCore);
+          ctx.beginPath();
+          ctx.ellipse(CX, y_top, p(10), p(10 * tilt), 0, 0, Math.PI * 2);
+          ctx.fill();
+          for (var i = 0; i < 3; i++) {
+            var a = i * ((2 * Math.PI) / 3) + rot * 1.5;
+            ctx.fillStyle = cs(colCore);
+            ctx.beginPath();
+            ctx.arc(
+              CX + p(Math.cos(a) * 40),
+              y_top + p(Math.sin(a) * 40 * tilt),
+              p(2),
+              0,
+              Math.PI * 2,
+            );
+            ctx.fill();
+          }
+
+          // Phase G : scanner rotatif + textes
+          var scanDeg = (sp * 1.5 * (180 / Math.PI)) % 360;
+          var s1 = (scanDeg * Math.PI) / 180,
+            s2 = ((scanDeg + 40) * Math.PI) / 180;
+          ctx.strokeStyle = cs(colCore);
+          ctx.lineWidth = p(1);
+          ctx.beginPath();
+          ctx.arc(CX, CY, p(115), s1, s2);
+          ctx.stroke();
+          ctx.strokeStyle = cs(colDark);
+          ctx.beginPath();
+          ctx.arc(CX, CY, p(115), 0, Math.PI * 2);
+          ctx.stroke();
+
+          if (explode > 0.8) {
+            ctx.fillStyle = cs(colNeon);
+            ctx.font = p(9) + "px sans-serif";
+            ctx.textAlign = "left";
+            ctx.fillText("PALLADIUM", p(28), p(55));
+            ctx.fillText("CORE", p(28), p(70));
+            ctx.strokeStyle = cs(colWire);
+            ctx.lineWidth = p(1);
+            ctx.beginPath();
+            ctx.moveTo(p(90), p(62));
+            ctx.lineTo(CX - p(15), y_top);
+            ctx.stroke();
+            ctx.textAlign = "right";
+            ctx.fillText("MARK I", p(212), p(185));
+            ctx.fillText("3.0 GJ/s", p(212), p(200));
+            ctx.textAlign = "left";
+          }
         }
-        requestAnimationFrame(renderLoop);
+
+        // ================== MODE SYSTEM ==================
+        function rSystem() {
+          dSR(120, 120, 110, 8, 8, gp * 50, 0.1, C.CYAN);
+          dSR(120, 120, 95, 2, 36, -gp * 80, 0.5, C.BLUE);
+          dTx("SYS.OPT", 120, 105, C.WHITE, 14);
+          var load = 40 + Math.sin(gp * 5) * 20;
+          dR(80, 120, 80, 12, C.CYAN);
+          fR(82, 122, (76 * load) / 100, 8, C.CYAN);
+          dTx("RAM: 1.2G", 120, 150, C.GREEN, 10);
+        }
+
+        // ================== MODE VISION ==================
+        function rVision() {
+          var i;
+          for (i = -120; i <= 120; i += 25) {
+            dL(120 + i, 0, 120 + i, 240, { r: 40, g: 0, b: 0 });
+            dL(0, 120 + i, 240, 120 + i, { r: 40, g: 0, b: 0 });
+          }
+          var tr = 90 + Math.sin(gp * 10) * 5;
+          dL(120 - tr, 120 - tr / 2, 120 - tr, 120 - tr, C.RED);
+          dL(120 - tr, 120 - tr, 120 - tr / 2, 120 - tr, C.RED);
+          dL(120 + tr, 120 - tr / 2, 120 + tr, 120 - tr, C.RED);
+          dL(120 + tr, 120 - tr, 120 + tr / 2, 120 - tr, C.RED);
+          dL(120 - tr, 120 + tr / 2, 120 - tr, 120 + tr, C.RED);
+          dL(120 - tr, 120 + tr, 120 - tr / 2, 120 + tr, C.RED);
+          dL(120 + tr, 120 + tr / 2, 120 + tr, 120 + tr, C.RED);
+          dL(120 + tr, 120 + tr, 120 + tr / 2, 120 + tr, C.RED);
+          var sy = 120 + Math.sin(gp * 4) * 115;
+          fR(10, sy - 2, 220, 4, C.RED);
+          dTx("AI_LOCK", 120, 80, C.RED, 12);
+        }
+
+        // ================== MODE HOME ==================
+        function rHome() {
+          fA(120, 120, 50, 49, 0, 360, C.BLUE);
+          fA(120, 120, 100, 99, 0, 360, C.BLUE);
+          var sa = gp * 2;
+          fT(
+            120,
+            120,
+            120 + Math.cos(sa) * 120,
+            120 + Math.sin(sa) * 120,
+            120 + Math.cos(sa - 0.2) * 120,
+            120 + Math.sin(sa - 0.2) * 120,
+            { r: 0, g: 50, b: 100 },
+          );
+          dL(
+            120,
+            120,
+            120 + Math.cos(sa) * 120,
+            120 + Math.sin(sa) * 120,
+            C.CYAN,
+          );
+          var nodes = [
+            { a: 0.5, d: 55, n: "LIV" },
+            { a: 2.1, d: 95, n: "KIT" },
+            { a: 4.8, d: 80, n: "BED" },
+          ];
+          for (var k = 0; k < nodes.length; k++) {
+            var nd = nodes[k],
+              nx = 120 + Math.cos(nd.a) * nd.d,
+              ny = 120 + Math.sin(nd.a) * nd.d;
+            dC(nx, ny, 4, C.CYAN, true);
+            dTx(nd.n, nx, ny - 10, C.WHITE, 9);
+          }
+        }
+
+        // ================== MODE MEDIA ==================
+        function rMedia() {
+          for (var i = 0; i < 45; i++) {
+            var a = i * 8 * DEG + gp,
+              val =
+                10 +
+                Math.abs(Math.sin(gp * 4 + i * 0.4) * 45) +
+                Math.sin(i * 132) * 5,
+              col = lerp(C.PINK, C.PURP, i / 45);
+            dL(
+              120 + Math.cos(a) * 55,
+              120 + Math.sin(a) * 55,
+              120 + Math.cos(a) * (55 + val),
+              120 + Math.sin(a) * (55 + val),
+              col,
+              2,
+            );
+          }
+          dG(120, 120, 25 + Math.sin(gp * 5) * 5, C.PINK, 15);
+          dC(120, 120, 20 + Math.sin(gp * 5) * 5, C.WHITE, true);
+        }
+
+        // ================== MODE TIMER ==================
+        function rTimer() {
+          var ae = ((mst % 60000) / 60000) * 360;
+          fA(120, 120, 80, 75, 0, 360, { r: 50, g: 50, b: 0 });
+          fA(120, 120, 80, 75, 0, ae, C.YELL);
+          for (var i = 0; i < 12; i++) {
+            var a = i * 30 * DEG;
+            dC(120 + Math.cos(a) * 95, 120 + Math.sin(a) * 95, 3, C.ORA, true);
+          }
+          dTx("TIMER", 120, 128, C.WHITE, 20);
+        }
+
+        // ================== MODE WEATHER ==================
+        function rWeather() {
+          // Parsing : Température | Condition (SUN, CLOUD, RAIN)
+          var parts = (lt || "24C|SUN").split("|");
+          var temp = parts[0] || "--";
+          var cond = parts[1] || "SUN";
+
+          if (cond === "SUN") {
+            // Soleil rotatif
+            dG(120, 100, 30, C.YELL, 15);
+            dC(120, 100, 25, C.YELL, true);
+            for (var i = 0; i < 8; i++) {
+              var a = (i * 45 + gp * 20) * DEG;
+              dL(
+                120 + Math.cos(a) * 35,
+                100 + Math.sin(a) * 35,
+                120 + Math.cos(a) * 50,
+                100 + Math.sin(a) * 50,
+                C.YELL,
+                2,
+              );
+            }
+          } else {
+            // Nuage vectoriel (Base commune pour CLOUD et RAIN)
+            dC(100, 100, 20, C.WHITE, true);
+            dC(120, 85, 25, C.WHITE, true);
+            dC(140, 100, 20, C.WHITE, true);
+            fR(100, 100, 40, 20, C.WHITE);
+
+            if (cond === "RAIN") {
+              // Gouttes de pluie tombantes animées
+              for (var j = 0; j < 4; j++) {
+                var ry = 115 + ((gp * 60 + j * 15) % 40);
+                dL(95 + j * 16, ry, 95 + j * 16, ry + 10, C.CYAN, 2);
+              }
+            }
+          }
+          // Température
+          dTx(temp, 120, 180, C.WHITE, 16);
+          dTx(cond, 120, 200, C.CYAN, 8);
+        }
+
+        // ================== MODE DOORS ==================
+        function rDoors() {
+          // 1. Extraction de l'état des capteurs (AVANT|ARRIERE|GARAGE|LATERAL)
+          var parts = (lt || "0|0|0|0").split("|");
+          var names = ["AVANT", "ARRIERE", "GARAGE", "LATERAL"];
+          var openDoors = [];
+
+          for (var i = 0; i < 4; i++) {
+            if (parts[i] === "1") openDoors.push(names[i]);
+          }
+          var isSecure = openDoors.length === 0;
+
+          // 2. Halo lumineux ambiant
+          var pulse = (Math.sin(gp * (isSecure ? 2 : 8)) + 1) / 2;
+          dG(
+            120,
+            100,
+            isSecure ? 40 : 50 + pulse * 10,
+            isSecure ? C.GREEN : C.RED,
+            20,
+          );
+
+          // 3. Cadre de la porte (Bâti fixe)
+          dR(80, 40, 80, 120, { r: 100, g: 110, b: 120 }); // Extérieur
+          dR(82, 42, 76, 116, { r: 50, g: 60, b: 70 }); // Intérieur
+
+          // 4. Dessin de la porte selon l'état
+          if (isSecure) {
+            // --- PORTE FERMÉE (Vue de face) ---
+            fR(82, 42, 76, 116, { r: 15, g: 35, b: 20 }); // Bois / Matière verte
+
+            // Panneaux décoratifs de la porte
+            dR(88, 48, 64, 45, C.GREEN);
+            dR(88, 100, 64, 52, C.GREEN);
+
+            // Poignée et serrure
+            fR(142, 95, 10, 3, C.WHITE);
+            fR(148, 95, 4, 16, C.WHITE);
+            dC(146, 85, 2, C.GREEN, true); // Diode verrouillée
+
+            // Effet de scan technique (Ligne qui descend)
+            var scanY = 42 + ((gp * 30) % 116);
+            dL(82, scanY, 158, scanY, C.GREEN, 1);
+
+            // HUD Textes
+            dTx("TOUTES PORTES", 120, 185, C.WHITE, 9);
+            dTx("VERROUILLEES", 120, 205, C.GREEN, 12);
+          } else {
+            // --- PORTE OUVERTE (Perspective 3D) ---
+            // Intérieur de la pièce (sombre)
+            fR(82, 42, 76, 116, { r: 25, g: 5, b: 5 });
+            dTx("!!!", 120, 100, C.RED, 14); // Alerte interne
+
+            // Calcul de la porte pivotée (Trapèze)
+            // Charnière à gauche (x=82), ouverture vers l'intérieur droit
+            var colOpen = { r: 60, g: 15, b: 15 };
+
+            // Dessin de la surface de la porte via 2 triangles
+            fT(82, 42, 135, 55, 82, 158, colOpen);
+            fT(135, 55, 135, 145, 82, 158, colOpen);
+
+            // Contours rouges pour accentuer la 3D
+            dL(82, 42, 135, 55, C.RED, 1);
+            dL(135, 55, 135, 145, C.RED, 1);
+            dL(135, 145, 82, 158, C.RED, 1);
+
+            // Poignée en perspective
+            fR(125, 92, 4, 12, C.WHITE);
+
+            // HUD Textes
+            dTx("ALERTE OUVERTURE", 120, 185, C.RED, 10);
+            dTx(openDoors.join(" - "), 120, 205, C.ORA, 10);
+          }
+
+          // 5. En-tête HUD Global
+          dTx("CAPTEURS", 120, 20, C.CYAN, 10);
+          dL(90, 25, 150, 25, C.CYAN, 1);
+        }
+        // ================== MODE PRINT ==================
+        function rPrint() {
+          // 1. Parsing des données d'entrée
+          var parts = (lt || "220|60|45").split("|");
+          var t = parts[0] || "--";
+          var b = parts[1] || "--";
+          var p = parts[2] || "0";
+          var prog = parseInt(p) || 0;
+          if (p === "FLOTTE") prog = 0;
+
+          // 2. Barre de progression circulaire (Bordure de l'écran)
+          fA(120, 120, 116, 110, 0, 360, { r: 40, g: 40, b: 45 }); // Fond
+          if (prog > 0) {
+            var angle = (prog / 100) * 360;
+            fA(120, 120, 116, 110, -90, -90 + angle, C.CYAN); // Progression
+          }
+
+          // 3. Variables d'animation
+          var cy = 110 + Math.sin(gp * 0.5) * 5; // Légère vibration verticale de la tête
+          var nx = 120 + Math.sin(gp * 2.2) * 40; // Oscillation horizontale
+          var bedY = 165; // Position verticale du plateau
+
+          // 4. Structure de l'imprimante (Rail)
+          fR(50, cy - 22, 140, 4, { r: 100, g: 105, b: 110 });
+
+          // 5. Plateau chauffant avec perspective (Trapèze simulé par 2 triangles)
+          fT(60, bedY, 180, bedY, 160, bedY - 10, { r: 60, g: 60, b: 65 });
+          fT(60, bedY, 80, bedY - 10, 160, bedY - 10, { r: 50, g: 50, b: 55 });
+
+          // Halo thermique du plateau si T > 40°C
+          if (parseInt(b) > 40) {
+            dG(120, bedY - 5, 40, C.RED, 8);
+          }
+
+          // 6. Pièce en cours d'impression (Croissance dynamique)
+          var ph = (prog / 100) * 40; // Hauteur maximale simulée : 40px
+          if (ph > 0) {
+            fR(100, bedY - 10 - ph, 40, ph, C.GREEN);
+            dR(100, bedY - 10 - ph, 40, ph, C.WHITE);
+          }
+
+          // 7. Tête d'impression et Filament
+          // Ligne de filament déposé
+          dL(nx, cy, nx, bedY - 10 - ph, C.GREEN, 1);
+
+          // Corps de l'extrudeur et Buse
+          fR(nx - 12, cy - 25, 24, 18, { r: 200, g: 200, b: 210 });
+          fT(nx - 5, cy - 7, nx + 5, cy - 7, nx, cy, C.ORA);
+
+          // Effet de particules (Simulation d'extrusion)
+          if (prog > 0 && prog < 100) {
+            var sparkY = cy + ((gp * 30) % 15);
+            dC(nx + Math.sin(gp * 10) * 2, sparkY, 1, C.ORA, true);
+          }
+
+          // 8. Affichage HUD (Interface utilisateur)
+          // Température Tête
+          dC(60, 56, 3, C.ORA, true);
+          dTx(t + "°", 68, 60, C.WHITE, 9, "left");
+
+          // Température Plateau
+          dC(150, 56, 3, C.RED, true);
+          dTx(b + "°", 158, 60, C.WHITE, 9, "left");
+
+          // Pourcentage ou statut d'erreur ("FLOTTE")
+          var statusText = p === "FLOTTE" ? p : p + "%";
+          dTx(statusText, 120, 200, C.CYAN, 12, "center");
+        }
+
+        // ================== MODE MATRIX ==================
+        function rMatrix() {
+          ctx.font = p(12) + "px monospace";
+          ctx.fillStyle = cs(C.GREEN);
+          for (var i = 0; i < 18; i++)
+            ctx.fillText(
+              Math.random() > 0.5 ? "1" : "0",
+              p((i * 20) % 240),
+              p((mst / 15 + i * 40) % 240),
+            );
+        }
+
+        // ================== MODE GHOST ==================
+        function rGhost() {
+          dC(120, 120, 55 + Math.sin(gp) * 5, C.DARK, true);
+          fA(120, 120, 110, 108, 0, 360, { r: 30, g: 30, b: 30 });
+          for (var x = -60; x < 60; x += 3)
+            fR(120 + x, 120 + Math.sin(x * 0.2 + gp) * 15, 1, 1, C.GREY);
+        }
+
+        // ================== MODE ERROR ==================
+        function rError() {
+          dTx(
+            "ERROR",
+            120 + (Math.random() * 10 - 5),
+            128 + (Math.random() * 10 - 5),
+            C.RED,
+            22,
+          );
+          for (var i = 0; i < 8; i++)
+            fR(0, Math.random() * 240, 240, 4, { r: 150, g: 0, b: 0 });
+        }
+
+        // ================== MODE SUCCESS ==================
+        function rSuccess() {
+          dSR(120, 120, 85, 4, 1, 0, 0, C.GREEN);
+          dL(90, 120, 115, 145, C.GREEN, 2);
+          dL(115, 145, 160, 90, C.GREEN, 2);
+          dL(91, 120, 116, 145, C.WHITE);
+          dL(116, 145, 161, 90, C.WHITE);
+        }
+
+        // ================== MODE WHATSAPP ==================
+        function rWhatsapp() {
+          // Halo et anneau
+          dG(120, 110, 35, C.GREEN, 20);
+          dSR(120, 120, 110, 4, 12, gp * 30, 0.3, C.GREEN);
+
+          // Bulle de discussion (Corps)
+          fR(70, 75, 100, 60, { r: 10, g: 150, b: 50 });
+
+          // Bulle (Pointe vers le bas à gauche)
+          fT(70, 115, 90, 135, 90, 115, { r: 10, g: 150, b: 50 });
+
+          // Points de suspension animés (...)
+          var phase = Math.floor(gp * 3) % 4;
+          if (phase > 0) dC(100, 105, 4, C.WHITE, true);
+          if (phase > 1) dC(120, 105, 4, C.WHITE, true);
+          if (phase > 2) dC(140, 105, 4, C.WHITE, true);
+
+          // Texte
+          dTx("WHATSAPP", 120, 175, C.WHITE, 9);
+          dTx(lt || "MESSAGE ENTRANT", 120, 195, C.GREEN, 11);
+        }
+
+        // ================== MODE GMAIL ==================
+        function rGmail() {
+          // Halo et anneau
+          dG(120, 110, 40, C.RED, 15);
+          dSR(120, 120, 110, 3, 6, gp * 25, 0.25, C.RED);
+
+          // Enveloppe vectorielle (Corps)
+          fR(70, 80, 100, 60, { r: 200, g: 30, b: 40 });
+          dR(70, 80, 100, 60, C.WHITE);
+
+          // Enveloppe (Rabat supérieur)
+          fT(70, 80, 170, 80, 120, 115, { r: 240, g: 50, b: 60 });
+          dL(70, 80, 120, 115, C.WHITE, 1);
+          dL(170, 80, 120, 115, C.WHITE, 1);
+
+          // Texte de notification
+          dTx("INBOX", 120, 175, C.WHITE, 9);
+          dTx(lt || "NOUVEAU MESSAGE", 120, 195, C.RED, 11);
+        }
+
+        // ================== MODE CALENDAR ==================
+        function rCalendar() {
+          dSR(120, 120, 88, 3, 8, gp * 20, 0.3, C.CYAN);
+          dR(70, 85, 100, 80, C.CYAN);
+          fR(70, 85, 100, 18, C.CYAN);
+          dTx("CAL", 120, 99, C.BG, 11);
+          for (var col = 0; col < 7; col++)
+            for (var row = 0; row < 4; row++) {
+              var cx2 = 78 + col * 13,
+                cy2 = 115 + row * 12;
+              dC(
+                cx2,
+                cy2,
+                4,
+                col === 2 && row === 1 ? C.CYAN : { r: 30, g: 60, b: 70 },
+                true,
+              );
+            }
+          dTx(lt || "RAPPEL", 120, 185, C.WHITE, 10);
+        }
+
+        // ================== MODE MAP ==================
+        function rMap() {
+          // Grille GPS tactique
+          var i;
+          for (i = -120; i <= 120; i += 30) {
+            dL(120 + i, 0, 120 + i, 240, { r: 10, g: 25, b: 40 });
+            dL(0, 120 + i, 240, 120 + i, { r: 10, g: 25, b: 40 });
+          }
+          // Tracé de la route
+          var prevX = -1,
+            prevY = -1;
+          for (i = 0; i <= 100; i += 5) {
+            var t = i / 100;
+            var px2 = 120 - 80 + t * 160;
+            var py2 = 120 + 60 - t * 120 + Math.sin(t * 6 + gp * 0.5) * 15;
+            if (prevX !== -1)
+              dL(prevX, prevY, px2, py2, { r: 60, g: 60, b: 80 });
+            prevX = px2;
+            prevY = py2;
+          }
+          // Curseur position
+          var prog = (Math.sin(gp * 0.2) + 1) / 2;
+          var cx2 = 120 - 80 + prog * 160;
+          var cy2 = 120 + 60 - prog * 120 + Math.sin(prog * 6 + gp * 0.5) * 15;
+          dG(cx2, cy2, 15, C.CYAN, 10);
+          dC(cx2, cy2, 5, C.WHITE, true);
+          dC(cx2, cy2, 8, C.CYAN, false);
+          // Destination (pulse)
+          var dx2 = 120 - 80 + 160;
+          var dy2 = 120 + 60 - 120 + Math.sin(6 + gp * 0.5) * 15;
+          if (Math.floor(gp * 2) % 2 === 0) dC(dx2, dy2, 6, C.RED, true);
+          dC(dx2, dy2, 12, C.RED, false);
+          // Parsing DESTINATION|DISTANCE|ETA
+          var parts = (lt || "").split("|");
+          var dest = parts[0] || "MAP",
+            dist = parts[1] || "--",
+            eta = parts[2] || "--";
+          dTx(dest, 15, 20, C.CYAN, 9, "left");
+          dTx("DIST: " + dist, 225, 205, C.WHITE, 9, "right");
+          dTx("ETA: " + eta, 15, 205, C.WHITE, 9, "left");
+          // Boussole
+          dC(210, 30, 15, C.GREY, false);
+          dL(210, 20, 205, 35, C.RED);
+          dL(210, 20, 215, 35, C.RED);
+          dL(205, 35, 215, 35, C.WHITE);
+        }
+
+        // ================== MODE SEARCH ==================
+        function rSearch() {
+          // Grille tactique
+          dC(120, 120, 50, { r: 20, g: 30, b: 40 }, false);
+          dC(120, 120, 100, { r: 20, g: 30, b: 40 }, false);
+          dL(120, 10, 120, 230, { r: 20, g: 30, b: 40 }, 1);
+          dL(10, 120, 230, 120, { r: 20, g: 30, b: 40 }, 1);
+
+          // Angle du radar
+          var angleDeg = (gp * 120) % 360;
+
+          // Traînée du radar (Arc plein)
+          fA(120, 120, 110, 0, angleDeg - 40, angleDeg, {
+            r: 0,
+            g: 80,
+            b: 100,
+          });
+
+          // Faisceau principal
+          dL(
+            120,
+            120,
+            120 + Math.cos(angleDeg * DEG) * 110,
+            120 + Math.sin(angleDeg * DEG) * 110,
+            C.CYAN,
+            2,
+          );
+
+          // Blips (cibles simulées)
+          var t1 = 120 + Math.cos(45 * DEG) * 60;
+          var t2 = 120 + Math.sin(45 * DEG) * 60;
+          if ((angleDeg > 45 && angleDeg < 90) || angleDeg > 405) {
+            dC(t1, t2, 5, C.WHITE, true);
+            dC(t1, t2, 10 + Math.sin(gp * 10) * 5, C.CYAN, false); // Onde de choc
+          }
+
+          // Bordure et texte
+          dSR(120, 120, 118, 4, 12, -gp * 20, 0.1, C.CYAN);
+          dTx(lt || "SEARCHING...", 120, 215, C.CYAN, 9);
+        }
+
+        // Render frame pour le mode actif
+        function renderFrame(ts) {
+          mst = ts;
+          upd();
+          fR(0, 0, 240, 240, C.BG);
+          if (mode === "IDLE" || mode === "LISTENING" || mode === "SPEAKING")
+            rSphere();
+          else if (mode === "SCREENSAVER") rSaver();
+          else if (mode === "SYSTEM") rSystem();
+          else if (mode === "VISION") rVision();
+          else if (mode === "HOME") rHome();
+          else if (mode === "MEDIA") rMedia();
+          else if (mode === "TIMER") rTimer();
+          else if (mode === "WEATHER") rWeather();
+          else if (mode === "PRINT") rPrint();
+          else if (mode === "MATRIX") rMatrix();
+          else if (mode === "GHOST") rGhost();
+          else if (mode === "ERROR") rError();
+          else if (mode === "SUCCESS") rSuccess();
+          else if (mode === "WHATSAPP") rWhatsapp();
+          else if (mode === "GMAIL") rGmail();
+          else if (mode === "CALENDAR") rCalendar();
+          else if (mode === "MAP") rMap();
+          else if (mode === "DOORS") rDoors();
+          else rSearch();
+          if (mode !== "SCREENSAVER") rHUD();
+        }
+
+        return {
+          renderFrame: renderFrame,
+          setLt: function (t) {
+            lt = t;
+          },
+          getLt: function () {
+            return lt;
+          },
+        };
       }
 
-      // Interface UI Actions
-      function setMode(mode) {
-        local_state = mode;
-        document
-          .querySelectorAll("button")
-          .forEach((b) => b.classList.remove("active"));
-        event.target.classList.add("active");
+      // Liste des modes disponibles
+      var MODES = [
+        { id: "IDLE", label: "Idle / Standby" },
+        { id: "LISTENING", label: "Listening" },
+        { id: "SPEAKING", label: "Speaking" },
+        { id: "SCREENSAVER", label: "Screensaver" },
+        { id: "SYSTEM", label: "System" },
+        { id: "HOME", label: "Home / Radar" },
+        { id: "VISION", label: "Vision AI" },
+        { id: "MEDIA", label: "Media" },
+        { id: "TIMER", label: "Timer" },
+        { id: "WEATHER", label: "Weather" },
+        { id: "PRINT", label: "3D Print" },
+        { id: "MATRIX", label: "Matrix" },
+        { id: "GHOST", label: "Ghost" },
+        { id: "ERROR", label: "Error" },
+        { id: "SUCCESS", label: "Success" },
+        { id: "WHATSAPP", label: "WhatsApp" },
+        { id: "GMAIL", label: "Gmail" },
+        { id: "CALENDAR", label: "Calendar" },
+        { id: "MAP", label: "Trajet / Map" },
+        { id: "SEARCH", label: "Search (Locked)" },
+        { id: "DOORS", label: "Doors" },
+      ];
 
-        if (["IDLE", "LISTENING", "SPEAKING"].includes(mode))
-          local_text = "STANDBY";
-        else if (mode === "PRINT") local_text = "220|60|45";
-        else if (mode === "WEATHER") local_text = "24 C";
-        else if (mode === "WHATSAPP") local_text = "Maman";
-        else local_text = "";
-
-        document.getElementById("textInput").value = local_text;
+      // Création des cartes
+      var gallery = document.getElementById("gallery");
+      var renderers = {};
+      for (var mi = 0; mi < MODES.length; mi++) {
+        (function (m) {
+          var card = document.createElement("div");
+          card.className = "card";
+          card.innerHTML =
+            '<div class="bezel-sm"><div class="screen-sm"><canvas id="c-' +
+            m.id +
+            '" width="136" height="136"></canvas></div></div><span class="card-label">' +
+            m.label +
+            "</span>";
+          card.addEventListener("click", function () {
+            openModal(m.id);
+          });
+          gallery.appendChild(card);
+          renderers[m.id] = createRenderer(
+            document.getElementById("c-" + m.id),
+            m.id,
+            136,
+          );
+        })(MODES[mi]);
       }
 
-      function updateText() {
-        const txt = document.getElementById("textInput").value.trim();
-        if (txt) local_text = txt.substring(0, 60).toUpperCase();
+      var lastG = 0;
+      function gLoop(ts) {
+        if (ts - lastG >= 33) {
+          lastG = ts;
+          for (var i = 0; i < MODES.length; i++)
+            renderers[MODES[i].id].renderFrame(ts);
+        }
+        requestAnimationFrame(gLoop);
+      }
+      requestAnimationFrame(gLoop);
+
+      var mRend = null,
+        mAnimId = null,
+        mActiveId = null;
+
+      function openModal(id) {
+        mActiveId = id;
+        var m = null;
+        for (var i = 0; i < MODES.length; i++) {
+          if (MODES[i].id === id) {
+            m = MODES[i];
+            break;
+          }
+        }
+        document.getElementById("mtitle").textContent = m.label;
+        var inp = document.getElementById("minput");
+        inp.value = renderers[id].getLt();
+        if (mAnimId) {
+          cancelAnimationFrame(mAnimId);
+          mAnimId = null;
+        }
+        mRend = createRenderer(document.getElementById("mc"), id, 268);
+        mRend.setLt(inp.value);
+        document.getElementById("modal").classList.add("open");
+        var lastM = 0;
+        function loop(ts) {
+          if (ts - lastM >= 33) {
+            lastM = ts;
+            mRend.renderFrame(ts);
+          }
+          mAnimId = requestAnimationFrame(loop);
+        }
+        mAnimId = requestAnimationFrame(loop);
       }
 
-      requestAnimationFrame(renderLoop);
+      function closeModal() {
+        document.getElementById("modal").classList.remove("open");
+        if (mAnimId) {
+          cancelAnimationFrame(mAnimId);
+          mAnimId = null;
+        }
+        mRend = null;
+        mActiveId = null;
+      }
+
+      function onOvClick(e) {
+        if (e.target === document.getElementById("modal")) closeModal();
+      }
+
+      function onMText() {
+        var val = document.getElementById("minput").value.toUpperCase();
+        if (mRend) mRend.setLt(val);
+        if (mActiveId) renderers[mActiveId].setLt(val);
+      }
+
+      document.addEventListener("keydown", function (e) {
+        if (e.key === "Escape") closeModal();
+      });
     </script>
   </body>
 </html>

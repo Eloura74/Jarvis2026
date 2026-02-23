@@ -14,6 +14,7 @@ import { useVoiceSynthesis } from "./useVoiceSynthesis";
 import { useWakeWord } from "./useWakeWord";
 import { SystemStatus, LogEntry } from "../types";
 import { useKernel } from "../hooks/useKernel";
+import { playReadyBeep } from "../services/audioFeedback";
 
 interface UseJarvisInteractionProps {
   status: SystemStatus;
@@ -36,7 +37,12 @@ export function useJarvisInteraction({
   isDialogActiveRef,
 }: UseJarvisInteractionProps) {
   const [conversationMode, setConversationMode] = useState(false);
+  // B9 : État d'erreur micro pour badge visuel dans l'UI
+  const [micError, setMicError] = useState<string | null>(null);
   const { voiceSettings, wakeWordEnabled } = useKernel();
+
+  // V1 : Durée de la dernière réponse TTS (pour délai anti-écho adaptatif)
+  const lastTtsDurationRef = useRef<number>(0);
 
   // Refs pour gestion asynchrone
   const lastMicActivationTime = useRef<number>(0);
@@ -193,9 +199,10 @@ export function useJarvisInteraction({
         }
       }
     },
-    // onError : annonce vocale si le micro est refusé par le navigateur
+    // onError : annonce vocale + badge visuel si le micro est refusé (B9)
     (errorMessage) => {
       addLog(`⚠️ Micro: ${errorMessage}`, "SYSTEM", "error");
+      setMicError(errorMessage); // B9 : exposer l'erreur pour badge UI
       // Utiliser speechSynthesis directement car rawSpeak n'est pas encore défini ici
       const utterance = new SpeechSynthesisUtterance(errorMessage);
       utterance.lang = "fr-FR";
@@ -213,7 +220,6 @@ export function useJarvisInteraction({
     pitch: voiceSettings.pitch,
     rate: voiceSettings.rate,
     volume: voiceSettings.volume,
-    forceResumeListening: forceResumeListening,
     onStart: async () => {
       isSpeakingRef.current = true;
       setStatus(SystemStatus.SPEAKING);
@@ -223,10 +229,13 @@ export function useJarvisInteraction({
         forceResumeListening();
       }, 100);
     },
-    onEnd: () => {
-      console.log("🔊 Fin parole Jarvis");
+    onEnd: (ttsDurationMs: number) => {
+      console.log(`🔊 Fin parole Jarvis (durée: ${ttsDurationMs}ms)`);
       setStatus(SystemStatus.IDLE);
       lastSpeechEndTime.current = Date.now(); // Marquer le moment exact
+
+      // Stocker la durée TTS pour le délai adaptatif (V1)
+      lastTtsDurationRef.current = ttsDurationMs;
 
       // PROTECTION CRITIQUE : Si la file d'attente vocale a encore des choses à dire,
       // on ne réactive PAS encore le micro (on attendra le prochain onEnd)
@@ -239,19 +248,37 @@ export function useJarvisInteraction({
 
       isSpeakingRef.current = false;
 
-      // Réactivation micro : délai réduit à 800ms si un dialog flow est actif
-      // (l'utilisateur doit répondre rapidement), sinon 3500ms anti-écho standard
-      const resumeDelay = isDialogActiveRef?.current ? 800 : 3500;
+      // V1 : Délai anti-écho ADAPTATIF selon la durée de la réponse TTS
+      // - Dialog flow actif → 800ms (réponse rapide attendue)
+      // - TTS < 2s (réponse courte) → 1200ms (écho court)
+      // - TTS 2-5s (réponse moyenne) → 2000ms
+      // - TTS > 5s (réponse longue) → 2800ms
+      // Plafond à 2800ms (au lieu de 3500ms) pour plus de fluidité
+      let resumeDelay: number;
+      if (isDialogActiveRef?.current) {
+        resumeDelay = 800;
+      } else if (ttsDurationMs < 2000) {
+        resumeDelay = 1200;
+      } else if (ttsDurationMs < 5000) {
+        resumeDelay = 2000;
+      } else {
+        resumeDelay = 2800;
+      }
+
       if (conversationModeRef.current && !isExitingRef.current) {
         setTimeout(() => {
           // Vérifier une dernière fois qu'on n'est pas en train de parler
           if (window.speechSynthesis.speaking) return;
 
           console.log(
-            `🎤 Mode conversation : Réactivation micro après délai sécurité (${resumeDelay}ms)`,
+            `🎤 Mode conversation : Réactivation micro après délai adaptatif (${resumeDelay}ms, TTS: ${ttsDurationMs}ms)`,
           );
           lastMicActivationTime.current = Date.now();
           startListening();
+
+          // V2 : Feedback sonore discret pour signaler que le micro est prêt
+          // Bip court (880Hz, 80ms, volume 0.15) — non capté par le micro
+          playReadyBeep();
 
           // Timeout d'inactivité : si personne ne parle dans les 15s, on quitte le mode conversation
           if (conversationTimeoutRef.current)
@@ -268,7 +295,7 @@ export function useJarvisInteraction({
               stopListening();
             }
           }, 15000);
-        }, resumeDelay); // 800ms si dialog flow actif, 3500ms sinon (anti-écho)
+        }, resumeDelay);
       } else if (isExitingRef.current) {
         console.log("👋 Fin de session confirmée, micro reste coupé.");
         isExitingRef.current = false; // Reset pour la prochaine fois
@@ -396,6 +423,8 @@ export function useJarvisInteraction({
     speak,
     conversationMode,
     setConversationMode,
-    stopFullConversation, // NOUVEAU
+    stopFullConversation,
+    micError, // B9 : erreur micro pour badge UI
+    clearMicError: () => setMicError(null), // B9 : reset du badge après lecture
   };
 }

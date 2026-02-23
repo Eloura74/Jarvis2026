@@ -1,0 +1,60 @@
+var MODES=[
+  {id:"IDLE",label:"Idle / Standby"},{id:"LISTENING",label:"Listening"},
+  {id:"SPEAKING",label:"Speaking"},{id:"SCREENSAVER",label:"Arc Reactor"},
+  {id:"SYSTEM",label:"System"},{id:"HOME",label:"Home / Radar"},
+  {id:"VISION",label:"Vision AI"},{id:"MEDIA",label:"Media"},
+  {id:"TIMER",label:"Timer"},{id:"WEATHER",label:"Weather"},
+  {id:"PRINT",label:"3D Print"},{id:"MATRIX",label:"Matrix"},
+  {id:"GHOST",label:"Ghost"},{id:"ERROR",label:"Error"},
+  {id:"SUCCESS",label:"Success"},{id:"WHATSAPP",label:"WhatsApp"},
+  {id:"GMAIL",label:"Gmail"},{id:"CALENDAR",label:"Calendar"},
+  {id:"SEARCH",label:"Search (Locked)"}
+];
+var gallery=document.getElementById("gallery");
+var renderers={};
+for(var mi=0;mi<MODES.length;mi++){
+  (function(m){
+    var card=document.createElement("div");
+    card.className="card";
+    card.innerHTML='<div class="bezel-sm"><div class="screen-sm"><canvas id="c-'+m.id+'" width="136" height="136"></canvas></div></div><span class="card-label">'+m.label+'</span>';
+    card.addEventListener("click",function(){openModal(m.id);});
+    gallery.appendChild(card);
+    renderers[m.id]=createRenderer(document.getElementById("c-"+m.id),m.id,136);
+  })(MODES[mi]);
+}
+var lastG=0;
+function gLoop(ts){
+  if(ts-lastG>=33){lastG=ts;for(var i=0;i<MODES.length;i++)renderers[MODES[i].id].renderFrame(ts);}
+  requestAnimationFrame(gLoop);
+}
+requestAnimationFrame(gLoop);
+var mRend=null,mAnimId=null,mActiveId=null;
+function openModal(id){
+  mActiveId=id;
+  var m=null;for(var i=0;i<MODES.length;i++){if(MODES[i].id===id){m=MODES[i];break;}}
+  document.getElementById("mtitle").textContent=m.label;
+  var inp=document.getElementById("minput");
+  inp.value=renderers[id].getLt();
+  if(mAnimId){cancelAnimationFrame(mAnimId);mAnimId=null;}
+  mRend=createRenderer(document.getElementById("mc"),id,268);
+  mRend.setLt(inp.value);
+  document.getElementById("modal").classList.add("open");
+  var lastM=0;
+  function loop(ts){if(ts-lastM>=33){lastM=ts;mRend.renderFrame(ts);}mAnimId=requestAnimationFrame(loop);}
+  mAnimId=requestAnimationFrame(loop);
+}
+function closeModal(){
+  document.getElementById("modal").classList.remove("open");
+  if(mAnimId){cancelAnimationFrame(mAnimId);mAnimId=null;}
+  mRend=null;mActiveId=null;
+}
+function onOvClick(e){if(e.target===document.getElementById("modal"))closeModal();}
+function onMText(){
+  var val=document.getElementById("minput").value.toUpperCase();
+  if(mRend)mRend.setLt(val);
+  if(mActiveId)renderers[mActiveId].setLt(val);
+}
+document.addEventListener("keydown",function(e){if(e.key==="Escape")closeModal();});
+</script>
+</body>
+</html>

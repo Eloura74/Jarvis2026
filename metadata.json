@@ -1,7 +1,5 @@
 {
   "name": "OMNI - Autonomous System Interface",
   "description": "A futuristic, Jarvis-like command center interface. Uses Gemini to simulate an autonomous system orchestrator that interprets natural language commands, visualizes system metrics, and manages tasks.",
-  "requestFramePermissions": [
-    "microphone"
-  ]
+  "requestFramePermissions": ["microphone", "camera"]
 }
