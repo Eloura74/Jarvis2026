@@ -25,17 +25,27 @@ export const toolDeclarations: FunctionDeclaration[] = [
   },
   {
     name: "manage_window",
-    description: "Control application windows.",
+    description:
+      "Control application windows (close, minimize, maximize, focus). " +
+      "CRITICAL: appName is MANDATORY and must be the application name. " +
+      "Examples: 'Chrome', 'Opera', 'Firefox', 'Code', 'Spotify'. " +
+      "For 'ferme Opera' → appName='Opera', action='close'. " +
+      "For 'minimise Chrome' → appName='Chrome', action='minimize'.",
     parameters: {
       type: Type.OBJECT,
       properties: {
-        windowTitle: { type: Type.STRING },
+        appName: {
+          type: Type.STRING,
+          description:
+            "REQUIRED: The application name to control. Examples: 'Opera', 'Chrome', 'Firefox', 'Code', 'Spotify'. This is the name of the application window to close/minimize/maximize.",
+        },
         action: {
           type: Type.STRING,
           enum: ["focus", "close", "minimize", "maximize"],
+          description: "The action to perform on the window.",
         },
       },
-      required: ["windowTitle", "action"],
+      required: ["appName", "action"],
     },
   },
   {

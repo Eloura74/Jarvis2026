@@ -182,13 +182,73 @@ export const handleSearchAndLaunchApp = async (
  * HANDLER 2: Gestion fenêtres
  */
 export const handleManageWindow = async (
-  args: { action: string; windowTitle: string },
+  args: { action: string; appName?: string; windowTitle?: string },
   ctx: HandlerContext,
 ) => {
-  const { action, windowTitle } = args;
+  const { action, appName, windowTitle } = args;
   const { addLog, setStatus } = ctx;
 
-  addLog(`Window action: ${action} on "${windowTitle}"`, "SYSTEM", "info");
+  // Accepter appName (nouveau) ou windowTitle (legacy) pour rétrocompatibilité
+  let finalAppName = appName || windowTitle;
+
+  // FALLBACK INTELLIGENT : Si appName manquant, essayer de deviner depuis le contexte
+  if (!finalAppName || finalAppName.trim() === "") {
+    addLog(
+      `⚠️ manage_window: appName manquant, tentative de fallback intelligent...`,
+      "SYSTEM",
+      "warning",
+    );
+
+    // Si action = close, essayer de fermer les navigateurs courants dans l'ordre
+    // (Opera, Chrome, Firefox, Edge) — celui qui est ouvert sera fermé
+    if (action === "close") {
+      const browserCandidates = ["Opera", "Chrome", "Firefox", "Edge", "Brave"];
+      addLog(
+        `🔍 Recherche d'un navigateur ouvert parmi: ${browserCandidates.join(", ")}`,
+        "SYSTEM",
+        "info",
+      );
+
+      for (const browser of browserCandidates) {
+        const success = await closeWindow(browser);
+        if (success) {
+          addLog(`✅ Navigateur fermé: ${browser}`, "SYSTEM", "success");
+          setStatus(SystemStatus.IDLE);
+          return {
+            status: "success",
+            message: `${browser} fermé, Monsieur.`,
+          };
+        }
+      }
+
+      // Aucun navigateur trouvé
+      addLog(`❌ Aucun navigateur ouvert trouvé`, "SYSTEM", "error");
+      setStatus(SystemStatus.ERROR);
+      setTimeout(() => setStatus(SystemStatus.IDLE), 2000);
+      return {
+        status: "error",
+        message:
+          "Aucun navigateur ouvert trouvé. Veuillez spécifier quelle application fermer.",
+      };
+    }
+
+    // Pour les autres actions (minimize, maximize, focus), appName est obligatoire
+    addLog(
+      `❌ manage_window: appName requis pour action ${action}`,
+      "SYSTEM",
+      "error",
+    );
+    setStatus(SystemStatus.ERROR);
+    setTimeout(() => setStatus(SystemStatus.IDLE), 2000);
+    return {
+      status: "error",
+      message: `Impossible de ${action === "minimize" ? "minimiser" : action === "maximize" ? "maximiser" : "gérer"} la fenêtre : vous devez spécifier quelle application.`,
+    };
+  }
+
+  finalAppName = finalAppName.trim();
+
+  addLog(`Window action: ${action} on "${finalAppName}"`, "SYSTEM", "info");
   setStatus(SystemStatus.EXECUTING);
 
   try {
@@ -196,16 +256,16 @@ export const handleManageWindow = async (
 
     switch (action) {
       case "focus":
-        success = await focusWindow(windowTitle);
+        success = await focusWindow(finalAppName);
         break;
       case "close":
-        success = await closeWindow(windowTitle);
+        success = await closeWindow(finalAppName);
         break;
       case "minimize":
-        success = await minimizeWindow(windowTitle);
+        success = await minimizeWindow(finalAppName);
         break;
       case "maximize":
-        success = await maximizeWindow(windowTitle);
+        success = await maximizeWindow(finalAppName);
         break;
       default:
         addLog(`Unknown window action: ${action}`, "SYSTEM", "error");
@@ -226,7 +286,10 @@ export const handleManageWindow = async (
       );
       setStatus(SystemStatus.ERROR);
       setTimeout(() => setStatus(SystemStatus.IDLE), 2000);
-      return { status: "error", message: `Window "${windowTitle}" not found` };
+      return {
+        status: "error",
+        message: `Fenêtre "${finalAppName}" introuvable. Vérifiez que l'application est ouverte.`,
+      };
     }
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);

@@ -20,7 +20,9 @@ router.get("/", async (req, res) => {
 // --- FOCUS ---
 router.post("/focus", async (req, res) => {
   try {
-    const result = await windowManager.focusWindow(req.body.title);
+    const result = await windowManager.focusWindow(
+      req.body.windowTitle || req.body.title,
+    );
     res.json(result);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -30,7 +32,9 @@ router.post("/focus", async (req, res) => {
 // --- CLOSE ---
 router.post("/close", async (req, res) => {
   try {
-    const result = await windowManager.closeWindow(req.body.title);
+    const result = await windowManager.closeWindow(
+      req.body.windowTitle || req.body.title,
+    );
     res.json(result);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -40,7 +44,9 @@ router.post("/close", async (req, res) => {
 // --- MINIMIZE ---
 router.post("/minimize", async (req, res) => {
   try {
-    const result = await windowManager.minimizeWindow(req.body.title);
+    const result = await windowManager.minimizeWindow(
+      req.body.windowTitle || req.body.title,
+    );
     res.json(result);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -50,7 +56,9 @@ router.post("/minimize", async (req, res) => {
 // --- MAXIMIZE ---
 router.post("/maximize", async (req, res) => {
   try {
-    const result = await windowManager.maximizeWindow(req.body.title);
+    const result = await windowManager.maximizeWindow(
+      req.body.windowTitle || req.body.title,
+    );
     res.json(result);
   } catch (error) {
     res.status(500).json({ error: error.message });
