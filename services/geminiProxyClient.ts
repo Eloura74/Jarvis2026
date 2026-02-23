@@ -45,6 +45,12 @@ export interface ProxyStreamConfig {
    * Le message courant (input) sera ajouté en dernier par le backend.
    */
   history?: GeminiHistoryEntry[];
+  /**
+   * Budget de réflexion Gemini 2.5 Flash (thinking budget).
+   * -1 = automatique (Gemini décide), 0 = désactivé, >0 = tokens alloués.
+   * Voir geminiThinkingConfig.ts pour les constantes et le helper.
+   */
+  thinkingBudget?: number;
 }
 
 // ============================================================================
@@ -63,10 +69,18 @@ export async function* generateContentStreamProxy(
   input: string,
   config: ProxyStreamConfig,
 ): AsyncGenerator<ProxyStreamChunk> {
+  // On destructure explicitement pour s'assurer que thinkingBudget est transmis
+  // même si la valeur est 0 (désactivé) — JSON.stringify(0) est valide.
+  const { thinkingBudget, ...restConfig } = config;
+  const body: Record<string, unknown> = { input, ...restConfig };
+  if (thinkingBudget !== undefined) {
+    body.thinkingBudget = thinkingBudget;
+  }
+
   const response = await fetch(`${BACKEND_URL}/api/gemini/stream`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ input, ...config }),
+    body: JSON.stringify(body),
   });
 
   if (!response.ok || !response.body) {

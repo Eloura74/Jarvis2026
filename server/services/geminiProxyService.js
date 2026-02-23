@@ -87,7 +87,16 @@ async function generateStreamWithFallback(
 /**
  * Traite une requête de streaming Gemini et écrit les chunks dans la réponse SSE.
  *
- * @param {object} req - Requête Express (body: { input, systemInstruction, tools, temperature, maxOutputTokens })
+ * @param {object} req - Requête Express
+ *   body: {
+ *     input           {string}   - Texte de la commande utilisateur (obligatoire)
+ *     systemInstruction {string} - Instructions système (personnalité JARVIS)
+ *     tools           {Array}    - Déclarations d'outils Gemini
+ *     temperature     {number}   - Température (défaut: 0.1)
+ *     maxOutputTokens {number}   - Limite tokens sortie (optionnel)
+ *     history         {Array}    - Historique multi-tours format GeminiContent[]
+ *     thinkingBudget  {number}   - Budget réflexion : -1=auto, 0=off, >0=tokens
+ *   }
  * @param {object} res - Réponse Express (SSE text/event-stream)
  */
 export async function handleGeminiStream(req, res) {
@@ -104,6 +113,10 @@ export async function handleGeminiStream(req, res) {
     temperature,
     maxOutputTokens,
     history,
+    // thinkingBudget : budget de réflexion Gemini 2.5 Flash
+    // -1 = automatique, 0 = désactivé, >0 = tokens alloués
+    // undefined = non fourni → on n'active pas thinkingConfig
+    thinkingBudget,
   } = req.body;
 
   if (!input) {
@@ -117,12 +130,31 @@ export async function handleGeminiStream(req, res) {
   try {
     await waitIfNecessary();
 
+    // Construction du thinkingConfig si un budget est fourni et non nul.
+    // Budget 0 = désactivé → on n'envoie pas le paramètre (économie de tokens).
+    // Budget -1 = automatique (Gemini décide selon la complexité perçue).
+    // Budget >0 = nombre de tokens alloués à la réflexion interne.
+    // La réflexion est SUPERPOSÉE au streaming : Gemini "pense" en interne
+    // puis génère la réponse finale en flux continu sans latence perceptible.
+    const thinkingConfig =
+      thinkingBudget !== undefined && thinkingBudget !== 0
+        ? { thinkingBudget }
+        : undefined;
+
     const config = {
       systemInstruction,
       tools: tools ? [{ functionDeclarations: tools }] : undefined,
       temperature: temperature ?? 0.1,
       ...(maxOutputTokens !== undefined && { maxOutputTokens }),
+      // Injecter thinkingConfig uniquement si défini (évite erreur API si non supporté)
+      ...(thinkingConfig !== undefined && { thinkingConfig }),
     };
+
+    if (thinkingConfig) {
+      console.log(
+        `🧠 [Gemini Proxy] Thinking budget activé: ${thinkingBudget === -1 ? "AUTO" : thinkingBudget + " tokens"}`,
+      );
+    }
 
     // Construction du tableau contents :
     // - Si un historique multi-tours est fourni (format GeminiContent[]), on l'utilise

@@ -552,6 +552,7 @@ const estimateMaxOutputTokens = (input: string): number | undefined => {
 // ============================================================================
 
 import { getHAContext } from "./homeAssistantService"; // Circuit Breaker pour 429 (Rate Limiting)
+import { selectThinkingBudget } from "./geminiThinkingConfig"; // Budget de réflexion adaptatif Gemini 2.5 Flash
 
 // Auto-cleanup au démarrage : supprime les vieux timestamps
 const cleanupOldShield = () => {
@@ -880,6 +881,12 @@ export const streamCommand = async (
     // undefined = pas de limite (tool calls), 300 = simple, 600 = complexe
     const maxOutputTokens = estimateMaxOutputTokens(input);
 
+    // Budget de réflexion adaptatif (Gemini 2.5 Flash thinking budget)
+    // - 0   → désactivé (commandes simples, latence minimale)
+    // - -1  → automatique (Gemini décide selon la difficulté)
+    // - 8192 → réflexion approfondie (analyses, rapports complexes)
+    const thinkingBudget = selectThinkingBudget(input);
+
     const config = {
       systemInstruction:
         generateSystemInstruction(memSum, conversationContext) + haContext,
@@ -891,12 +898,14 @@ export const streamCommand = async (
     // S1 : Appel via proxy backend (clé API sécurisée côté serveur)
     // Le proxy gère le fallback 2.5-flash → 1.5-flash automatiquement
     // On passe l'historique natif Gemini pour un contexte multi-tours réel
+    // thinkingBudget est transmis au backend pour activer la réflexion Gemini 2.5 Flash
     const responseStream = generateContentStreamProxy(input, {
       systemInstruction: config.systemInstruction as string,
       tools: toolDeclarations,
       temperature: config.temperature as number,
       maxOutputTokens: config.maxOutputTokens as number | undefined,
       history: history.length > 0 ? history : undefined,
+      thinkingBudget,
     });
 
     let fullText = "";
