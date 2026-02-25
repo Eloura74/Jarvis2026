@@ -64,11 +64,57 @@ async function generateStreamWithFallback(
   try {
     return await ai.models.generateContentStream({ model, contents, config });
   } catch (error) {
+    // Logger l'erreur complète pour debug
+    console.error(`❌ [Gemini Proxy] Erreur ${model}:`, {
+      status: error.status,
+      message: error.message,
+      hasThinkingConfig: !!config.thinkingConfig,
+    });
+
     const isRetryable =
       error.status === 429 ||
       error.status === 503 ||
       error.status === 500 ||
       error.message?.includes("429");
+
+    // Si erreur 400 (détectée via message car status peut être undefined) avec thinkingConfig, réessayer sans
+    const is400Error =
+      error.status === 400 || error.message?.includes("400 Bad Request");
+    const is400WithThinking = is400Error && config.thinkingConfig;
+
+    if (is400WithThinking && !useFallback) {
+      console.warn(
+        `⚠️ [Gemini Proxy] Erreur 400 avec thinkingConfig → retry sans thinking`,
+      );
+      const configWithoutThinking = { ...config };
+      delete configWithoutThinking.thinkingConfig;
+      try {
+        return await ai.models.generateContentStream({
+          model,
+          contents,
+          config: configWithoutThinking,
+        });
+      } catch (retryError) {
+        // Si erreur 400 persiste, c'est probablement l'historique multi-tours
+        const is400Again =
+          retryError.status === 400 ||
+          retryError.message?.includes("400 Bad Request");
+        if (is400Again && Array.isArray(contents)) {
+          console.warn(
+            `⚠️ [Gemini Proxy] Erreur 400 persiste → retry sans historique multi-tours`,
+          );
+          // Extraire uniquement le dernier message (input utilisateur)
+          const lastMessage = contents[contents.length - 1];
+          const simpleContents = lastMessage?.parts?.[0]?.text || contents;
+          return await ai.models.generateContentStream({
+            model,
+            contents: simpleContents,
+            config: configWithoutThinking,
+          });
+        }
+        throw retryError;
+      }
+    }
 
     if (isRetryable && !useFallback) {
       console.warn(
@@ -164,22 +210,48 @@ export async function handleGeminiStream(req, res) {
     let contents;
     if (Array.isArray(history) && history.length > 0) {
       // Validation défensive : chaque entrée doit avoir role et parts[0].text
+      // ET le texte ne doit pas être "undefined" ou vide
       const validHistory = history.filter(
         (h) =>
           (h.role === "user" || h.role === "model") &&
           Array.isArray(h.parts) &&
           h.parts.length > 0 &&
-          typeof h.parts[0].text === "string",
+          typeof h.parts[0].text === "string" &&
+          h.parts[0].text.trim() !== "" &&
+          h.parts[0].text !== "undefined" &&
+          !h.parts[0].text.includes("undefined"),
       );
       // Ajouter le message courant en dernier
       contents = [...validHistory, { role: "user", parts: [{ text: input }] }];
       console.log(
         `📚 [Gemini Proxy] Historique multi-tours: ${validHistory.length} tours + message courant`,
       );
+
+      // Log détaillé pour debug erreur 400
+      console.log(
+        `🔍 [Gemini Proxy] Contents type: ${Array.isArray(contents) ? "array" : typeof contents}, length: ${contents.length}`,
+      );
+      console.log(
+        `🔍 [Gemini Proxy] Premier message:`,
+        JSON.stringify(contents[0]).substring(0, 200),
+      );
+      console.log(
+        `🔍 [Gemini Proxy] Dernier message:`,
+        JSON.stringify(contents[contents.length - 1]).substring(0, 200),
+      );
     } else {
       // Comportement précédent : message seul
       contents = input;
+      console.log(`🔍 [Gemini Proxy] Contents type: string, value: "${input}"`);
     }
+
+    // Log config pour debug
+    console.log(`🔍 [Gemini Proxy] Config keys:`, Object.keys(config));
+    console.log(`🔍 [Gemini Proxy] Has tools:`, !!config.tools);
+    console.log(
+      `🔍 [Gemini Proxy] Has thinkingConfig:`,
+      !!config.thinkingConfig,
+    );
 
     const stream = await generateStreamWithFallback(contents, config);
 

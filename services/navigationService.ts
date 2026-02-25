@@ -186,13 +186,46 @@ export async function getTravelTime(
       departureDate.getTime() - 10 * 60 * 1000,
     ); // +10min buffer sécurité
 
-    // Recalculer le trajet avec cette heure de départ théorique pour vérifier le trafic
-    // (Optionnel mais plus précis) - Pour l'instant on garde l'estimation "now" mais on renvoie le conseil
+    // Vérifier que la date de départ calculée est dans le futur
+    const now = Date.now();
+    if (departureDateWithBuffer.getTime() < now) {
+      console.warn(
+        `⚠️ Heure de départ calculée dans le passé (${departureDateWithBuffer.toISOString()}), utilisation de 'now'`,
+      );
+      // Si l'heure de départ est dans le passé, utiliser le trafic actuel
+      return {
+        ...routeEstimate,
+        recommendedDeparture: new Date(now).toISOString(),
+        diffToLeave: `Vous devriez partir maintenant pour arriver à l'heure. Le trajet est estimé à ${routeEstimate.durationInTraffic || routeEstimate.duration}.`,
+        arrivalTarget: arrivalDate.toISOString(),
+      };
+    }
 
+    // 3. Recalculer le trajet avec l'heure de départ théorique pour obtenir le trafic RÉEL à cette heure
+    console.log(
+      `📍 Recalcul avec départ théorique: ${departureDateWithBuffer.toISOString()}`,
+    );
+    const routeWithRealTraffic = await fetchRoute(
+      origin,
+      finalDestination,
+      departureDateWithBuffer.toISOString(),
+    );
+
+    if (!routeWithRealTraffic) {
+      // Fallback sur l'estimation initiale si le recalcul échoue
+      return {
+        ...routeEstimate,
+        recommendedDeparture: departureDateWithBuffer.toISOString(),
+        diffToLeave: `Vous devriez partir vers ${departureDateWithBuffer.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} pour arriver à l'heure. Le trajet est estimé à ${routeEstimate.duration}.`,
+        arrivalTarget: arrivalDate.toISOString(),
+      };
+    }
+
+    // Utiliser les données du trajet avec le trafic réel
     return {
-      ...routeEstimate,
+      ...routeWithRealTraffic,
       recommendedDeparture: departureDateWithBuffer.toISOString(),
-      diffToLeave: `Vous devriez partir vers ${departureDateWithBuffer.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`,
+      diffToLeave: `Vous devriez partir vers ${departureDateWithBuffer.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} pour arriver à l'heure. Le trajet est estimé à ${routeWithRealTraffic.durationInTraffic || routeWithRealTraffic.duration}.`,
       arrivalTarget: arrivalDate.toISOString(),
     };
   }

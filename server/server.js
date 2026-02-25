@@ -4,7 +4,6 @@
  */
 
 import express from "express";
-import cors from "cors";
 import dotenv from "dotenv";
 import { spawn } from "child_process";
 
@@ -13,6 +12,15 @@ import { spawn } from "child_process";
 dotenv.config({ path: "../.env.local" });
 // 2. Dossier server/ (GEMINI_API_KEY et secrets backend uniquement)
 dotenv.config({ path: "./.env.local" });
+
+// MIDDLEWARES DE SÉCURITÉ
+import {
+  corsMiddleware,
+  apiLimiter,
+  sanitizeAll,
+  errorHandler,
+  notFoundHandler,
+} from "./middleware/index.js";
 
 // DISPATCHER PLATEFORME
 import {
@@ -49,12 +57,23 @@ import sleepRoutes from "./routes/sleep.js";
 import briefingRoutes from "./routes/briefing.js";
 import cameraRoutes from "./routes/camera.js";
 import geminiRoutes from "./routes/gemini.js"; // S1 : Proxy Gemini (clé API côté serveur)
+import temperatureRoutes from "./routes/temperature.js"; // Monitoring températures
+import mapsRoutes from "./routes/maps.js"; // Google Maps Directions
+import phoneRoutes from "./routes/phone.js"; // Smartphone KDE Connect
+import truenasRoutes from "./routes/truenas.js"; // TrueNAS Monitoring
+import securityRoutes from "./routes/security.js"; // Sécurité & Surveillance HA
+import mediaRoutes from "./routes/media.js"; // Multimédia (YouTube, Spotify, Plex)
+import visionRoutes from "./routes/vision.js"; // Vision Gemini (webcam, analyse image)
+import sphereRoutes from "./routes/sphere.js"; // Contrôle Sphere ESP32 (états, modes, texte)
 
 const app = express();
 const PORT = 3001;
 
-app.use(cors());
-app.use(express.json());
+// MIDDLEWARES GLOBAUX DE SÉCURITÉ
+app.use(corsMiddleware); // CORS strict avec whitelist
+app.use(express.json({ limit: "10mb" })); // Limite taille body
+app.use(sanitizeAll); // Sanitization XSS/injection
+app.use(apiLimiter); // Rate limiting global (100 req/15min)
 
 // ENREGISTREMENT DES ROUTES
 app.use("/api/apps", appsRoutes);
@@ -75,6 +94,65 @@ app.use("/api/sleep", sleepRoutes); // Mode Veille Intelligente
 app.use("/api/briefing", briefingRoutes); // Briefing Vocal Matinal
 app.use("/api/camera", cameraRoutes); // Snapshots Webcam HA
 app.use("/api/gemini", geminiRoutes); // S1 : Proxy Gemini (clé API sécurisée côté serveur)
+app.use("/api/temperature", temperatureRoutes); // Monitoring températures (OpenWeather, piscine, PC/NAS)
+app.use("/api/maps", mapsRoutes); // Google Maps Directions (temps trajet avec trafic)
+app.use("/api/phone", phoneRoutes); // Smartphone KDE Connect (notifications, appels, SMS)
+app.use("/api/truenas", truenasRoutes); // TrueNAS Monitoring (pools, disques, services)
+app.use("/api/security", securityRoutes); // Sécurité & Surveillance HA (alarme, caméras, mouvement)
+app.use("/api/media", mediaRoutes); // Multimédia (YouTube, Spotify, Plex)
+app.use("/api/vision", visionRoutes); // Vision Gemini (webcam, analyse image)
+app.use("/api/sphere", sphereRoutes); // Contrôle Sphere ESP32 (états, modes, texte)
+
+// Route directe pour lancer une application par son chemin
+app.post("/api/launch", async (req, res) => {
+  try {
+    const { path, args } = req.body;
+    console.log(`🚀 [launch] Requête reçue:`, { path, args, body: req.body });
+
+    if (!path) {
+      console.error(`❌ [launch] Chemin manquant`);
+      return res.status(400).json({ error: "Chemin d'application requis" });
+    }
+
+    // Décoder le chemin HTML-escaped par sanitizeAll
+    const decodedPath = path
+      .replace(/&#x2F;/g, "/")
+      .replace(/&#x3A;/g, ":")
+      .replace(/&#x5C;/g, "\\")
+      .replace(/&amp;/g, "&");
+
+    console.log(`📍 [launch] Chemin décodé: ${decodedPath}`);
+
+    // Construire la commande avec arguments si fournis
+    let command = `start "" "${decodedPath}"`;
+    if (args && args.length > 0) {
+      const argsStr = args.map((arg) => `"${arg}"`).join(" ");
+      command = `start "" "${decodedPath}" ${argsStr}`;
+    }
+
+    console.log(`⚙️ [launch] Commande: ${command}`);
+
+    // Lancer l'application
+    await new Promise((resolve, reject) => {
+      const child = spawn("cmd.exe", ["/c", command], {
+        detached: true,
+        stdio: "ignore",
+        windowsHide: true,
+      });
+
+      child.on("error", reject);
+      child.unref();
+
+      setTimeout(() => resolve(), 500);
+    });
+
+    console.log(`✅ [launch] Application lancée: ${decodedPath}`);
+    res.json({ success: true, path: decodedPath });
+  } catch (error) {
+    console.error(`❌ [launch] Erreur:`, error);
+    res.status(500).json({ error: "Erreur lancement", details: error.message });
+  }
+});
 
 // Index des applications (chargé en mémoire)
 let appsIndex = [];
@@ -158,6 +236,10 @@ app.post("/api/reindex", async (req, res) => {
   res.json({ success: true, message: "Reindexing started" });
 });
 
+// MIDDLEWARES DE GESTION D'ERREURS (en dernier)
+app.use(notFoundHandler); // 404 pour routes non trouvées
+app.use(errorHandler); // Gestion centralisée des erreurs
+
 // GLOBAL ERROR HANDLERS (Prévention crash)
 process.on("uncaughtException", (error) => {
   console.error(`❌ UNCAUGHT EXCEPTION: ${error.message}`);
@@ -170,7 +252,6 @@ process.on("unhandledRejection", (reason) => {
 import { initBambuMqtt } from "./services/bambuMqtt.js";
 // Import Sphere Service
 import { initSphereService } from "./services/sphereService.js";
-import sphereRoutes from "./routes/sphere.js";
 // Import WhatsApp Service
 import { initWhatsAppService } from "./services/whatsappService.js";
 // Import Calendar Reminder Service
@@ -186,9 +267,6 @@ initializeIndex().then(() => {
   initWhatsAppService();
   // Init Calendar Reminder (rappels proactifs)
   startCalendarReminder();
-
-  // Register Sphere Routes
-  app.use("/api/sphere", sphereRoutes);
 
   app.listen(PORT, () => {
     console.log(`✅ J.A.R.V.I.S. Core running on http://localhost:${PORT}`);

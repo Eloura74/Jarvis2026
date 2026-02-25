@@ -66,9 +66,10 @@ export const toolDeclarations: FunctionDeclaration[] = [
   {
     name: "search_web",
     description:
-      "Open a search in the browser (Google, YouTube, GitHub). " +
-      "Use ONLY when the user explicitly says 'recherche', 'cherche sur Google', 'ouvre YouTube', etc. " +
-      "Do NOT use this for 'trouve-moi X', 'montre-moi X', 'X en STL', 'image de X' — use search_results_visual instead.",
+      "ALWAYS USE THIS when user explicitly says 'recherche sur Google', 'recherche sur YouTube', 'cherche sur Google', 'ouvre Google et cherche', 'fais une recherche Google'. " +
+      "Opens a search in the browser (Google, YouTube, GitHub) in a NEW TAB. " +
+      "MANDATORY for: 'recherche sur Google X', 'recherche web X', 'cherche sur Google X', 'ouvre YouTube et cherche X', 'recherche GitHub X'. " +
+      "DO NOT use this for 'montre-moi X', 'trouve-moi X', 'affiche X' — use search_results_visual instead for those.",
     parameters: {
       type: Type.OBJECT,
       properties: {
@@ -82,19 +83,20 @@ export const toolDeclarations: FunctionDeclaration[] = [
     },
   },
   {
-    name: "search_results_visual",
+    name: "show_search_results",
     description:
-      "Show 5 search results visually (title, URL, description, image) in a holographic overlay WITHOUT opening the browser. " +
-      "Use this when the user asks to FIND or SEE something without explicitly saying 'recherche': " +
-      "'support de téléphone S5 en STL', 'image de X', 'trouve-moi X', 'montre-moi des X', 'fichiers STL de X'. " +
-      "Also use for 3D model searches (STL, Thingiverse, Printables) and image lookups.",
+      "CRITICAL MANDATORY TOOL: Use THIS tool when user says 'montre-moi', 'affiche', 'trouve' + any object/file (STL, 3D, images, etc). " +
+      "Shows 5 visual search results in holographic overlay. NEVER open browser for these requests. " +
+      "Examples: 'montre-moi fichiers STL support téléphone' → call show_search_results with query='support téléphone STL'. " +
+      "'affiche images de chat' → call show_search_results with query='chat'. " +
+      "DO NOT respond with text - ALWAYS call this tool for 'montre-moi' requests.",
     parameters: {
       type: Type.OBJECT,
       properties: {
         query: {
           type: Type.STRING,
           description:
-            "The search query. Be specific, include relevant keywords like 'STL', 'fichier 3D', etc.",
+            "Search query with keywords like 'STL', 'fichier 3D', etc.",
         },
       },
       required: ["query"],
@@ -443,6 +445,479 @@ export const toolDeclarations: FunctionDeclaration[] = [
         },
       },
       required: ["webcam_url"],
+    },
+  },
+  {
+    name: "outdoor_temperature",
+    description:
+      "Get current outdoor temperature and weather conditions via OpenWeatherMap. Use when user says 'quelle température fait-il', 'météo extérieure', 'il fait combien dehors', 'température à [ville]'.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        city: {
+          type: Type.STRING,
+          description:
+            "City name for weather query. Default: 'Istres,FR'. Format: 'CityName,CountryCode'.",
+        },
+      },
+    },
+  },
+  {
+    name: "pool_temperature",
+    description:
+      "Get swimming pool temperature from Tuya sensor. Use when user says 'température piscine', 'quelle est la température de la piscine', 'est-ce que l'eau est bonne'.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {},
+    },
+  },
+  {
+    name: "system_temperatures",
+    description:
+      "Get PC and NAS system temperatures (CPU, GPU, disks). Use when user says 'température PC', 'température NAS', 'température système', 'monitoring températures', 'est-ce que le PC chauffe'.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {},
+    },
+  },
+  {
+    name: "get_directions",
+    description:
+      "Calculate travel time between two addresses with real-time traffic using Google Maps. Use when user says 'combien de temps pour aller à [destination]', 'temps de trajet vers [lieu]', 'il y a du trafic pour aller à [destination]', 'durée trajet [origine] vers [destination]'.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        origin: {
+          type: Type.STRING,
+          description:
+            "Starting address (e.g. 'Istres, France', 'home', 'current location'). If user says 'pour aller à X' without origin, use 'Istres, France' as default.",
+        },
+        destination: {
+          type: Type.STRING,
+          description:
+            "Destination address (e.g. 'Marseille, France', 'work', 'airport').",
+        },
+        mode: {
+          type: Type.STRING,
+          description:
+            "Travel mode: 'driving' (default), 'walking', 'bicycling', 'transit'.",
+        },
+      },
+      required: ["destination"],
+    },
+  },
+  {
+    name: "printer_camera",
+    description:
+      "Display live camera feed from a 3D printer. Use when user says 'montre-moi la caméra de [imprimante]', 'affiche la webcam [imprimante]', 'que fait [imprimante] en ce moment', 'caméra A1/VZ330/P1S'.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        printer_name: {
+          type: Type.STRING,
+          description: "Printer name: 'VZ330', 'P1S', or 'A1'.",
+        },
+        webcam_url: {
+          type: Type.STRING,
+          description:
+            "Optional webcam URL. If not provided, will use default URL for printer.",
+        },
+      },
+      required: ["printer_name"],
+    },
+  },
+  {
+    name: "printer_status",
+    description:
+      "Get status of 3D printers (printing, idle, progress, time remaining). Use when user says 'statut imprimantes', 'est-ce que [imprimante] imprime', 'où en est l'impression', 'combien de temps reste-t-il'.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        printer_name: {
+          type: Type.STRING,
+          description:
+            "Optional specific printer name ('VZ330', 'P1S', 'A1'). If not provided, returns status of all printers.",
+        },
+      },
+    },
+  },
+  {
+    name: "analyze_gcode",
+    description:
+      "Analyze G-code file to estimate print time, filament weight, and cost. Use when user says 'analyse ce G-code', 'combien de temps pour imprimer [fichier]', 'combien ça coûte d'imprimer [fichier]'.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        file_path: {
+          type: Type.STRING,
+          description:
+            "Full path to G-code file (e.g. 'C:/Users/faber/Downloads/model.gcode').",
+        },
+      },
+      required: ["file_path"],
+    },
+  },
+  {
+    name: "send_phone_notification",
+    description:
+      "Send a push notification to Android smartphone via KDE Connect. Use when user says 'envoie une notification sur mon téléphone', 'notifie-moi sur mon portable', 'rappelle-moi sur mon téléphone [message]'.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        title: {
+          type: Type.STRING,
+          description: "Notification title (e.g. 'Jarvis Reminder', 'Alert').",
+        },
+        message: {
+          type: Type.STRING,
+          description: "Notification message content.",
+        },
+      },
+      required: ["title", "message"],
+    },
+  },
+  {
+    name: "make_phone_call",
+    description:
+      "Make a phone call from Android smartphone via KDE Connect. Use when user says 'appelle [nom/numéro]', 'téléphone à [contact]', 'passe-moi [nom] au téléphone'.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        phone_number: {
+          type: Type.STRING,
+          description:
+            "Phone number to call (e.g. '0612345678', '+33612345678').",
+        },
+        contact_name: {
+          type: Type.STRING,
+          description:
+            "Optional contact name for voice feedback (e.g. 'Maman', 'Pierre').",
+        },
+      },
+      required: ["phone_number"],
+    },
+  },
+  {
+    name: "send_sms",
+    description:
+      "Send SMS from Android smartphone via KDE Connect. Use when user says 'envoie un SMS à [contact]', 'envoie un message à [nom] : [texte]', 'SMS [numéro] : [message]'.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        phone_number: {
+          type: Type.STRING,
+          description: "Phone number to send SMS to (e.g. '0612345678').",
+        },
+        message: {
+          type: Type.STRING,
+          description: "SMS message content.",
+        },
+        contact_name: {
+          type: Type.STRING,
+          description: "Optional contact name for voice feedback.",
+        },
+      },
+      required: ["phone_number", "message"],
+    },
+  },
+  {
+    name: "phone_battery",
+    description:
+      "Get Android smartphone battery level via KDE Connect. Use when user says 'batterie téléphone', 'niveau batterie portable', 'combien de batterie sur mon téléphone'.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {},
+    },
+  },
+  {
+    name: "storage_status",
+    description:
+      "Get TrueNAS storage pools status (space used, available, health). Use when user says 'statut stockage', 'espace disque NAS', 'combien de place sur le NAS', 'état pools TrueNAS'.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {},
+    },
+  },
+  {
+    name: "disk_health",
+    description:
+      "Get TrueNAS disks health (SMART status, temperatures). Use when user says 'santé disques NAS', 'température disques', 'état SMART', 'disques TrueNAS'.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {},
+    },
+  },
+  {
+    name: "truenas_services",
+    description:
+      "Get TrueNAS services status (SMB, NFS, etc.). Use when user says 'services TrueNAS', 'services NAS actifs', 'état services stockage'.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {},
+    },
+  },
+  {
+    name: "calendar_move",
+    description:
+      "Move/reschedule a calendar event to a new time. Use when user says 'déplace mon RDV de 14h à 16h', 'change l'heure de mon rendez-vous', 'repousse ma réunion à demain'. Checks for scheduling conflicts automatically.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        eventId: {
+          type: Type.STRING,
+          description:
+            "Event ID to move. Get this from calendar_next or calendar_list first.",
+        },
+        newStartTime: {
+          type: Type.STRING,
+          description:
+            "New start time in ISO 8601 format (e.g. '2026-02-24T16:00:00').",
+        },
+        newEndTime: {
+          type: Type.STRING,
+          description:
+            "Optional new end time. If not provided, keeps same duration as original event.",
+        },
+      },
+      required: ["eventId", "newStartTime"],
+    },
+  },
+  {
+    name: "move_window_to_screen",
+    description:
+      "Move a window to a specific screen in multi-monitor setup. Use when user says 'déplace Chrome sur écran 2', 'mets Firefox sur mon deuxième écran', 'envoie cette fenêtre sur l'écran de gauche'.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        appName: {
+          type: Type.STRING,
+          description:
+            "Name of the application window to move (e.g. 'Chrome', 'Firefox', 'VSCode').",
+        },
+        screenNumber: {
+          type: Type.NUMBER,
+          description: "Screen number (1 = primary, 2 = secondary, etc.).",
+        },
+      },
+      required: ["appName", "screenNumber"],
+    },
+  },
+  {
+    name: "list_processes",
+    description:
+      "List active processes with CPU/RAM usage (task manager). Use when user says 'quels processus consomment le plus', 'gestionnaire de tâches', 'montre-moi les processus gourmands', 'utilisation CPU'.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        sortBy: {
+          type: Type.STRING,
+          description: "Sort by 'cpu' or 'memory'. Default: 'cpu'.",
+        },
+        limit: {
+          type: Type.NUMBER,
+          description: "Number of processes to return. Default: 10.",
+        },
+      },
+    },
+  },
+  {
+    name: "kill_process",
+    description:
+      "Terminate a process by name. Use when user says 'ferme le processus Chrome', 'tue le processus bloqué', 'arrête Firefox en force'.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        processName: {
+          type: Type.STRING,
+          description: "Process name to terminate (without .exe extension).",
+        },
+        force: {
+          type: Type.BOOLEAN,
+          description: "Force kill if process doesn't respond. Default: false.",
+        },
+      },
+      required: ["processName"],
+    },
+  },
+  {
+    name: "volume_control",
+    description:
+      "Control system volume (set level, mute, unmute). Use when user says 'mets le volume à 50', 'coupe le son', 'rétablis l'audio', 'volume à 80%'.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        action: {
+          type: Type.STRING,
+          description:
+            "Action: 'set' (change level), 'mute' (mute audio), 'unmute' (restore audio).",
+        },
+        level: {
+          type: Type.NUMBER,
+          description: "Volume level 0-100. Required only for action 'set'.",
+        },
+      },
+      required: ["action"],
+    },
+  },
+  {
+    name: "get_volume",
+    description:
+      "Get current system volume level and mute status. Use when user says 'quel est le volume', 'volume actuel', 'le son est coupé ?'.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {},
+    },
+  },
+  {
+    name: "security_status",
+    description:
+      "Get security system status (doors, windows, motion sensors, alarm state). Use when user says 'état sécurité', 'vérifie les portes et fenêtres', 'y a-t-il du mouvement', 'alarme activée ?'.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {},
+    },
+  },
+  {
+    name: "alarm_control",
+    description:
+      "Arm or disarm the alarm system. Use when user says 'active l'alarme', 'désactive l'alarme', 'arme la maison', 'mode absence'.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        action: {
+          type: Type.STRING,
+          description: "Action: 'arm' (activate) or 'disarm' (deactivate).",
+        },
+        mode: {
+          type: Type.STRING,
+          description:
+            "Alarm mode: 'home' (présence) or 'away' (absence). Default: 'away'.",
+        },
+      },
+      required: ["action"],
+    },
+  },
+  {
+    name: "security_camera_snapshot",
+    description:
+      "Capture a snapshot from a security camera. Use when user says 'montre-moi la caméra entrée', 'snapshot caméra garage', 'photo caméra jardin'.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        cameraName: {
+          type: Type.STRING,
+          description:
+            "Name of the camera (e.g. 'entrée', 'garage', 'jardin').",
+        },
+      },
+      required: ["cameraName"],
+    },
+  },
+  {
+    name: "list_cameras",
+    description:
+      "List all available security cameras. Use when user says 'quelles caméras sont disponibles', 'liste des caméras', 'montre-moi les caméras'.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {},
+    },
+  },
+  {
+    name: "motion_history",
+    description:
+      "Get motion detection history. Use when user says 'historique mouvement', 'détections récentes', 'y a-t-il eu du mouvement aujourd'hui'.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        hours: {
+          type: Type.NUMBER,
+          description: "Number of hours to look back. Default: 24.",
+        },
+      },
+    },
+  },
+  {
+    name: "play_youtube",
+    description:
+      "Search and play a YouTube video. Use when user says 'lance sur YouTube [titre]', 'mets la vidéo [nom]', 'regarde [vidéo] sur YouTube'.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        query: {
+          type: Type.STRING,
+          description:
+            "Search query for the YouTube video (e.g. 'Iron Man trailer', 'tutoriel Python').",
+        },
+      },
+      required: ["query"],
+    },
+  },
+  {
+    name: "spotify_control",
+    description:
+      "Control Spotify playback (play, pause, next, previous). Use when user says 'lance [musique] sur Spotify', 'pause Spotify', 'piste suivante', 'musique précédente'.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        action: {
+          type: Type.STRING,
+          description: "Action: 'play', 'pause', 'next', 'previous'.",
+        },
+        track: {
+          type: Type.STRING,
+          description: "Track name to play (only for action 'play'). Optional.",
+        },
+      },
+      required: ["action"],
+    },
+  },
+  {
+    name: "play_plex",
+    description:
+      "Play a movie or TV show on Plex media server. Use when user says 'lance [film] sur Plex', 'regarde [série]', 'mets [titre] sur le serveur'.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        title: {
+          type: Type.STRING,
+          description: "Title of the movie or TV show to play.",
+        },
+        type: {
+          type: Type.STRING,
+          description: "Media type: 'movie' or 'show'. Default: 'movie'.",
+        },
+      },
+      required: ["title"],
+    },
+  },
+  {
+    name: "webcam_vision",
+    description:
+      "Capture webcam image and analyze with Gemini Vision. Use when user says 'que vois-tu', 'regarde-moi', 'analyse ce que tu vois', 'capture webcam'.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        prompt: {
+          type: Type.STRING,
+          description:
+            "Optional custom prompt for the analysis. Default: describe what you see.",
+        },
+      },
+    },
+  },
+  {
+    name: "detect_objects",
+    description:
+      "Detect objects or people in webcam image. Use when user says 'détecte [objet]', 'vois-tu [personne]', 'y a-t-il [chose]', 'trouve [objet]'.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        target: {
+          type: Type.STRING,
+          description:
+            "Optional target object or person to detect (e.g. 'une personne', 'un chat', 'un téléphone').",
+        },
+      },
     },
   },
 ];

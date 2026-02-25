@@ -33,5 +33,28 @@ export * from "./googleHandlers";
 // Memory (RAG)
 export * from "./memoryHandlers";
 
-// Weather
+// Weather & WhatsApp
 export * from "./weatherHandlers";
+export * from "./whatsappHandlers";
+export * from "./temperatureHandlers";
+
+// Google Maps
+export * from "./mapsHandlers";
+
+// 3D Printing (Bambu Lab)
+export * from "./printingHandlers";
+
+// Smartphone (KDE Connect)
+export * from "./phoneHandlers";
+
+// TrueNAS
+export * from "./truenasHandlers";
+
+// Système avancé
+export * from "./systemAdvancedHandlers";
+
+// Sécurité & Surveillance
+export * from "./securityHandlers";
+
+// Vision & Caméra
+export * from "./visionHandlers";

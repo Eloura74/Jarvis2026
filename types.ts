@@ -60,7 +60,8 @@ export interface LogEntry {
     | "KERNEL"
     | "VOICE"
     | "GMAIL"
-    | "CALENDAR"; // Origine du log
+    | "CALENDAR"
+    | "SECURITY"; // Origine du log
   message: string; // Message descriptif en anglais
   type: "info" | "success" | "warning" | "error"; // Type visuel (affecte la couleur)
 }

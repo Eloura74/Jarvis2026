@@ -5,7 +5,7 @@
 
 import type { HandlerContext } from "../types/app.types";
 import { SystemStatus } from "../types";
-import { searchApps, APPS_DATABASE } from "../appsDatabase";
+import { searchApps, APPS_DATABASE } from "../apps";
 import { searchAppOnBackend, launchAppOnBackend } from "../services/backendApi";
 import { promptUserForAppPath, cacheAppPath } from "../services/appScanner";
 import {

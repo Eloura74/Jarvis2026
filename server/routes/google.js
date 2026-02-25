@@ -25,8 +25,21 @@ router.post("/config", async (req, res) => {
 });
 
 /**
+ * GET /api/google/status
+ * Vérifie si Google est configuré et renvoie l'URL d'auth
+ */
+router.get("/status", async (req, res) => {
+  try {
+    const url = await googleService.getAuthUrl();
+    res.json({ configured: true, authUrl: url });
+  } catch (error) {
+    res.json({ configured: false, authUrl: null });
+  }
+});
+
+/**
  * GET /api/google/auth-url
- * Récupère l'URL d'auth Google
+ * Récupère l'URL d'auth Google (redirection directe)
  */
 router.get("/auth-url", async (req, res) => {
   try {

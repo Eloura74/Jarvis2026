@@ -27,36 +27,67 @@ Unlike standard chatbots, J.A.R.V.I.S. is **agentic**: it can see your screen, c
 
 ## ✨ Features
 
-### 🧠 Advanced AI Core
+### 🧠 Advanced AI Core (33 Tools Gemini)
 
-- **Gemini 2.5 Flash Integration**: Ultra-fast, multimodal responses with high context awareness.
+- **Gemini 1.5 Flash Integration**: Ultra-fast, multimodal responses with 33 outils fonctionnels.
 - **Memory & Persistence**: Context-aware conversations that remember previous interactions.
-- **RAG System**: Retrieval-Augmented Generation for accessing local documentation and knowledge.
+- **Tool Execution**: Dynamic tool selection and execution based on natural language.
 
-### 👁️ Vision & Perception
+### 🌡️ Monitoring & Sensors
 
-- **Screen Analysis**: Instantly analyze and discuss what's on your screen.
-- **Webcam Vision**: "See" the physical world through connected cameras (Sentinel Mode).
-- **Ghost Mode**: Proactive background monitoring to assist without direct prompts.
+- **Temperature Monitoring**: Outdoor weather (OpenWeather), pool temperature, PC/NAS temps.
+- **TrueNAS Monitoring**: Storage pools, disk health, services status.
+- **Real-time Alerts**: Automatic notifications for critical thresholds.
+
+### �️ Navigation & Maps
+
+- **Google Maps Integration**: Real-time traffic data, travel time estimation.
+- **Route Planning**: Intelligent route suggestions with current traffic conditions.
+
+### 🖨️ 3D Printing
+
+- **Bambu Lab Integration**: Live camera feed, printer status, temperature monitoring.
+- **G-code Analysis**: Automatic analysis of print files with time/material estimates.
+
+### � Smartphone Control
+
+- **KDE Connect Integration**: Send notifications, make calls, send SMS to Android devices.
+- **Battery Monitoring**: Real-time battery level and charging status.
+
+### 📅 Calendar Management
+
+- **Google Calendar**: Move appointments with conflict detection.
+- **Smart Scheduling**: Intelligent event management.
+
+### 🖥️ System Management
+
+- **Multi-Screen Window Control**: Move windows across multiple monitors.
+- **Process Management**: List processes by CPU/RAM usage, kill processes.
+- **Volume Control**: Set volume, mute/unmute system audio.
+
+### 🔐 Security & Surveillance
+
+- **Home Assistant Security**: Alarm control (arm/disarm), door/window sensors.
+- **Camera Integration**: Live snapshots from security cameras.
+- **Motion Detection**: Historical motion detection with alerts.
+
+### 🎬 Multimedia
+
+- **YouTube**: Search and play videos via YouTube Data API.
+- **Spotify**: Control playback (play/pause/next/previous).
+- **Plex**: Launch movies and TV shows on media server.
+
+### �️ Vision & AI
+
+- **Webcam Vision**: Capture and analyze images with Gemini Vision.
+- **Object Detection**: Detect specific objects or people in real-time.
+- **Screen Analysis**: Analyze screen content with AI.
 
 ### 🗣️ Natural Interaction
 
 - **Voice Control**: Hands-free operation with hotword detection ("Jarvis").
-- **Neural Voice Synthesis**: Natural-sounding text-to-speech feedback.
-- **Holographic Visualizer**: Dynamic 3D interface that reacts to voice and system states.
-
-### 🏠 Home Automation & IoT
-
-- **Home Assistant Integration**: Native control of lights, sensors, switches, and covers.
-- **3D Printer Management**: Monitor Bambu Lab printers (status, temps, video feed).
-- **Environmental Monitoring**: Real-time display of temperature, humidity, and air quality.
-
-### 💻 System Control
-
-- **App Management**: Launch, close, and manage applications (VS Code, Chrome, Spotify, etc.).
-- **Media Control**: Play/Pause, Volume, Next/Prev for system audio.
-- **File System**: Search, read, and manage local files.
-- **Windows Integration**: Control brightness, lock screen, shutdown/restart.
+- **Text-to-Speech**: Natural-sounding voice feedback.
+- **Dynamic UI**: Responsive interface that reacts to voice and system states.
 
 ## 🛠️ Tech Stack
 

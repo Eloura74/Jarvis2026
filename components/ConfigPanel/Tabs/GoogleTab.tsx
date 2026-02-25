@@ -11,15 +11,15 @@ export const GoogleTab: React.FC = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [authUrl, setAuthUrl] = useState<string | null>(null);
 
-  // Tentative de récupération de l'URL d'auth au montage si les IDs sont là
+  // Vérifier si Google est déjà configuré au montage
   useEffect(() => {
     const checkExistingAuth = async () => {
       try {
-        const response = await fetch(
-          "http://localhost:3001/api/google/auth-url",
-        );
+        const response = await fetch("http://localhost:3001/api/google/status");
         const data = await response.json();
-        if (data.url) setAuthUrl(data.url);
+        if (data.configured && data.authUrl) {
+          setAuthUrl(data.authUrl);
+        }
       } catch {
         // Pas encore configuré, c'est ok
       }
@@ -44,9 +44,11 @@ export const GoogleTab: React.FC = () => {
       });
       if (res.ok) {
         const data = await fetch(
-          "http://localhost:3001/api/google/auth-url",
+          "http://localhost:3001/api/google/status",
         ).then((r) => r.json());
-        setAuthUrl(data.url);
+        if (data.configured && data.authUrl) {
+          setAuthUrl(data.authUrl);
+        }
       }
     } catch (error) {
       console.error("Erreur save config Google:", error);

@@ -70,20 +70,32 @@ router.delete("/:name", async (req, res) => {
 router.post("/launch", async (req, res) => {
   try {
     const { appName } = req.body;
+    console.log(`🚀 [launch] Requête reçue:`, { appName, body: req.body });
 
     if (!appName) {
+      console.error(`❌ [launch] Nom d'app manquant`);
       return res.status(400).json({ error: "Nom d'app requis" });
     }
 
     const apps = await getCollection("apps");
-    const app = apps[appName.toLowerCase()];
+    const searchKey = appName.toLowerCase();
+    console.log(`🔍 [launch] Recherche app: "${searchKey}"`);
+
+    const app = apps[searchKey];
 
     if (!app) {
+      console.error(
+        `❌ [launch] App "${appName}" non trouvée (clé: "${searchKey}")`,
+      );
+      console.log(
+        `📋 [launch] Apps disponibles:`,
+        Object.keys(apps).slice(0, 10),
+      );
       return res.status(404).json({ error: `App ${appName} non trouvée` });
     }
 
-    console.log(`🚀 Test de lancement: ${appName}`);
-    console.log(`📍 Chemin: ${app.path}`);
+    console.log(`✅ [launch] App trouvée: ${appName}`);
+    console.log(`📍 [launch] Chemin: ${app.path}`);
 
     // Lancer l'application
     const command = `start "" "${app.path}"`;

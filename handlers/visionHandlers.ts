@@ -115,3 +115,145 @@ export const handleFindErrors = async (
 ) => {
   return handleAnalyzeScreen({ type: "error", ...args }, ctx);
 };
+
+/**
+ * Handler capture webcam et analyse avec Gemini Vision
+ * Capture une image depuis la webcam et l'analyse avec Gemini Vision
+ */
+export const handleWebcamVision = async (
+  args: { prompt?: string },
+  ctx: HandlerContext,
+) => {
+  const { addLog, speak, setStatus } = ctx;
+
+  addLog("Capture webcam en cours...", "SYSTEM", "info");
+  setStatus?.("processing" as any);
+
+  try {
+    const API_BASE = "http://localhost:3001";
+    const response = await fetch(`${API_BASE}/api/vision/webcam`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt: args.prompt }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Erreur API: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    if (data.error) {
+      throw new Error(data.error);
+    }
+
+    const analysis = data.analysis;
+
+    addLog("📷 Analyse webcam terminée", "OMNI", "success");
+    addLog(analysis, "OMNI", "info");
+
+    if (speak) {
+      const summary =
+        analysis.substring(0, 200) + (analysis.length > 200 ? "..." : "");
+      speak(summary);
+    }
+
+    setStatus?.("idle" as any);
+
+    return {
+      status: "success",
+      message: analysis,
+      data: { analysis, imageUrl: data.imageUrl },
+    };
+  } catch (error: unknown) {
+    const err = error as Error;
+    const msg = err.message || String(error);
+    addLog(`Erreur webcam vision: ${msg}`, "SYSTEM", "error");
+
+    if (speak) {
+      speak("Impossible d'analyser l'image webcam, Monsieur.");
+    }
+
+    setStatus?.("error" as any);
+    setTimeout(() => setStatus?.("idle" as any), 2000);
+
+    return {
+      status: "error",
+      message: `Impossible d'analyser webcam : ${msg}`,
+    };
+  }
+};
+
+/**
+ * Handler détection objets/personnes via webcam
+ * Utilise Gemini Vision pour détecter objets et personnes
+ */
+export const handleDetectObjects = async (
+  args: { target?: string },
+  ctx: HandlerContext,
+) => {
+  const { addLog, speak, setStatus } = ctx;
+
+  const prompt = args.target
+    ? `Détecte si tu vois ${args.target} dans cette image. Réponds par oui ou non, puis décris ce que tu vois.`
+    : "Liste tous les objets et personnes visibles dans cette image. Sois précis et concis.";
+
+  addLog(
+    `Détection objets${args.target ? ` (recherche: ${args.target})` : ""}...`,
+    "SYSTEM",
+    "info",
+  );
+  setStatus?.("processing" as any);
+
+  try {
+    const API_BASE = "http://localhost:3001";
+    const response = await fetch(`${API_BASE}/api/vision/webcam`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Erreur API: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    if (data.error) {
+      throw new Error(data.error);
+    }
+
+    const analysis = data.analysis;
+
+    addLog("🔍 Détection terminée", "OMNI", "success");
+    addLog(analysis, "OMNI", "info");
+
+    if (speak) {
+      speak(analysis);
+    }
+
+    setStatus?.("idle" as any);
+
+    return {
+      status: "success",
+      message: analysis,
+      data: { analysis, imageUrl: data.imageUrl },
+    };
+  } catch (error: unknown) {
+    const err = error as Error;
+    const msg = err.message || String(error);
+    addLog(`Erreur détection: ${msg}`, "SYSTEM", "error");
+
+    if (speak) {
+      speak("Impossible de détecter les objets, Monsieur.");
+    }
+
+    setStatus?.("error" as any);
+    setTimeout(() => setStatus?.("idle" as any), 2000);
+
+    return {
+      status: "error",
+      message: `Impossible de détecter objets : ${msg}`,
+    };
+  }
+};

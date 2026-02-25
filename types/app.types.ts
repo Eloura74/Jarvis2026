@@ -100,7 +100,8 @@ export interface HandlerContext {
       | "KERNEL"
       | "VOICE"
       | "GMAIL"
-      | "CALENDAR",
+      | "CALENDAR"
+      | "SECURITY",
     type?: "info" | "success" | "error" | "warning",
   ) => void;
   setStatus: (status: SystemStatus) => void;

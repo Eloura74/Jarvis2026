@@ -34,7 +34,7 @@ export const THINKING_BUDGET_LOW = 512;
 export const THINKING_BUDGET_HIGH = 8192;
 
 /** Budget par défaut utilisé si aucun n'est spécifié */
-export const THINKING_BUDGET_DEFAULT = THINKING_BUDGET_AUTO;
+export const THINKING_BUDGET_DEFAULT = THINKING_BUDGET_OFF;
 
 // ============================================================================
 // TYPES
@@ -125,8 +125,8 @@ export function selectThinkingBudget(input: string): number {
     return THINKING_BUDGET_HIGH;
   }
 
-  // Par défaut : Gemini décide automatiquement
-  return THINKING_BUDGET_AUTO;
+  // Par défaut : désactivé (thinkingConfig non supporté par l'API actuelle)
+  return THINKING_BUDGET_OFF;
 }
 
 /**

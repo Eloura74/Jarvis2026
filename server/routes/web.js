@@ -1,6 +1,8 @@
 import express from "express";
 import { exec } from "child_process";
 import webScraper from "../services/webScraper.js";
+import { searchLimiter } from "../middleware/rateLimiter.js";
+import { validateBody, schemas } from "../middleware/validation.js";
 
 const router = express.Router();
 
@@ -28,19 +30,33 @@ router.post("/scrape", async (req, res) => {
  * POST /api/web/open-url
  * Body: { url: string }
  */
-router.post("/open-url", (req, res) => {
-  const { url } = req.body;
-  if (!url) return res.status(400).json({ error: "URL requise" });
+router.post("/open-url", validateBody(schemas.openUrl), (req, res) => {
+  // Décoder l'URL HTML-escaped par le middleware sanitizeAll
+  const decodedUrl = req.body.url
+    .replace(/&#x2F;/g, "/")
+    .replace(/&#x3A;/g, ":")
+    .replace(/&amp;/g, "&");
+
+  console.log(`🌐 [open-url] Requête reçue:`, {
+    original: req.body.url,
+    decoded: decodedUrl,
+  });
+
+  if (!decodedUrl) {
+    console.error(`❌ [open-url] URL manquante`);
+    return res.status(400).json({ error: "URL requise" });
+  }
 
   // Valider que c'est bien une URL http/https pour éviter les injections
-  if (!url.startsWith("http://") && !url.startsWith("https://")) {
+  if (!decodedUrl.startsWith("http://") && !decodedUrl.startsWith("https://")) {
+    console.error(`❌ [open-url] URL invalide: ${decodedUrl}`);
     return res
       .status(400)
       .json({ error: "URL invalide (doit commencer par http:// ou https://)" });
   }
 
   // Échapper les guillemets dans l'URL pour éviter les injections shell
-  const safeUrl = url.replace(/"/g, "%22");
+  const safeUrl = decodedUrl.replace(/"/g, "%22");
 
   // 'start "" "url"' ouvre l'URL dans le navigateur par défaut Windows
   exec(`start "" "${safeUrl}"`, (error) => {
@@ -48,8 +64,8 @@ router.post("/open-url", (req, res) => {
       console.error(`❌ Erreur ouverture URL: ${error.message}`);
       return res.status(500).json({ error: error.message });
     }
-    console.log(`🌐 URL ouverte via backend: ${url}`);
-    res.json({ success: true, url });
+    console.log(`🌐 URL ouverte via backend: ${decodedUrl}`);
+    res.json({ success: true, url: decodedUrl });
   });
 });
 
@@ -58,22 +74,56 @@ router.post("/open-url", (req, res) => {
  * Utilise Gemini avec Google Search grounding pour des résultats réels avec images.
  * Fallback sur liens statiques si Gemini échoue.
  *
+ * POST /api/web/search-web
+ * Body: { query: string }
+ */
+router.post(
+  "/search-web",
+  searchLimiter,
+  validateBody(schemas.searchWeb),
+  async (req, res) => {
+    const { query } = req.body;
+    if (!query) return res.status(400).json({ error: "Query requise" });
+
+    try {
+      const results = await searchWithGemini(query);
+      console.log(`🔍 search-web: "${query}" → ${results.length} résultats`);
+      console.log(
+        `🔍 search-results: "${query}" → ${results.length} résultats`,
+      );
+      res.json({ success: true, results, query });
+    } catch (error) {
+      console.error("❌ search-results error:", error.message);
+      res.status(500).json({ error: error.message });
+    }
+  },
+);
+
+/**
+ * Alias de /search-web pour le tool search_results_visual
  * POST /api/web/search-results
  * Body: { query: string }
  */
-router.post("/search-results", async (req, res) => {
-  const { query } = req.body;
-  if (!query) return res.status(400).json({ error: "Query requise" });
+router.post(
+  "/search-results",
+  searchLimiter,
+  validateBody(schemas.searchWeb),
+  async (req, res) => {
+    const { query } = req.body;
+    if (!query) return res.status(400).json({ error: "Query requise" });
 
-  try {
-    const results = await searchWithGemini(query);
-    console.log(`🔍 search-results: "${query}" → ${results.length} résultats`);
-    res.json({ success: true, results, query });
-  } catch (error) {
-    console.error("❌ search-results error:", error.message);
-    res.status(500).json({ error: error.message });
-  }
-});
+    try {
+      const results = await searchWithGemini(query);
+      console.log(
+        `🔍 search-results: "${query}" → ${results.length} résultats`,
+      );
+      res.json({ success: true, results, query });
+    } catch (error) {
+      console.error("❌ search-results error:", error.message);
+      res.status(500).json({ error: error.message });
+    }
+  },
+);
 
 /**
  * Recherche enrichie via Gemini + Google Search grounding.

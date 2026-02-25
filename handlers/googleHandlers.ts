@@ -305,29 +305,127 @@ export async function handleCalendarDelete(
   ctx: HandlerContext,
 ) {
   const { addLog } = ctx;
-  const { eventId } = args;
 
   try {
-    addLog(`Suppression de l'évènement ${eventId}...`, "OMNI", "info");
+    addLog("Suppression de l'évènement...", "OMNI", "info");
     const response = await fetch(
-      `http://localhost:3001/api/google/calendar/events/${eventId}`,
-      {
-        method: "DELETE",
-      },
+      `http://localhost:3001/api/google/calendar/events/${args.eventId}`,
+      { method: "DELETE" },
     );
     const data = await response.json();
 
     if (data.error) throw new Error(data.error);
 
-    addLog(`✅ Évènement supprimé`, "CALENDAR", "success");
-    return { status: "success", message: "Évènement supprimé" };
+    return {
+      status: "success",
+      message: "Évènement supprimé avec succès",
+    };
   } catch (error: unknown) {
     const err = error as Error;
-    addLog(
-      `Erreur suppression calendrier: ${err.message || String(error)}`,
-      "SYSTEM",
-      "error",
+    const msg = err.message || String(error);
+    addLog(`Erreur Calendar Delete: ${msg}`, "SYSTEM", "error");
+    return {
+      status: "error",
+      message: `Impossible de supprimer l'évènement : ${msg}`,
+    };
+  }
+}
+
+/**
+ * Déplace un évènement du calendrier (modifie l'heure de début)
+ */
+export async function handleCalendarMove(
+  args: { eventId: string; newStartTime: string; newEndTime?: string },
+  ctx: HandlerContext,
+) {
+  const { addLog, speak } = ctx;
+
+  try {
+    addLog(`Déplacement de l'évènement ${args.eventId}...`, "CALENDAR", "info");
+
+    const getResponse = await fetch(
+      `http://localhost:3001/api/google/calendar/events/${args.eventId}`,
     );
-    throw error;
+    const eventData = await getResponse.json();
+
+    if (eventData.error) throw new Error(eventData.error);
+
+    const event = eventData.event;
+    const oldStart = new Date(event.start.dateTime || event.start.date);
+    const newStart = new Date(args.newStartTime);
+
+    let newEnd: Date;
+    if (args.newEndTime) {
+      newEnd = new Date(args.newEndTime);
+    } else {
+      const oldEnd = new Date(event.end.dateTime || event.end.date);
+      const duration = oldEnd.getTime() - oldStart.getTime();
+      newEnd = new Date(newStart.getTime() + duration);
+    }
+
+    const checkResponse = await fetch(
+      `http://localhost:3001/api/google/calendar/events?timeMin=${newStart.toISOString()}&timeMax=${newEnd.toISOString()}`,
+    );
+    const checkData = await checkResponse.json();
+
+    const conflicts =
+      checkData.events?.filter((e: any) => e.id !== args.eventId) || [];
+
+    if (conflicts.length > 0) {
+      const conflictNames = conflicts.map((e: any) => e.summary).join(", ");
+      speak(
+        `Attention, conflit horaire détecté avec : ${conflictNames}. Souhaitez-vous continuer ?`,
+      );
+      addLog(`⚠️ Conflit horaire: ${conflictNames}`, "CALENDAR", "warning");
+    }
+
+    const updateResponse = await fetch(
+      `http://localhost:3001/api/google/calendar/events/${args.eventId}`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          start: { dateTime: newStart.toISOString() },
+          end: { dateTime: newEnd.toISOString() },
+        }),
+      },
+    );
+
+    const updateData = await updateResponse.json();
+
+    if (updateData.error) throw new Error(updateData.error);
+
+    const oldTime = oldStart.toLocaleTimeString("fr-FR", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+    const newTime = newStart.toLocaleTimeString("fr-FR", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+
+    const message = `Rendez-vous "${event.summary}" déplacé de ${oldTime} à ${newTime}, Monsieur.`;
+    speak(message);
+    addLog(`✅ ${message}`, "CALENDAR", "success");
+
+    return {
+      status: "success",
+      message,
+      data: {
+        event: updateData.event,
+        oldStart: oldStart.toISOString(),
+        newStart: newStart.toISOString(),
+        conflicts: conflicts.length,
+      },
+    };
+  } catch (error: unknown) {
+    const err = error as Error;
+    const msg = err.message || String(error);
+    addLog(`Erreur Calendar Move: ${msg}`, "SYSTEM", "error");
+    speak("Impossible de déplacer le rendez-vous, Monsieur.");
+    return {
+      status: "error",
+      message: `Impossible de déplacer l'évènement : ${msg}`,
+    };
   }
 }

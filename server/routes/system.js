@@ -1,6 +1,15 @@
 import express from "express";
 import { systemControl } from "../platform/dispatcher.js";
 import { getSystemStats, getLightStats } from "../systemStats.js";
+import {
+  moveWindowToScreen,
+  listProcesses,
+  killProcess,
+  setVolume,
+  muteAudio,
+  getVolume,
+} from "../services/systemService.js";
+import { searchLimiter, strictLimiter } from "../middleware/index.js";
 
 const router = express.Router();
 
@@ -72,6 +81,69 @@ router.post("/media/control", async (req, res) => {
   try {
     const result = await systemControl.controlMedia(req.body);
     res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// --- FENÊTRES MULTI-ÉCRANS ---
+router.post("/window/move-screen", strictLimiter, async (req, res) => {
+  try {
+    const { appName, screenNumber } = req.body;
+    const result = await moveWindowToScreen(appName, screenNumber);
+    res.json({ success: true, result });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// --- GESTIONNAIRE DE TÂCHES ---
+router.get("/processes", searchLimiter, async (req, res) => {
+  try {
+    const { sortBy, limit } = req.query;
+    const processes = await listProcesses(sortBy, parseInt(limit) || 10);
+    res.json({ success: true, processes });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.post("/process/kill", strictLimiter, async (req, res) => {
+  try {
+    const { processName, force } = req.body;
+    const result = await killProcess(processName, force);
+    res.json({ success: true, result });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// --- CONTRÔLE AUDIO AVANCÉ ---
+router.get("/audio/volume", async (req, res) => {
+  try {
+    const volumeInfo = await getVolume();
+    res.json({ success: true, ...volumeInfo });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.post("/audio/volume", strictLimiter, async (req, res) => {
+  try {
+    const { action, level } = req.body;
+    let result;
+
+    if (action === "set" && level !== undefined) {
+      result = await setVolume(level);
+    } else if (action === "mute") {
+      result = await muteAudio(true);
+    } else if (action === "unmute") {
+      result = await muteAudio(false);
+    } else {
+      return res.status(400).json({ error: "Action invalide" });
+    }
+
+    res.json({ success: true, result });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

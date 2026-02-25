@@ -119,7 +119,7 @@ export function useToolExecutor({
           // === WEB ===
           case "search_web":
             return await handlers.handleSearchWeb(toolArgs, ctx);
-          case "search_results_visual":
+          case "show_search_results":
             return await handlers.handleSearchResultsVisual(toolArgs, ctx);
           case "open_url":
             return await handlers.handleOpenUrl(toolArgs, ctx);
@@ -200,11 +200,186 @@ export function useToolExecutor({
             }
           }
 
+          case "outdoor_temperature": {
+            const { handleOutdoorTemperature } =
+              await import("../../handlers/temperatureHandlers");
+            return await handleOutdoorTemperature(toolArgs, ctx);
+          }
+
+          case "pool_temperature": {
+            const { handlePoolTemperature } =
+              await import("../../handlers/temperatureHandlers");
+            return await handlePoolTemperature(toolArgs, ctx);
+          }
+
+          case "system_temperatures": {
+            const { handleSystemTemperatures } =
+              await import("../../handlers/temperatureHandlers");
+            return await handleSystemTemperatures(toolArgs, ctx);
+          }
+
+          case "get_directions": {
+            const { handleGetDirections } =
+              await import("../../handlers/mapsHandlers");
+            return await handleGetDirections(toolArgs, ctx);
+          }
+
+          case "printer_camera": {
+            const { handlePrinterCamera } =
+              await import("../../handlers/printingHandlers");
+            return await handlePrinterCamera(toolArgs, ctx);
+          }
+
+          case "printer_status": {
+            const { handlePrinterStatus } =
+              await import("../../handlers/printingHandlers");
+            return await handlePrinterStatus(toolArgs, ctx);
+          }
+
+          case "analyze_gcode": {
+            const { handleAnalyzeGcode } =
+              await import("../../handlers/printingHandlers");
+            return await handleAnalyzeGcode(toolArgs, ctx);
+          }
+
+          case "send_phone_notification": {
+            const { handleSendPhoneNotification } =
+              await import("../../handlers/phoneHandlers");
+            return await handleSendPhoneNotification(toolArgs, ctx);
+          }
+
+          case "make_phone_call": {
+            const { handleMakePhoneCall } =
+              await import("../../handlers/phoneHandlers");
+            return await handleMakePhoneCall(toolArgs, ctx);
+          }
+
+          case "send_sms": {
+            const { handleSendSMS } =
+              await import("../../handlers/phoneHandlers");
+            return await handleSendSMS(toolArgs, ctx);
+          }
+
+          case "phone_battery": {
+            const { handlePhoneBattery } =
+              await import("../../handlers/phoneHandlers");
+            return await handlePhoneBattery(toolArgs, ctx);
+          }
+
+          case "storage_status": {
+            const { handleStorageStatus } =
+              await import("../../handlers/truenasHandlers");
+            return await handleStorageStatus(toolArgs, ctx);
+          }
+
+          case "disk_health": {
+            const { handleDiskHealth } =
+              await import("../../handlers/truenasHandlers");
+            return await handleDiskHealth(toolArgs, ctx);
+          }
+
+          case "truenas_services": {
+            const { handleTrueNASServices } =
+              await import("../../handlers/truenasHandlers");
+            return await handleTrueNASServices(toolArgs, ctx);
+          }
+
+          case "move_window_to_screen": {
+            const { handleMoveWindowToScreen } =
+              await import("../../handlers/systemAdvancedHandlers");
+            return await handleMoveWindowToScreen(toolArgs, ctx);
+          }
+
+          case "list_processes": {
+            const { handleListProcesses } =
+              await import("../../handlers/systemAdvancedHandlers");
+            return await handleListProcesses(toolArgs, ctx);
+          }
+
+          case "kill_process": {
+            const { handleKillProcess } =
+              await import("../../handlers/systemAdvancedHandlers");
+            return await handleKillProcess(toolArgs, ctx);
+          }
+
+          case "volume_control": {
+            const { handleVolumeControl } =
+              await import("../../handlers/systemAdvancedHandlers");
+            return await handleVolumeControl(toolArgs, ctx);
+          }
+
+          case "get_volume": {
+            const { handleGetVolume } =
+              await import("../../handlers/systemAdvancedHandlers");
+            return await handleGetVolume(toolArgs, ctx);
+          }
+
+          case "security_status": {
+            const { handleSecurityStatus } =
+              await import("../../handlers/securityHandlers");
+            return await handleSecurityStatus(toolArgs, ctx);
+          }
+
+          case "alarm_control": {
+            const { handleAlarmControl } =
+              await import("../../handlers/securityHandlers");
+            return await handleAlarmControl(toolArgs, ctx);
+          }
+
+          case "camera_snapshot": {
+            const { handleCameraSnapshot } =
+              await import("../../handlers/securityHandlers");
+            return await handleCameraSnapshot(toolArgs, ctx);
+          }
+
+          case "list_cameras": {
+            const { handleListCameras } =
+              await import("../../handlers/securityHandlers");
+            return await handleListCameras(toolArgs, ctx);
+          }
+
+          case "motion_history": {
+            const { handleMotionHistory } =
+              await import("../../handlers/securityHandlers");
+            return await handleMotionHistory(toolArgs, ctx);
+          }
+
+          case "play_youtube": {
+            const { handlePlayYouTube } =
+              await import("../../handlers/mediaHandlers");
+            return await handlePlayYouTube(toolArgs, ctx);
+          }
+
+          case "spotify_control": {
+            const { handleSpotifyControl } =
+              await import("../../handlers/mediaHandlers");
+            return await handleSpotifyControl(toolArgs, ctx);
+          }
+
+          case "play_plex": {
+            const { handlePlayPlex } =
+              await import("../../handlers/mediaHandlers");
+            return await handlePlayPlex(toolArgs, ctx);
+          }
+
+          case "webcam_vision": {
+            const { handleWebcamVision } =
+              await import("../../handlers/visionHandlers");
+            return await handleWebcamVision(toolArgs, ctx);
+          }
+
+          case "detect_objects": {
+            const { handleDetectObjects } =
+              await import("../../handlers/visionHandlers");
+            return await handleDetectObjects(toolArgs, ctx);
+          }
+
           // === GOOGLE SERVICES ===
           case "gmail_read":
             return await handlers.handleGmailRead(toolArgs, ctx);
           case "gmail_send":
             return await handlers.handleGmailSend(toolArgs, ctx);
+          // ... (rest of the code remains the same)
           case "calendar_next":
             return await handlers.handleCalendarNext(toolArgs, ctx);
           case "calendar_list":
@@ -213,6 +388,8 @@ export function useToolExecutor({
             return await handlers.handleCalendarCreate(toolArgs, ctx);
           case "calendar_delete":
             return await handlers.handleCalendarDelete(toolArgs, ctx);
+          case "calendar_move":
+            return await handlers.handleCalendarMove(toolArgs, ctx);
 
           // === HOME ASSISTANT ===
           case "control_home_automation": {
@@ -455,49 +632,6 @@ export function useToolExecutor({
             const briefingData = await res.json();
             if (briefingData.text) speak(briefingData.text);
             return { status: "success", data: briefingData };
-          }
-
-          // === SNAPSHOT CAMÉRA HA ===
-          // Commandes vocales : "Jarvis, montre-moi la caméra de la VZ330"
-          case "camera_snapshot": {
-            const webcamUrl = toolArgs.webcam_url;
-            if (!webcamUrl) {
-              speak("Aucune URL de caméra fournie, Monsieur.");
-              return { status: "error", message: "webcam_url manquant" };
-            }
-            const res = await fetch(
-              `http://localhost:3001/api/camera/snapshot?url=${encodeURIComponent(webcamUrl)}`,
-            );
-            if (!res.ok) {
-              const err = await res.json();
-              speak("La caméra est inaccessible pour le moment, Monsieur.");
-              return { status: "error", message: err.error };
-            }
-            const snap = await res.json();
-            // Afficher le snapshot dans l'overlay holographique
-            if (ctx.setStatusOverlay) {
-              ctx.setStatusOverlay({
-                id: `camera-snap-${Date.now()}`,
-                title: toolArgs.printer_name || "Caméra",
-                type: "printer",
-                lastUpdate: new Date().toLocaleTimeString("fr-FR"),
-                image: `data:${snap.mimeType};base64,${snap.base64}`,
-                stats: [
-                  {
-                    label: "Capture",
-                    value: new Date().toLocaleTimeString("fr-FR"),
-                    status: "normal",
-                  },
-                  {
-                    label: "Taille",
-                    value: `${Math.round(snap.sizeBytes / 1024)} Ko`,
-                    status: "normal",
-                  },
-                ],
-              });
-            }
-            speak(`Voici la vue de la caméra, Monsieur.`);
-            return { status: "success", capturedAt: snap.capturedAt };
           }
 
           // === CONVERSATION CONTROL ===
