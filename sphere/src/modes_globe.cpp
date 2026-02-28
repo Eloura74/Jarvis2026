@@ -214,13 +214,15 @@ void renderModeScreensaver() {
   // L'animation respire lentement grâce à une onde sinusoïdale
   float explode = (sin(g_sleep_phase * 0.6f) + 1.0f) * 0.5f;
 
-  // 2. PALETTE DE COULEURS "STARK INDUSTRIES" — drift chromatique cyan->cobalt
-  float cc = (sin(g_sleep_phase * 0.07f) + 1.0f) * 0.5f;
-  g_sleep_color = rgb565((uint8_t)(cc*60), (uint8_t)(180+cc*60), (uint8_t)(235+cc*20));
+  // 2. PALETTE DE COULEURS THEMATISEE
+  // Au lieu de calculer un "Stark drift", on utilise g_sleep_color (définie par le thème actif)
+  // On crée par contre de légères oscillations lumineuses sur cette base
+  float pulseLuma = (sin(g_sleep_phase * 2.0f) + 1.0f) * 0.2f; // Léger pulse 0.0 -> 0.4
+  
   uint16_t colCore = COL_WHITE;
-  uint16_t colNeon = g_sleep_color;                      // Cyan drift
-  uint16_t colDark = lerpColor(COL_BG, colNeon, 0.15f); // Bleu de structure
-  uint16_t colWire = lerpColor(COL_BG, colNeon, 0.40f); // Lignes de plan
+  uint16_t colNeon = lerpColor(g_sleep_color, COL_WHITE, pulseLuma);
+  uint16_t colDark = lerpColor(COL_BG, g_sleep_color, 0.20f);
+  uint16_t colWire = lerpColor(COL_BG, g_sleep_color, 0.45f);
 
   // 3. PARAMETRES DE PERSPECTIVE
   const float tilt = 0.45f; // Inclinaison de la caméra (ellipse ratio)

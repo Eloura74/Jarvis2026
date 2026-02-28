@@ -31,8 +31,8 @@ extern char local_text[64];
 // ================== MODE SYSTEM ==================
 // Affiche un HUD système avec anneaux segmentés, barre de charge CPU et RAM.
 void renderModeSystem() {
-  drawSegmentedRing(CX, CY, 110, 8, 8, g_phase * 50.0f, 0.1f, COL_CYAN);
-  drawSegmentedRing(CX, CY, 95, 2, 36, -g_phase * 80.0f, 0.5f, COL_BLUE);
+  drawSegmentedRing(CX, CY, 110, 8, 8, g_phase * 50.0f, 0.1f, dyn_color);
+  drawSegmentedRing(CX, CY, 95, 2, 36, -g_phase * 80.0f, 0.5f, lerpColor(COL_BG, dyn_color, 0.6f));
 
   spr.setFont(&fonts::FreeSans12pt7b);
   spr.setTextColor(COL_WHITE);
@@ -40,8 +40,8 @@ void renderModeSystem() {
 
   // Barre de charge CPU simulée (oscille entre 20% et 60%)
   int load = 40 + (int)(sin(g_phase * 5.0f) * 20);
-  spr.drawRect(CX - 40, CY, 80, 12, COL_CYAN);
-  spr.fillRect(CX - 38, CY + 2, (76 * load) / 100, 8, COL_CYAN);
+  spr.drawRect(CX - 40, CY, 80, 12, dyn_color);
+  spr.fillRect(CX - 38, CY + 2, (76 * load) / 100, 8, dyn_color);
 
   spr.setFont(&fonts::FreeSans9pt7b);
   spr.setTextColor(COL_GREEN);
@@ -90,7 +90,7 @@ void renderModeHome() {
                    CX + (int)(cos(scanA) * 120), CY + (int)(sin(scanA) * 120),
                    CX + (int)(cos(scanA - 0.2f) * 120), CY + (int)(sin(scanA - 0.2f) * 120),
                    rgb565(0, 50, 100));
-  spr.drawLine(CX, CY, CX + (int)(cos(scanA) * 120), CY + (int)(sin(scanA) * 120), COL_CYAN);
+  spr.drawLine(CX, CY, CX + (int)(cos(scanA) * 120), CY + (int)(sin(scanA) * 120), dyn_color);
 
   // Noeuds de pièces (position angulaire + distance + label)
   struct Pt { float a; float d; const char* nm; };
@@ -99,7 +99,7 @@ void renderModeHome() {
   for (int i = 0; i < 3; i++) {
     int nx = CX + (int)(cos(nodes[i].a) * nodes[i].d);
     int ny = CY + (int)(sin(nodes[i].a) * nodes[i].d);
-    spr.fillCircle(nx, ny, 4, COL_CYAN);
+    spr.fillCircle(nx, ny, 4, dyn_color);
     spr.setTextColor(COL_WHITE);
     spr.drawString(nodes[i].nm, nx, ny - 15);
   }
@@ -188,7 +188,7 @@ void renderModeWeather() {
             // Gouttes de pluie animées
             for(int j = 0; j < 4; j++) {
                 int ry = (CY - 5) + ((int)(g_phase * 60 + j * 15) % 40);
-                spr.drawFastVLine(CX - 25 + j * 16, ry, 10, COL_CYAN);
+                spr.drawFastVLine(CX - 25 + j * 16, ry, 10, dyn_color);
             }
         }
     }
@@ -199,7 +199,7 @@ void renderModeWeather() {
     spr.drawCenterString(temp, CX, CY + 50);
 
     spr.setFont(&fonts::FreeSans9pt7b);
-    spr.setTextColor(COL_CYAN);
+    spr.setTextColor(dyn_color);
     spr.drawCenterString(cond, CX, CY + 80);
 }
 
@@ -406,16 +406,16 @@ void renderModeGmail() {
 // Affiche une notification agenda avec calendrier stylisé et événement depuis local_text.
 void renderModeCalendar() {
   // Anneaux tournants cyan agenda
-  drawSegmentedRing(CX, CY, 90, 5, 8, g_phase * 20.0f, 0.15f, COL_CYAN);
-  drawSegmentedRing(CX, CY, 72, 2, 32, -g_phase * 40.0f, 0.5f, COL_BLUE);
+  drawSegmentedRing(CX, CY, 90, 5, 8, g_phase * 20.0f, 0.15f, dyn_color);
+  drawSegmentedRing(CX, CY, 72, 2, 32, -g_phase * 40.0f, 0.5f, lerpColor(COL_BG, dyn_color, 0.6f));
 
   // Corps du calendrier
-  drawGlow(CX, CY, 38, COL_CYAN, 15);
+  drawGlow(CX, CY, 38, dyn_color, 15);
   spr.fillRect(CX - 32, CY - 28, 64, 56, rgb565(5, 20, 35));
-  spr.drawRect(CX - 32, CY - 28, 64, 56, COL_CYAN);
+  spr.drawRect(CX - 32, CY - 28, 64, 56, dyn_color);
 
   // Barre de titre
-  spr.fillRect(CX - 32, CY - 28, 64, 14, COL_CYAN);
+  spr.fillRect(CX - 32, CY - 28, 64, 14, dyn_color);
   spr.setFont(&fonts::FreeSans9pt7b);
   spr.setTextColor(COL_BG);
   spr.drawString("CAL", CX - (spr.textWidth("CAL") / 2), CY - 23);
@@ -429,7 +429,7 @@ void renderModeCalendar() {
       // Rendez-vous mis en surbrillance (ligne 1, colonne 2)
       bool highlight = (row == 1 && col == 2);
       spr.fillCircle(dx, dy, highlight ? 4 : 2,
-                     highlight ? lerpColor(COL_CYAN, COL_WHITE, (sin(g_phase * 6.0f) + 1.0f) * 0.5f)
+                     highlight ? lerpColor(dyn_color, COL_WHITE, (sin(g_phase * 6.0f) + 1.0f) * 0.5f)
                                : dotCol);
     }
   }
@@ -440,7 +440,7 @@ void renderModeCalendar() {
 
   // Texte de l'événement depuis local_text
   if (strlen(local_text) > 0) {
-    spr.setTextColor(COL_CYAN);
+    spr.setTextColor(dyn_color);
     spr.drawString(local_text, CX - (spr.textWidth(local_text) / 2), CY + 40);
   }
 }
@@ -472,9 +472,9 @@ void renderModeMap() {
   float progress = (sin(g_phase * 0.2f) + 1.0f) / 2.0f;
   int currX = (CX - 80) + (int)(progress * 160);
   int currY = (CY + 60) - (int)(progress * 120) + (int)(sin(progress * 6.0f + g_phase * 0.5f) * 15);
-  drawGlow(currX, currY, 15, COL_CYAN, 10);
+  drawGlow(currX, currY, 15, dyn_color, 10);
   spr.fillCircle(currX, currY, 5, COL_WHITE);
-  spr.drawCircle(currX, currY, 8, COL_CYAN);
+  spr.drawCircle(currX, currY, 8, dyn_color);
 
   // 4. Point de destination (pulse clignotant)
   int destX = (CX - 80) + 160;
@@ -498,7 +498,7 @@ void renderModeMap() {
 
   // 6. HUD Navigation
   spr.setFont(&fonts::FreeSans9pt7b);
-  spr.setTextColor(COL_CYAN);
+  spr.setTextColor(dyn_color);
   spr.drawString(dest, 15, 15);
 
   char buf[32];
@@ -605,7 +605,7 @@ void renderModeDoors() {
 
     // En-tête HUD
     spr.setFont(&fonts::FreeSans9pt7b);
-    spr.setTextColor(TFT_CYAN);
+    spr.setTextColor(dyn_color);
     spr.drawCenterString("CAPTEURS", CX, CY - 105);
-    spr.drawFastHLine(CX - 30, CY - 88, 60, TFT_CYAN);
+    spr.drawFastHLine(CX - 30, CY - 88, 60, dyn_color);
 }

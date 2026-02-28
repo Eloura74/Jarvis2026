@@ -1,5 +1,12 @@
 import { SerialPort } from "serialport";
 import { ReadlineParser } from "@serialport/parser-readline";
+import fs from "fs/promises";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const SETTINGS_FILE = path.join(__dirname, "../../config/user-settings.json");
 
 let port;
 let parser;
@@ -43,14 +50,26 @@ async function connect() {
     port = new SerialPort({ path: portPath, baudRate: BAUD_RATE });
     parser = port.pipe(new ReadlineParser({ delimiter: "\n" }));
 
-    port.on("open", () => {
+    port.on("open", async () => {
       console.log(`✅ [Sphere] Connecté sur ${portPath}`);
       isConnected = true;
       if (reconnectInterval) {
         clearInterval(reconnectInterval);
         reconnectInterval = null;
       }
+
+      // Essayer de lire la configuration pour envoyer le bon thème
+      let currentTheme = "CLASSIC";
+      try {
+        const data = await fs.readFile(SETTINGS_FILE, "utf-8");
+        const settings = JSON.parse(data);
+        if (settings.theme) currentTheme = settings.theme;
+      } catch (err) {
+        console.log("⚠️ [Sphere] Pas de user-settings.json, thème par défaut");
+      }
+
       setTimeout(() => {
+        setSphereTheme(currentTheme);
         setSphereState("IDLE");
         setSphereText("JARVIS ONLINE");
       }, 2000);
@@ -105,6 +124,21 @@ export function setSphereState(state) {
     port.write(cmd);
   } catch (error) {
     console.error("Error writing to sphere:", error);
+  }
+}
+
+/**
+ * Change le thème matériel de la sphère
+ * @param {string} theme - CLASSIC, IRONMAN, MATRIX, COPPER, WOOD
+ */
+export function setSphereTheme(theme) {
+  if (!isConnected || !port) return;
+  try {
+    const normalized = theme.toUpperCase();
+    const cmd = `THEME ${normalized}\n`;
+    port.write(cmd);
+  } catch (error) {
+    console.error("Error writing theme to sphere:", error);
   }
 }
 

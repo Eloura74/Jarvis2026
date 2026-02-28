@@ -7,6 +7,7 @@ import express from "express";
 import fs from "fs/promises";
 import path from "path";
 import { fileURLToPath } from "url";
+import { setSphereTheme } from "../services/sphereService.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -94,6 +95,12 @@ router.post("/settings", async (req, res) => {
       "utf-8",
     );
     console.log("✅ Settings saved to backend");
+
+    // Push the theme to the hardware sphere if present
+    if (req.body.theme) {
+      setSphereTheme(req.body.theme);
+    }
+
     res.json({ success: true });
   } catch (error) {
     console.error("Error saving settings:", error);

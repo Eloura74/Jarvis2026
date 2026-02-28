@@ -2,7 +2,7 @@
 #include "utils.h"
 #include "renderer.h"
 #include "modes.h"
-
+#include "infos.h" // Pour accéder à frame_count
 // ==============================================================================
 // renderer.cpp — Moteur de rendu principal (Core 1)
 // ==============================================================================
@@ -209,37 +209,43 @@ void renderTask(void *pvParameters) {
 
   for (;;) {
     ms_time = millis();
+    
+    // Mise à jour des variables d'animation globales (phases)
     updateLogic();
 
     // Framerate adaptatif : 15 FPS en veille profonde pour réduire la chaleur
+    // Sinon 30 FPS standard (33ms)
     bool deepSleep = (local_state == OrbState::MODE_SCREENSAVER)
                      && (millis() - g_screensaver_start > 120000UL);
+    
     TickType_t xFrequency = pdMS_TO_TICKS(deepSleep ? 66 : 33);
 
+    // Effacement de l'écran (Fond)
     spr.fillScreen(COL_BG);
 
     // Dispatch vers le renderer du mode actif
     switch (local_state) {
       case OrbState::IDLE:
       case OrbState::LISTENING:
-      case OrbState::SPEAKING:         renderOmniSphere();      break;
-      case OrbState::MODE_SYSTEM:      renderModeSystem();      break;
-      case OrbState::MODE_VISION:      renderModeVision();      break;
-      case OrbState::MODE_HOME:        renderModeHome();        break;
-      case OrbState::MODE_GHOST:       renderModeGhost();       break;
-      case OrbState::ERROR:            renderModeError();       break;
-      case OrbState::MODE_SUCCESS:     renderModeSuccess();     break;
-      case OrbState::MODE_MEDIA:       renderModeMedia();       break;
-      case OrbState::MODE_WEATHER:     renderModeWeather();     break;
-      case OrbState::MODE_TIMER:       renderModeTimer();       break;
-      case OrbState::MODE_PRINT:       renderModePrint();       break;
-      case OrbState::MODE_MATRIX:      renderModeMatrix();      break;
-      case OrbState::MODE_SCREENSAVER: renderModeScreensaver(); break;
-      case OrbState::MODE_WHATSAPP:    renderModeWhatsapp();    break;
-      case OrbState::MODE_GMAIL:       renderModeGmail();       break;
-      case OrbState::MODE_CALENDAR:    renderModeCalendar();    break;
-      case OrbState::MODE_MAP:          renderModeMap();         break;
-      default:                         renderDefaultLocked();   break;
+      case OrbState::SPEAKING:        renderOmniSphere();      break;
+      case OrbState::MODE_SYSTEM:     renderModeSystem();      break;
+      case OrbState::MODE_VISION:     renderModeVision();      break;
+      case OrbState::MODE_HOME:       renderModeHome();        break;
+      case OrbState::MODE_GHOST:      renderModeGhost();       break;
+      case OrbState::ERROR:           renderModeError();       break;
+      case OrbState::MODE_SUCCESS:    renderModeSuccess();     break;
+      case OrbState::MODE_MEDIA:      renderModeMedia();       break;
+      case OrbState::MODE_WEATHER:    renderModeWeather();     break;
+      case OrbState::MODE_TIMER:      renderModeTimer();       break;
+      case OrbState::MODE_PRINT:      renderModePrint();       break;
+      case OrbState::MODE_MATRIX:     renderModeMatrix();      break;
+      case OrbState::MODE_SCREENSAVER:renderModeScreensaver(); break;
+      case OrbState::MODE_WHATSAPP:   renderModeWhatsapp();    break;
+      case OrbState::MODE_GMAIL:      renderModeGmail();       break;
+      case OrbState::MODE_CALENDAR:   renderModeCalendar();    break;
+      case OrbState::MODE_MAP:        renderModeMap();         break;
+      // case OrbState::MODE_DOORS:      renderModeDoors();       break; // <--- AJOUTÉ
+      default:                        renderDefaultLocked();   break;
     }
 
     // HUD persistant sur tous les modes sauf screensaver
@@ -247,7 +253,15 @@ void renderTask(void *pvParameters) {
       renderPersistentHUD();
     }
 
+    // Envoi du buffer vers l'écran physique
     spr.pushSprite(0, 0);
+
+    // --- COMPTEUR FPS ---
+    // On compte une frame seulement quand elle a été envoyée à l'écran
+    frame_count++; 
+    // --------------------
+
+    // Maintien du framerate constant via FreeRTOS
     vTaskDelayUntil(&xLastWakeTime, xFrequency);
   }
 }

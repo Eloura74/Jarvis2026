@@ -64,6 +64,7 @@ uint16_t dyn_color  = 0; // Initialisé dans setup() après la palette (COL_OMNI
 // ÉTAT LOCAL CORE 1 — Copie thread-safe de jarvisData (mise à jour par updateLogic)
 // ==============================================================================
 OrbState      local_state    = OrbState::IDLE;
+AppTheme      local_theme    = AppTheme::CLASSIC;
 char          local_text[64] = "STANDBY";
 unsigned long idleStartTime  = 0;
 

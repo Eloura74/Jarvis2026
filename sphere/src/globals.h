@@ -83,10 +83,18 @@ enum class OrbState : uint8_t {
 };
 
 // ==============================================================================
+// THEMES DE L'APP
+// ==============================================================================
+enum class AppTheme : uint8_t {
+  CLASSIC, IRONMAN, MATRIX, COPPER, WOOD
+};
+
+// ==============================================================================
 // STRUCTURE D'ÉTAT PARTAGÉE (accès multi-core via spinlock)
 // ==============================================================================
 struct JarvisState {
   OrbState currentState = OrbState::IDLE;
+  AppTheme currentTheme = AppTheme::CLASSIC;
   char textLabel[64]    = "STANDBY";
   portMUX_TYPE spinlock = portMUX_INITIALIZER_UNLOCKED;
 };
@@ -133,6 +141,7 @@ extern uint16_t dyn_color;
 
 // État local Core 1 (copie thread-safe depuis jarvisData)
 extern OrbState local_state;
+extern AppTheme local_theme;
 extern char     local_text[64];
 extern unsigned long idleStartTime;
 
@@ -154,3 +163,8 @@ extern const uint16_t COL_PINK;
 extern const uint16_t COL_GREY;
 extern const uint16_t COL_DARK;
 extern const uint16_t COL_BG;
+extern const uint16_t COL_COPPER;
+extern const uint16_t COL_WOOD;
+extern const uint16_t COL_OAK;
+extern const uint16_t COL_COPPER_BURNED;
+extern const uint16_t COL_SIENNA;

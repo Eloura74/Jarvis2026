@@ -55,6 +55,27 @@ static void setStateFromStr(const char* s_ptr) {
   portEXIT_CRITICAL(&jarvisData.spinlock);
 }
 
+// Convertit un nom de thème en AppTheme enum
+static void setThemeFromStr(const char* s_ptr) {
+  String s = String(s_ptr);
+  s.trim();
+  s.toUpperCase();
+
+  AppTheme newTheme = jarvisData.currentTheme;
+
+  if      (s == "CLASSIC")   newTheme = AppTheme::CLASSIC;
+  else if (s == "IRONMAN")   newTheme = AppTheme::IRONMAN;
+  else if (s == "MATRIX")    newTheme = AppTheme::MATRIX;
+  else if (s == "COPPER")    newTheme = AppTheme::COPPER;
+  else if (s == "WOOD")      newTheme = AppTheme::WOOD;
+
+  portENTER_CRITICAL(&jarvisData.spinlock);
+  if (jarvisData.currentTheme != newTheme) {
+    jarvisData.currentTheme = newTheme;
+  }
+  portEXIT_CRITICAL(&jarvisData.spinlock);
+}
+
 // Traite une ligne complète reçue sur le port série
 static void handleLine(const char* line) {
   if (strlen(line) == 0) return;
@@ -71,6 +92,16 @@ static void handleLine(const char* line) {
     if (s != nullptr) {
       setStateFromStr(s + 1);
       Serial.println("OK MODE");
+    }
+    return;
+  }
+
+  // Changement de thème : "THEME WOOD"
+  if (strncmp(line, "THEME ", 6) == 0) {
+    const char* s = strchr(line, ' ');
+    if (s != nullptr) {
+      setThemeFromStr(s + 1);
+      Serial.println("OK THEME");
     }
     return;
   }
