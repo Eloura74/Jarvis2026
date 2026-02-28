@@ -134,10 +134,9 @@ export const CenterPanel: React.FC<CenterPanelProps> = ({
         transition={{ duration: 1, delay: 0.5 }}
         className="absolute top-4 md:top-8 xl:top-12 text-center z-0"
       >
-        {/* Simple Glow Background for contrast */}
         <div
           className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-24 blur-[50px] -z-10 rounded-full"
-          style={{ backgroundColor: `var(--color-cyan-500)`, opacity: 0.2 }}
+          style={{ backgroundColor: `var(--cyan-primary)`, opacity: 0.2 }}
         />
 
         <h1
@@ -149,7 +148,7 @@ export const CenterPanel: React.FC<CenterPanelProps> = ({
         <div
           className="text-[8px] md:text-[10px] tracking-[0.5em] md:tracking-[1em] opacity-80 mt-1 md:mt-2 hidden md:block font-light"
           style={{
-            color: `var(--color-cyan-200)`,
+            color: `var(--cyan-primary)`,
             filter: `drop-shadow(0 0 2px var(--cyan-primary))`,
           }}
         >
@@ -176,31 +175,31 @@ export const CenterPanel: React.FC<CenterPanelProps> = ({
             style={{
               backgroundColor: isListening
                 ? "rgba(239, 68, 68, 0.4)"
-                : "var(--color-cyan-400)",
+                : "var(--cyan-primary)",
               opacity: isListening ? 1 : 0.2,
             }}
           />
 
           <button
             onClick={onMicrophoneClick}
-            className={`relative w-24 md:w-28 h-24 md:h-28 rounded-full border border-cyan-500/30 flex items-center justify-center transition-all duration-300 backdrop-blur-xl z-10 shadow-[0_0_20px_rgba(0,0,0,0.5)]`}
+            className={`relative w-24 md:w-28 h-24 md:h-28 rounded-full border flex items-center justify-center transition-all duration-300 backdrop-blur-xl z-10 shadow-[0_0_20px_rgba(0,0,0,0.5)]`}
             style={{
               backgroundColor: isListening
                 ? "rgba(69, 10, 10, 0.4)"
                 : "rgba(0, 0, 0, 0.4)",
-              color: isListening ? "#ef4444" : "var(--color-cyan-300)",
+              color: isListening ? "#ef4444" : "var(--cyan-primary)",
               boxShadow: isListening
                 ? "0 0 30px rgba(239,68,68,0.4)"
                 : "0 0 20px rgba(0,0,0,0.5)",
               borderColor: isListening
                 ? "rgba(239,68,68,0.5)"
-                : "var(--color-cyan-500)",
+                : "var(--cyan-primary)",
             }}
           >
             {/* Inner Ring */}
             <div
-              className="absolute inset-1 rounded-full border border-cyan-500/10"
-              style={{ borderColor: "var(--color-cyan-500)", opacity: 0.1 }}
+              className="absolute inset-1 rounded-full border"
+              style={{ borderColor: "var(--cyan-primary)", opacity: 0.2 }}
             />
 
             <svg
@@ -223,7 +222,7 @@ export const CenterPanel: React.FC<CenterPanelProps> = ({
 
           <div
             className="absolute -bottom-8 md:-bottom-10 text-[10px] md:text-xs tracking-[0.3em] font-medium opacity-60 whitespace-nowrap uppercase"
-            style={{ color: "var(--color-cyan-400)" }}
+            style={{ color: "var(--cyan-primary)" }}
           >
             {isListening ? "LISTENING" : "VOICE"}
           </div>
