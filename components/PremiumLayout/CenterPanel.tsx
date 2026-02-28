@@ -27,7 +27,7 @@ export const CenterPanel: React.FC<CenterPanelProps> = ({
       case "copper":
         return { base: "#b46d29", active: "#f59e0b", listen: "#ef4444" }; // Cuivre / Bois (Teintes dorées/brunes)
       case "wood":
-        return { base: "#4a332a", active: "#8c6241", listen: "#ef4444" }; // Bois Élégant
+        return { base: "#e6b070", active: "#f4a460", listen: "#ef4444" }; // Chêne clair
       case "classic":
       default:
         return { base: "#006080", active: "#8a0000", listen: "#8a0000" }; // Cyan sombre
