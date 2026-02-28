@@ -73,6 +73,12 @@ export const SettingsTab: React.FC = () => {
   const handleSave = async () => {
     setIsSaving(true);
     await updateSettings(draft);
+
+    // Appliquer le thème dynamiquement
+    document.documentElement.className =
+      document.documentElement.className.replace(/theme-[a-z]+/g, "");
+    document.documentElement.classList.add(`theme-${draft.theme}`);
+
     setIsSaving(false);
     setIsDirty(false);
     setSaveSuccess(true);
@@ -247,6 +253,13 @@ export const SettingsTab: React.FC = () => {
                     color: "text-green-400",
                     border: "border-green-500/50",
                     bg: "bg-green-500/10",
+                  },
+                  {
+                    value: "copper",
+                    label: "Élégant Cuivre",
+                    color: "text-amber-500",
+                    border: "border-amber-600/50",
+                    bg: "bg-amber-500/10",
                   },
                 ] as const
               ).map((t) => (

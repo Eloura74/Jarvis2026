@@ -1,9 +1,12 @@
 {
   "wakeWordEnabled": true,
-  "wakeWordThreshold": 0.8,
-  "voiceLanguage": "fr-FR",
+  "wakeWordThreshold": 0.85,
+  "voiceURI": null,
+  "voicePitch": 1,
+  "voiceRate": 1,
   "voiceVolume": 1,
-  "theme": "ironman",
+  "voiceLanguage": "fr-FR",
+  "theme": "copper",
   "ghostModeEnabled": false,
   "psychProfileEnabled": true,
   "savedLocations": {

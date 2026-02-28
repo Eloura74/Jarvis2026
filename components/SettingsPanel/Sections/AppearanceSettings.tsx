@@ -23,8 +23,8 @@ export const AppearanceSettings: React.FC<AppearanceSettingsProps> = ({
           Thème de couleurs
         </span>
       </div>
-      <div className="grid grid-cols-3 gap-2">
-        {(["classic", "ironman", "matrix"] as const).map((theme) => {
+      <div className="grid grid-cols-4 gap-2">
+        {(["classic", "ironman", "matrix", "copper"] as const).map((theme) => {
           const config = getThemeConfig(theme);
           return (
             <button

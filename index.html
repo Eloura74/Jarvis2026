@@ -14,6 +14,49 @@
 
     <!-- Tailwind CDN (temporaire - PostCSS v4 config à finaliser) -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      // Configuration Tailwind CDN pour rendre la couleur 'cyan' dynamique via des variables CSS
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              cyan: {
+                50: "var(--theme-50, #ecfeff)",
+                100: "var(--theme-100, #cffafe)",
+                200: "var(--theme-200, #a5f3fc)",
+                300: "var(--theme-300, #67e8f9)",
+                400: "var(--theme-400, #22d3ee)",
+                500: "var(--theme-500, #06b6d4)",
+                600: "var(--theme-600, #0891b2)",
+                700: "var(--theme-700, #0e7490)",
+                800: "var(--theme-800, #155e75)",
+                900: "var(--theme-900, #164e63)",
+                950: "var(--theme-950, #083344)",
+              },
+            },
+          },
+        },
+      };
+    </script>
+
+    <!-- Injection du Thème dès le chargement de la page pour éviter le clignotement -->
+    <script>
+      try {
+        const storedSettings = localStorage.getItem("jarvis-settings");
+        if (storedSettings) {
+          const settings = JSON.parse(storedSettings);
+          if (settings.theme) {
+            document.documentElement.classList.add("theme-" + settings.theme);
+          } else {
+            document.documentElement.classList.add("theme-ironman");
+          }
+        } else {
+          document.documentElement.classList.add("theme-ironman");
+        }
+      } catch (e) {
+        console.error("Erreur parsing thème", e);
+      }
+    </script>
 
     <!-- PATCH SILENCIEUX: Suppression des erreurs d'extensions Chrome (Content.js) -->
     <script>

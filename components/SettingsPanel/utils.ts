@@ -19,6 +19,13 @@ export const getThemeConfig = (theme: JarvisSettings["theme"]): ThemeConfig => {
         border: "border-green-500/30",
         bg: "bg-green-500/10",
       };
+    case "copper":
+      return {
+        name: "Élégant Cuivre",
+        primary: "text-amber-500",
+        border: "border-amber-600/30",
+        bg: "bg-amber-500/10",
+      };
     default:
       return {
         name: "Classic",

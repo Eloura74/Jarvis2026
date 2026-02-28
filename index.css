@@ -3,7 +3,6 @@
  * Design System "Premium Iron Man"
  */
 
-
 /* Import des design tokens personnalisés */
 @import "./styles/tokens.css";
 
@@ -44,7 +43,12 @@
 }
 
 body {
-  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto",
+  font-family:
+    "Inter",
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    "Roboto",
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -203,7 +207,8 @@ body {
 
 /* Textures de fond */
 .bg-hex-pattern {
-  background-image: linear-gradient(
+  background-image:
+    linear-gradient(
       30deg,
       #06b6d4 12%,
       transparent 12.5%,
@@ -252,7 +257,13 @@ body {
       #06b6d477
     );
   background-size: 20px 35px;
-  background-position: 0 0, 0 0, 10px 18px, 10px 18px, 0 0, 10px 18px;
+  background-position:
+    0 0,
+    0 0,
+    10px 18px,
+    10px 18px,
+    0 0,
+    10px 18px;
   opacity: 0.03;
 }
 
@@ -280,10 +291,8 @@ body {
   height: 200vh;
   left: -50%;
   top: -50%;
-  background-image: linear-gradient(
-      rgba(0, 243, 255, 0.05) 1px,
-      transparent 1px
-    ),
+  background-image:
+    linear-gradient(rgba(0, 243, 255, 0.05) 1px, transparent 1px),
     linear-gradient(90deg, rgba(0, 243, 255, 0.05) 1px, transparent 1px);
   background-size: 60px 60px;
   transform: perspective(500px) rotateX(60deg);
@@ -377,4 +386,87 @@ body {
 
 .animate-spin-reverse {
   animation: spin-reverse 6s linear infinite;
+}
+
+/* === THEME DYNAMIC SYSTEM === */
+@theme {
+  --color-cyan-50: var(--theme-50);
+  --color-cyan-100: var(--theme-100);
+  --color-cyan-200: var(--theme-200);
+  --color-cyan-300: var(--theme-300);
+  --color-cyan-400: var(--theme-400);
+  --color-cyan-500: var(--theme-500);
+  --color-cyan-600: var(--theme-600);
+  --color-cyan-700: var(--theme-700);
+  --color-cyan-800: var(--theme-800);
+  --color-cyan-900: var(--theme-900);
+  --color-cyan-950: var(--theme-950);
+}
+
+.theme-classic {
+  --theme-50: #ecfeff;
+  --theme-100: #cffafe;
+  --theme-200: #a5f3fc;
+  --theme-300: #67e8f9;
+  --theme-400: #22d3ee;
+  --theme-500: #06b6d4;
+  --theme-600: #0891b2;
+  --theme-700: #0e7490;
+  --theme-800: #155e75;
+  --theme-900: #164e63;
+  --theme-950: #083344;
+  --cyan-primary: #00f3ff;
+  --cyan-dim: rgba(0, 243, 255, 0.15);
+  --cyan-glow: rgba(0, 243, 255, 0.4);
+}
+
+.theme-ironman {
+  --theme-50: #fefce8;
+  --theme-100: #fef9c3;
+  --theme-200: #fef08a;
+  --theme-300: #fde047;
+  --theme-400: #facc15;
+  --theme-500: #eab308;
+  --theme-600: #ca8a04;
+  --theme-700: #a16207;
+  --theme-800: #854d0e;
+  --theme-900: #713f12;
+  --theme-950: #422006;
+  --cyan-primary: #facc15;
+  --cyan-dim: rgba(250, 204, 21, 0.15);
+  --cyan-glow: rgba(250, 204, 21, 0.4);
+}
+
+.theme-matrix {
+  --theme-50: #f0fdf4;
+  --theme-100: #dcfce7;
+  --theme-200: #bbf7d0;
+  --theme-300: #86efac;
+  --theme-400: #4ade80;
+  --theme-500: #22c55e;
+  --theme-600: #16a34a;
+  --theme-700: #15803d;
+  --theme-800: #166534;
+  --theme-900: #14532d;
+  --theme-950: #052e16;
+  --cyan-primary: #4ade80;
+  --cyan-dim: rgba(74, 222, 128, 0.15);
+  --cyan-glow: rgba(74, 222, 128, 0.4);
+}
+
+.theme-copper {
+  --theme-50: #fffbeb;
+  --theme-100: #fef3c7;
+  --theme-200: #fde68a;
+  --theme-300: #fcd34d;
+  --theme-400: #fbbf24;
+  --theme-500: #f59e0b;
+  --theme-600: #d97706;
+  --theme-700: #b45309;
+  --theme-800: #92400e;
+  --theme-900: #78350f;
+  --theme-950: #451a03;
+  --cyan-primary: #f59e0b;
+  --cyan-dim: rgba(245, 158, 11, 0.15);
+  --cyan-glow: rgba(245, 158, 11, 0.4);
 }
