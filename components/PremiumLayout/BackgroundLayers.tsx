@@ -14,6 +14,8 @@ export const BackgroundLayers: React.FC = () => {
         return "rgba(34, 197, 94, 0.15)"; // Vert
       case "copper":
         return "rgba(217, 119, 6, 0.25)"; // Ambre foncé/Cuivre
+      case "wood":
+        return "rgba(140, 98, 65, 0.35)"; // Marron Bois foncé
       case "classic":
       default:
         return "rgba(0, 243, 255, 0.1)"; // Cyan par défaut
@@ -23,7 +25,7 @@ export const BackgroundLayers: React.FC = () => {
   const bgTint = getThemeBgTint(settings.theme);
 
   const getThemeBgImage = (theme: string) => {
-    if (theme === "copper") return "/bg-wires3Cuivre.png";
+    if (theme === "copper" || theme === "wood") return "/bg-wires3Cuivre.png";
     return "/bg-wires3.png";
   };
   const bgImage = getThemeBgImage(settings.theme);

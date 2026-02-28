@@ -18,7 +18,7 @@ export interface JarvisSettings {
   voiceLanguage: "fr-FR" | "en-US" | "en-GB";
 
   // UI
-  theme: "classic" | "ironman" | "matrix" | "copper";
+  theme: "classic" | "ironman" | "matrix" | "copper" | "wood";
 
   // Features
   ghostModeEnabled: boolean;

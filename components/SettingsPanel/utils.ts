@@ -26,6 +26,13 @@ export const getThemeConfig = (theme: JarvisSettings["theme"]): ThemeConfig => {
         border: "border-amber-600/30",
         bg: "bg-amber-500/10",
       };
+    case "wood":
+      return {
+        name: "Bois Élégant",
+        primary: "text-orange-700",
+        border: "border-orange-800/30",
+        bg: "bg-orange-900/10",
+      };
     default:
       return {
         name: "Classic",

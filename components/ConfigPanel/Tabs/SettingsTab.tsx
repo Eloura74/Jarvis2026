@@ -261,6 +261,13 @@ export const SettingsTab: React.FC = () => {
                     border: "border-amber-600/50",
                     bg: "bg-amber-500/10",
                   },
+                  {
+                    value: "wood",
+                    label: "Bois Élégant",
+                    color: "text-orange-600",
+                    border: "border-orange-700/50",
+                    bg: "bg-orange-800/10",
+                  },
                 ] as const
               ).map((t) => (
                 <button

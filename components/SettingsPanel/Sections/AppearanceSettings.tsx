@@ -24,24 +24,26 @@ export const AppearanceSettings: React.FC<AppearanceSettingsProps> = ({
         </span>
       </div>
       <div className="grid grid-cols-4 gap-2">
-        {(["classic", "ironman", "matrix", "copper"] as const).map((theme) => {
-          const config = getThemeConfig(theme);
-          return (
-            <button
-              key={theme}
-              onClick={() => setSettings((prev) => ({ ...prev, theme }))}
-              className={`
+        {(["classic", "ironman", "matrix", "copper", "wood"] as const).map(
+          (theme) => {
+            const config = getThemeConfig(theme);
+            return (
+              <button
+                key={theme}
+                onClick={() => setSettings((prev) => ({ ...prev, theme }))}
+                className={`
                 p-3 rounded border-2 transition-all
                 ${settings.theme === theme ? config.border + " " + config.bg : "border-slate-700 bg-slate-800/50"}
                 hover:scale-105
               `}
-            >
-              <p className={`font-mono text-xs ${config.primary}`}>
-                {config.name}
-              </p>
-            </button>
-          );
-        })}
+              >
+                <p className={`font-mono text-xs ${config.primary}`}>
+                  {config.name}
+                </p>
+              </button>
+            );
+          },
+        )}
       </div>
     </SettingItem>
   );

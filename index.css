@@ -470,3 +470,20 @@ body {
   --cyan-dim: rgba(245, 158, 11, 0.15);
   --cyan-glow: rgba(245, 158, 11, 0.4);
 }
+
+.theme-wood {
+  --theme-50: #fdf8f6;
+  --theme-100: #f2e8e5;
+  --theme-200: #eaddd7;
+  --theme-300: #e0cec7;
+  --theme-400: #d2bab0;
+  --theme-500: #a18072;
+  --theme-600: #8c6241;
+  --theme-700: #5c412f;
+  --theme-800: #4a332a;
+  --theme-900: #38261f;
+  --theme-950: #291c16;
+  --cyan-primary: #8c6241;
+  --cyan-dim: rgba(140, 98, 65, 0.15);
+  --cyan-glow: rgba(140, 98, 65, 0.4);
+}
