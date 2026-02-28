@@ -25,9 +25,9 @@ export const CenterPanel: React.FC<CenterPanelProps> = ({
       case "matrix":
         return { base: "#006600", active: "#00ff00", listen: "#00cc00" }; // Vert sombre
       case "copper":
-        return { base: "#b46d29", active: "#f59e0b", listen: "#ef4444" }; // Cuivre / Bois (Teintes dorées/brunes)
+        return { base: "#b46d29", active: "#f59e0b", listen: "#c2410c" }; // Rouge brique / Cuivré brûlé
       case "wood":
-        return { base: "#e6b070", active: "#f4a460", listen: "#ef4444" }; // Chêne clair
+        return { base: "#e6b070", active: "#f4a460", listen: "#9a3412" }; // Rouge très chaud (Terre de sienne)
       case "classic":
       default:
         return { base: "#006080", active: "#8a0000", listen: "#8a0000" }; // Cyan sombre
