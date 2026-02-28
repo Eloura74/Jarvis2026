@@ -17,8 +17,41 @@ void updateLogic() {
   portENTER_CRITICAL(&jarvisData.spinlock);
   OrbState previous_state = local_state;
   local_state = jarvisData.currentState;
+  local_theme = jarvisData.currentTheme; // <--- AJOUT : copie du thème
   strncpy(local_text, jarvisData.textLabel, sizeof(local_text));
   portEXIT_CRITICAL(&jarvisData.spinlock);
+
+  // 1. Définition des couleurs selon le thème actuel
+  uint16_t theme_idle_col, theme_listen_col, theme_speak_col;
+  
+  switch (local_theme) {
+    case AppTheme::COPPER:
+      theme_idle_col   = COL_COPPER;
+      theme_listen_col = COL_OAK;
+      theme_speak_col  = COL_COPPER_BURNED;
+      break;
+    case AppTheme::WOOD:
+      theme_idle_col   = COL_WOOD;
+      theme_listen_col = COL_OAK;
+      theme_speak_col  = COL_SIENNA;
+      break;
+    case AppTheme::IRONMAN:
+      theme_idle_col   = COL_RED;
+      theme_listen_col = COL_CYAN;
+      theme_speak_col  = COL_YELLOW;
+      break;
+    case AppTheme::MATRIX:
+      theme_idle_col   = rgb565(0, 50, 0); // Vert sombre
+      theme_listen_col = COL_GREEN;
+      theme_speak_col  = COL_WHITE;
+      break;
+    case AppTheme::CLASSIC:
+    default:
+      theme_idle_col   = COL_OMNI_BLUE;
+      theme_listen_col = COL_CYAN;
+      theme_speak_col  = COL_OMNI_RED;
+      break;
+  }
 
   // Gestion de la transition automatique vers le screensaver après 30s d'IDLE
   if (local_state == OrbState::IDLE) {
@@ -28,7 +61,8 @@ void updateLogic() {
       // Première entrée en screensaver : initialiser les variables de veille
       if (previous_state == OrbState::IDLE) {
         g_screensaver_start = millis();
-        g_sleep_color = COL_CYAN;
+        // <--- MODIFICATION : La couleur de veille est celle du repos du thème
+        g_sleep_color = theme_idle_col; 
         if (!g_dust_init) { initDustParticles(); g_dust_init = true; }
       }
       local_state = OrbState::MODE_SCREENSAVER;
@@ -44,20 +78,20 @@ void updateLogic() {
   // Calcul des paramètres cibles selon l'état courant
   float target_radius = 65.0f;
   float target_speed  = 0.03f;
-  uint16_t target_color = COL_OMNI_BLUE;
+  uint16_t target_color = theme_idle_col;
 
   if (local_state == OrbState::SPEAKING) {
     target_radius = 75.0f + (sin(g_phase * 1.5f) * 12.0f);
     target_speed  = 0.08f;
-    target_color  = COL_OMNI_RED;
+    target_color  = theme_speak_col;
   } else if (local_state == OrbState::LISTENING) {
     target_radius = 70.0f + (sin(g_phase * 0.8f) * 6.0f);
     target_speed  = 0.04f;
-    target_color  = COL_CYAN;
+    target_color  = theme_listen_col;
   } else if (local_state == OrbState::IDLE) {
     target_radius = 65.0f + (sin(g_phase * 0.5f) * 3.0f);
     target_speed  = 0.02f;
-    target_color  = COL_OMNI_BLUE;
+    target_color  = theme_idle_col;
   } else {
     switch (local_state) {
       case OrbState::ERROR:            target_radius = 20.0f; target_speed = 0.0f;   target_color = COL_RED;   break;
@@ -66,11 +100,11 @@ void updateLogic() {
       case OrbState::MODE_GHOST:       target_radius = 10.0f; target_speed = 0.01f;  target_color = COL_GREY;  break;
       case OrbState::MODE_MEDIA:       target_radius = 20.0f; target_speed = 0.10f;  target_color = COL_PINK;  break;
       case OrbState::MODE_SUCCESS:     target_radius = 0.0f;  target_speed = 0.05f;  target_color = COL_GREEN; break;
-      case OrbState::MODE_SCREENSAVER: target_radius = 0.0f;  target_speed = 0.012f; target_color = COL_CYAN;  break;
+      case OrbState::MODE_SCREENSAVER: target_radius = 0.0f;  target_speed = 0.012f; target_color = theme_idle_col; break;
       case OrbState::MODE_WHATSAPP:    target_radius = 10.0f; target_speed = 0.06f;  target_color = COL_GREEN; break;
       case OrbState::MODE_GMAIL:       target_radius = 5.0f;  target_speed = 0.07f;  target_color = COL_RED;   break;
-      case OrbState::MODE_CALENDAR:    target_radius = 5.0f;  target_speed = 0.05f;  target_color = COL_CYAN;  break;
-      default:                         target_radius = 30.0f; target_speed = 0.05f;  target_color = COL_CYAN;  break;
+      case OrbState::MODE_CALENDAR:    target_radius = 5.0f;  target_speed = 0.05f;  target_color = theme_idle_col;  break;
+      default:                         target_radius = 30.0f; target_speed = 0.05f;  target_color = theme_idle_col;  break;
     }
   }
 

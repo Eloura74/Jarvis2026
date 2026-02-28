@@ -24,6 +24,13 @@ const uint16_t COL_GREY      = rgb565(100, 110, 120);
 const uint16_t COL_DARK      = rgb565(10, 15, 20);
 const uint16_t COL_BG        = rgb565(2, 3, 5);
 
+// Couleurs liées aux thèmes (WOOD, COPPER, etc.)
+const uint16_t COL_COPPER        = rgb565(184, 115, 51);
+const uint16_t COL_WOOD          = rgb565(160, 82, 45);
+const uint16_t COL_OAK           = rgb565(210, 180, 140);
+const uint16_t COL_COPPER_BURNED = rgb565(120, 60, 20);
+const uint16_t COL_SIENNA        = rgb565(136, 45, 23);
+
 // ==============================================================================
 // COULEURS
 // ==============================================================================

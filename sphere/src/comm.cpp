@@ -5,6 +5,7 @@
 // comm.cpp — Parseur série UART (Core 0)
 // Protocole : une commande par ligne, terminée par \n
 //   STATE <NOM>  ou  MODE <NOM>  → change l'état de l'orb
+//   THEME <NOM>                  → change le thème de la sphère
 //   TEXT <texte>                 → met à jour le label affiché
 //   PING                         → répond PONG (test de connexion)
 // ==============================================================================
@@ -39,7 +40,7 @@ static void setStateFromStr(const char* s_ptr) {
   else if (s == "WHATSAPP")                      newState = OrbState::MODE_WHATSAPP;
   else if (s == "GMAIL")                         newState = OrbState::MODE_GMAIL;
   else if (s == "CALENDAR")                      newState = OrbState::MODE_CALENDAR;
-  else if (s == "MAP"     || s == "TRAJET")       newState = OrbState::MODE_MAP;
+  else if (s == "MAP"     || s == "TRAJET")      newState = OrbState::MODE_MAP;
 
   // Écriture thread-safe : le Core 1 lit jarvisData en permanence
   portENTER_CRITICAL(&jarvisData.spinlock);
@@ -87,22 +88,22 @@ static void handleLine(const char* line) {
   }
 
   // Changement d'état : "STATE LISTENING" ou "MODE PRINT"
-  if (strncmp(line, "STATE ", 6) == 0 || strncmp(line, "MODE ", 5) == 0) {
-    const char* s = strchr(line, ' ');
-    if (s != nullptr) {
-      setStateFromStr(s + 1);
-      Serial.println("OK MODE");
-    }
+  if (strncmp(line, "STATE ", 6) == 0) {
+    setStateFromStr(line + 6);
+    Serial.println("OK MODE");
+    return;
+  }
+  
+  if (strncmp(line, "MODE ", 5) == 0) {
+    setStateFromStr(line + 5);
+    Serial.println("OK MODE");
     return;
   }
 
   // Changement de thème : "THEME WOOD"
   if (strncmp(line, "THEME ", 6) == 0) {
-    const char* s = strchr(line, ' ');
-    if (s != nullptr) {
-      setThemeFromStr(s + 1);
-      Serial.println("OK THEME");
-    }
+    setThemeFromStr(line + 6);
+    Serial.println("OK THEME");
     return;
   }
 
