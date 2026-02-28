@@ -2,6 +2,7 @@ import React from "react";
 import { motion } from "framer-motion";
 import { JarvisHUDAuthentic } from "../JarvisHUDAuthentic";
 import { RealSphere } from "../RealSphere";
+import { useAppSettings } from "../../hooks/useAppSettings";
 
 interface CenterPanelProps {
   status: "idle" | "listening" | "processing" | "speaking";
@@ -14,6 +15,44 @@ export const CenterPanel: React.FC<CenterPanelProps> = ({
   isListening,
   onMicrophoneClick,
 }) => {
+  const { settings } = useAppSettings();
+
+  // Helper pour avoir des couleurs adaptées à la 3D
+  const getSphereColors = (theme: string) => {
+    switch (theme) {
+      case "ironman":
+        return { base: "#b48b00", active: "#ff3300", listen: "#ff0000" }; // Or/Rouge sombre
+      case "matrix":
+        return { base: "#006600", active: "#00ff00", listen: "#00cc00" }; // Vert sombre
+      case "copper":
+        return { base: "#b46d29", active: "#f59e0b", listen: "#ef4444" }; // Cuivre / Bois (Teintes dorées/brunes)
+      case "classic":
+      default:
+        return { base: "#006080", active: "#8a0000", listen: "#8a0000" }; // Cyan sombre
+    }
+  };
+
+  const sphereColors = getSphereColors(settings.theme);
+
+  // Pour le HUD 2D
+  const getHUDColor = (theme: string, componentStatus: string) => {
+    if (componentStatus === "processing") return "#ffd700"; // Toujours jaune quand ça charge
+
+    switch (theme) {
+      case "ironman":
+        return "#facc15"; // Jaune/Or
+      case "matrix":
+        return "#4ade80"; // Vert
+      case "copper":
+        return "#f59e0b"; // Ambre
+      case "classic":
+      default:
+        return "#00e5ff"; // Cyan
+    }
+  };
+
+  const hudColor = getHUDColor(settings.theme, status);
+
   return (
     <div
       className="relative flex items-center justify-center 
@@ -32,6 +71,7 @@ export const CenterPanel: React.FC<CenterPanelProps> = ({
                 : 600
           }
           showDetails={true}
+          themeColor={hudColor}
         />
       </div>
 
@@ -48,9 +88,9 @@ export const CenterPanel: React.FC<CenterPanelProps> = ({
                 ? 450
                 : 600
           }
-          baseColor="#006080" // Darker Cyan
-          activeColor="#8a0000" // Darker Red
-          listeningColor="#8a0000"
+          baseColor={sphereColors.base}
+          activeColor={sphereColors.active}
+          listeningColor={sphereColors.listen}
         />
       </div>
 
@@ -95,12 +135,24 @@ export const CenterPanel: React.FC<CenterPanelProps> = ({
         className="absolute top-4 md:top-8 xl:top-12 text-center z-0"
       >
         {/* Simple Glow Background for contrast */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-24 bg-cyan-500/20 blur-[50px] -z-10 rounded-full" />
+        <div
+          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-24 blur-[50px] -z-10 rounded-full"
+          style={{ backgroundColor: `var(--color-cyan-500)`, opacity: 0.2 }}
+        />
 
-        <h1 className="text-3xl md:text-5xl xl:text-6xl font-bold tracking-[0.3em] md:tracking-[0.5em] text-white drop-shadow-[0_0_10px_rgba(0,229,255,0.8)] border-b border-transparent">
+        <h1
+          className="text-3xl md:text-5xl xl:text-6xl font-bold tracking-[0.3em] md:tracking-[0.5em] text-white border-b border-transparent"
+          style={{ filter: `drop-shadow(0 0 10px var(--cyan-glow))` }}
+        >
           J.A.R.V.I.S
         </h1>
-        <div className="text-[8px] md:text-[10px] tracking-[0.5em] md:tracking-[1em] opacity-80 text-cyan-200 mt-1 md:mt-2 hidden md:block drop-shadow-[0_0_2px_#00e5ff] font-light">
+        <div
+          className="text-[8px] md:text-[10px] tracking-[0.5em] md:tracking-[1em] opacity-80 mt-1 md:mt-2 hidden md:block font-light"
+          style={{
+            color: `var(--color-cyan-200)`,
+            filter: `drop-shadow(0 0 2px var(--cyan-primary))`,
+          }}
+        >
           JUST A RATHER VERY INTELLIGENT SYSTEM
         </div>
       </motion.div>
@@ -120,21 +172,36 @@ export const CenterPanel: React.FC<CenterPanelProps> = ({
 
           {/* Pulse Effect */}
           <div
-            className={`absolute inset-0 rounded-full blur-2xl transition-all duration-300 w-24 md:w-28 h-24 md:h-28 -ml-[4px] md:-ml-[4px] -mt-[4px] md:-mt-[4px] ${
-              isListening ? "bg-red-500/40" : "bg-cyan-400/20"
-            }`}
+            className={`absolute inset-0 rounded-full blur-2xl transition-all duration-300 w-24 md:w-28 h-24 md:h-28 -ml-[4px] md:-ml-[4px] -mt-[4px] md:-mt-[4px]`}
+            style={{
+              backgroundColor: isListening
+                ? "rgba(239, 68, 68, 0.4)"
+                : "var(--color-cyan-400)",
+              opacity: isListening ? 1 : 0.2,
+            }}
           />
 
           <button
             onClick={onMicrophoneClick}
-            className={`relative w-24 md:w-28 h-24 md:h-28 rounded-full border border-cyan-500/30 flex items-center justify-center transition-all duration-300 backdrop-blur-xl z-10 shadow-[0_0_20px_rgba(0,0,0,0.5)] ${
-              isListening
-                ? "bg-red-950/40 text-red-500 shadow-[0_0_30px_rgba(239,68,68,0.4)]"
-                : "bg-black/40 text-cyan-300 hover:text-cyan-100 hover:border-cyan-400/60 hover:shadow-[0_0_30px_rgba(0,229,255,0.3)]"
-            }`}
+            className={`relative w-24 md:w-28 h-24 md:h-28 rounded-full border border-cyan-500/30 flex items-center justify-center transition-all duration-300 backdrop-blur-xl z-10 shadow-[0_0_20px_rgba(0,0,0,0.5)]`}
+            style={{
+              backgroundColor: isListening
+                ? "rgba(69, 10, 10, 0.4)"
+                : "rgba(0, 0, 0, 0.4)",
+              color: isListening ? "#ef4444" : "var(--color-cyan-300)",
+              boxShadow: isListening
+                ? "0 0 30px rgba(239,68,68,0.4)"
+                : "0 0 20px rgba(0,0,0,0.5)",
+              borderColor: isListening
+                ? "rgba(239,68,68,0.5)"
+                : "var(--color-cyan-500)",
+            }}
           >
             {/* Inner Ring */}
-            <div className="absolute inset-1 rounded-full border border-cyan-500/10" />
+            <div
+              className="absolute inset-1 rounded-full border border-cyan-500/10"
+              style={{ borderColor: "var(--color-cyan-500)", opacity: 0.1 }}
+            />
 
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -154,7 +221,10 @@ export const CenterPanel: React.FC<CenterPanelProps> = ({
             </svg>
           </button>
 
-          <div className="absolute -bottom-8 md:-bottom-10 text-[10px] md:text-xs tracking-[0.3em] font-medium opacity-60 whitespace-nowrap text-cyan-400 uppercase">
+          <div
+            className="absolute -bottom-8 md:-bottom-10 text-[10px] md:text-xs tracking-[0.3em] font-medium opacity-60 whitespace-nowrap uppercase"
+            style={{ color: "var(--color-cyan-400)" }}
+          >
             {isListening ? "LISTENING" : "VOICE"}
           </div>
         </div>

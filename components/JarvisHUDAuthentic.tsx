@@ -17,26 +17,28 @@ interface JarvisHUDAuthenticProps {
   status: "idle" | "listening" | "processing" | "speaking";
   size?: number; // Taille en pixels
   showDetails?: boolean; // Afficher les détails techniques
+  themeColor?: string;
 }
 
 export const JarvisHUDAuthentic: React.FC<JarvisHUDAuthenticProps> = ({
   status,
   size = 400,
   showDetails = true,
+  themeColor = "#00e5ff",
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rotationRef = useRef(0);
   const mouseRef = useRef({ x: 0, y: 0 });
 
   // Couleur selon statut (Déplacé pour accès dans JSX)
-  let color = "#00e5ff"; // cyan par défaut
+  let color = themeColor; // cyan par défaut
 
   if (status === "listening") {
-    color = "#00e5ff";
+    color = themeColor;
   } else if (status === "processing") {
     color = "#ffd700";
   } else if (status === "speaking") {
-    color = "#00e5ff";
+    color = themeColor;
   }
 
   useEffect(() => {
