@@ -22,10 +22,16 @@ export const BackgroundLayers: React.FC = () => {
 
   const bgTint = getThemeBgTint(settings.theme);
 
+  const getThemeBgImage = (theme: string) => {
+    if (theme === "copper") return "/bg-wires3Cuivre.png";
+    return "/bg-wires3.png";
+  };
+  const bgImage = getThemeBgImage(settings.theme);
+
   return (
     <div className="absolute inset-0 z-0">
       <img
-        src="/bg-wires3.png"
+        src={bgImage}
         alt="Background"
         className="fixed inset-0 w-full h-full object-cover opacity-50 z-0"
       />
