@@ -1,367 +1,302 @@
 // ==============================================================================
-// modes_globe.cpp — Données PROGMEM des continents/villes + renderModeScreensaver
-// Contient : tableaux PROGMEM, projectGlobe, drawContinent, drawContinent16,
-//            renderModeScreensaver (Arc Reactor Hologram style Iron Man HUD)
+// modes_globe.cpp — Screensaver : Arc Reactor Voxel-Slicing (Hologramme Jarvis)
+// Moteur 3D complet par projection perspective + tri de profondeur (Algorithme du Peintre).
+// Remplace l'ancien globe PROGMEM. Compatible LovyanGFX + système de thèmes.
+// Matériel cible : ESP32-S3 + GC9A01 240x240
 // ==============================================================================
 
 #include "globals.h"
 #include "modes.h"
 #include "utils.h"
+#include <vector>
+#include <algorithm>
 
 // Accès au sprite partagé (défini dans main.cpp)
 extern lgfx::LGFX_Sprite spr;
 
 // Variables de veille partagées (définies dans main.cpp)
-extern float g_sleep_phase;
-extern uint16_t g_sleep_color;
-
-// Variables d'animation partagées (définies dans main.cpp)
-extern float g_phase;
-
-// ── GLOBE v4 : données continents en PROGMEM {lat_deg, lon_deg} ─────────────
-
-// Amérique du Nord (contour simplifié) — int16_t car lon < -128
-static const int16_t CONT_NA[] PROGMEM = {
-  50,-125, 60,-140, 70,-140, 72,-120, 70,-95, 72,-80, 68,-75, 60,-65,
-  50,-55,  47,-53,  45,-60,  44,-66,  42,-70, 40,-74, 35,-75, 30,-80,
-  25,-80,  25,-90,  20,-87,  15,-85,  10,-83,  8,-77, 10,-75, 12,-72,
-  18,-66,  20,-70,  22,-80,  25,-80,  30,-88, 29,-94, 26,-97, 23,-106,
-  20,-105, 15,-92,  15,-90,  20,-87,  25,-80, 30,-88, 35,-90, 38,-90,
-  40,-80,  42,-83,  45,-83,  46,-84,  47,-88, 47,-92, 45,-93, 44,-93,
-  43,-88,  42,-87,  42,-83,  43,-79,  44,-76, 45,-75, 47,-70, 47,-68,
-  45,-64,  44,-66,  45,-60,  47,-53,  50,-55, 52,-56, 53,-60, 55,-60,
-  58,-62,  60,-65,  62,-68,  63,-75,  65,-80, 68,-75, 70,-80, 72,-80,
-  72,-120, 70,-140, 60,-140, 50,-125
-};
-static const uint8_t CONT_NA_N = sizeof(CONT_NA) / 4;
-
-// Europe
-static const int8_t CONT_EU[] PROGMEM = {
-  36,-9,  38,-9,  40,-8,  43,-9,  44,-1,  44,3,  43,5,  43,7,
-  44,8,   44,10,  43,12,  41,13,  38,15,  38,16, 40,18, 41,19,
-  42,19,  44,17,  45,14,  46,13,  47,10,  48,9,  48,8,  50,8,
-  51,3,   51,4,   52,5,   53,5,   54,8,   55,9,  55,10, 56,10,
-  57,10,  58,7,   58,5,   59,5,   60,5,   61,5,  62,5,  63,7,
-  64,14,  65,14,  66,14,  68,16,  70,25,  70,28, 69,29, 68,28,
-  67,26,  65,25,  64,26,  63,25,  62,24,  60,25, 59,24, 58,22,
-  57,21,  56,21,  55,21,  54,19,  54,18,  53,18, 52,17, 50,18,
-  49,18,  48,17,  47,17,  47,16,  46,16,  46,14, 45,14, 44,17,
-  43,17,  42,19,  41,20,  40,20,  39,20,  38,21, 37,22, 37,23,
-  38,24,  38,22,  37,22,  36,23,  36,28,  37,28, 38,27, 38,26,
-  39,26,  40,26,  41,28,  42,28,  42,27,  41,26, 40,26, 39,26,
-  38,27,  37,28,  36,28,  36,23,  36,-5,  36,-9
-};
-static const uint8_t CONT_EU_N = sizeof(CONT_EU) / 2;
-
-// Afrique
-static const int8_t CONT_AF[] PROGMEM = {
-  37,10,  36,10,  35,9,   33,9,   32,12,  30,32,  27,34,  22,37,
-  15,42,  12,44,  11,43,  10,42,   8,38,   5,36,   2,41,
-   0,42,  -2,41,  -4,40,  -5,39,  -8,35, -11,34, -15,35, -18,35,
- -22,35, -26,33, -29,30, -34,26, -35,20, -35,18, -34,17, -33,16,
- -32,17, -30,17, -28,16, -26,15, -24,14, -22,14, -20,14, -18,12,
- -16,12, -14,12, -12,14, -10,15,  -8,14,  -6,12,  -4,10,  -2,9,
-   0,9,    2,9,    4,2,    5,1,    6,1,    7,2,    8,3,    9,2,
-  10,2,   11,3,  12,3,   13,2,   14,3,   15,2,   16,3,   17,2,
-  18,3,   20,3,  22,4,   24,3,   26,3,   28,3,   30,32,  32,12,
-  33,9,   35,9,  36,10,  37,10
-};
-static const uint8_t CONT_AF_N = sizeof(CONT_AF) / 2;
-
-// Asie (simplifié)
-static const int8_t CONT_AS[] PROGMEM = {
-  70,30,  72,55,  73,80,  73,105, 72,120, 68,120, 65,121, 60,121,
-  55,125, 50,120, 48,125, 45,125, 43,122, 42,120, 40,118, 38,122,
-  35,120, 32,120, 30,121, 28,120, 25,121, 22,114, 22,110, 20,110,
-  18,106, 15,108, 12,109, 10,104,  8,100,  5,103,  1,104, -5,105,
-  -8,115, -5,120,  0,110,  5,100,  8,98,  10,98,  12,98,  15,98,
-  18,94,  20,92,  22,92,  24,88,  22,88,  20,86,  18,84,  15,80,
-  12,80,  10,77,   8,77,   8,80,  10,80,  12,80,  15,74,  18,73,
-  20,73,  22,70,  24,68,  26,66,  25,62,  22,60,  20,58,  18,56,
-  15,50,  12,45,  12,44,  15,42,  18,42,  20,40,  22,38,  24,38,
-  26,38,  28,34,  30,32,  32,36,  35,36,  37,36,  38,36,  40,36,
-  42,42,  42,45,  44,44,  45,42,  47,40,  48,38,  50,36,  52,34,
-  55,36,  55,40,  55,45,  55,50,  55,55,  55,60,  55,65,  55,70,
-  55,75,  55,80,  55,85,  55,90,  55,95,  55,100, 58,100, 60,100,
-  62,100, 65,100, 68,100, 70,80,  72,55,  70,30
-};
-static const uint8_t CONT_AS_N = sizeof(CONT_AS) / 2;
-
-// Amérique du Sud
-static const int8_t CONT_SA[] PROGMEM = {
-  12,-72,  10,-62,   8,-60,   6,-61,   4,-52,   2,-50,   0,-50,
-  -2,-44,  -5,-35,  -8,-35, -10,-37, -12,-38, -15,-39, -18,-39,
- -20,-40, -22,-41, -23,-43, -25,-48, -28,-49, -30,-51, -33,-53,
- -35,-57, -38,-57, -40,-62, -42,-64, -45,-66, -48,-66, -50,-68,
- -52,-68, -54,-68, -55,-67, -52,-68, -50,-68, -48,-66, -45,-66,
- -42,-64, -40,-62, -38,-57, -35,-57, -33,-53, -30,-51, -28,-49,
- -25,-48, -23,-43, -22,-41, -20,-40, -18,-39, -15,-39, -12,-38,
- -10,-37,  -8,-35,  -5,-35,  -2,-44,   0,-50,   2,-50,   4,-52,
-   6,-61,   8,-60,  10,-62,  12,-72,  10,-75,   8,-77,   5,-77,
-   2,-77,   0,-78,  -2,-80,  -5,-81,  -8,-80, -10,-78, -12,-77,
- -15,-75, -18,-70, -20,-70, -22,-68, -24,-68, -26,-70, -28,-70,
- -30,-71, -33,-71, -35,-72, -38,-72, -40,-72, -42,-73, -45,-73,
- -48,-75, -50,-75, -52,-72, -54,-68, -55,-67, -52,-68, -50,-75,
- -48,-75, -45,-73, -42,-73, -40,-72, -38,-72, -35,-72, -33,-71,
- -30,-71, -28,-70, -26,-70, -24,-68, -22,-68, -20,-70, -18,-70,
- -15,-75, -12,-77, -10,-78,  -8,-80,  -5,-81,  -2,-80,   0,-78,
-   2,-77,   5,-77,   8,-77,  10,-75,  12,-72
-};
-static const uint8_t CONT_SA_N = sizeof(CONT_SA) / 2;
-
-// Australie — int16_t car lon > 127
-static const int16_t CONT_AU[] PROGMEM = {
- -14,130, -12,132, -12,136, -14,140, -16,140, -18,140,
- -20,140, -22,140, -24,140, -26,140, -28,140, -30,140, -32,140,
- -34,140, -36,140, -38,140, -38,146, -37,120, -35,121, -34,121,
- -32,122, -30,123, -28,123, -26,123, -24,122, -22,120, -20,118,
- -18,116, -16,125, -14,130
-};
-static const uint8_t CONT_AU_N = sizeof(CONT_AU) / 4;
-
-// Villes principales {lat, lon} en int8_t
-static const int8_t CITIES[] PROGMEM = {
-  48,  2,   51,  0,   40, 29,   55, 37,   40,-74,
-  34,-118,  19,-99,  -23,-43,   39,116,   35,116,
-  28, 77,  -34,121,  -26, 28,   30, 31,   37,-122,
-  41,-87,   43,-79
-};
-static const uint8_t CITIES_N = sizeof(CITIES) / 2;
+extern float     g_sleep_phase;
+extern uint16_t  g_sleep_color;   // Couleur accent du thème actif
 
 // ==============================================================================
-// projectGlobe — Projette lat/lon (radians) sur sphère 3D.
-// Retourne true si le point est sur la face avant (visible).
+// PALETTE FIXE — Cuivre + Carbone
+// Complète la palette dynamique g_sleep_color sans la remplacer.
+// ==============================================================================
+#define COL_COPPER_BRIGHT  rgb565(253, 100, 50)   // Cuivre très éclairé (reflet)
+#define COL_COPPER_MID     rgb565(180,  80, 30)   // Cuivre neutre
+#define COL_COPPER_DARK    rgb565( 80,  35,  5)   // Cuivre dans l'ombre
+#define COL_CARBON_MID     rgb565( 30,  35, 40)   // Gris carbone lumineux
+#define COL_CARBON_SHADOW  rgb565(  5,   6,  8)   // Carbone sombre
+#define COL_METAL_HL       rgb565( 60,  75, 90)   // Reflet aluminium brossé
+#define SS_BG              rgb565(  2,   3,  5)   // Fond noir quasi-pur
+
+// ==============================================================================
+// TYPES DE COMPOSANTS DU RÉACTEUR
+// ==============================================================================
+enum PartType {
+    PT_BASE,      // Radiateur de base (disque plein, gravure laser)
+    PT_PLAIN,     // Anneau intermédiaire simple
+    PT_TORUS,     // Tore avec bobines de cuivre animées
+    PT_GLOWRING,  // Anneau néon thématisé
+    PT_CORE,      // Noyau plasma (glow multicouche)
+    PT_LASER      // Câble d'énergie central (visible à l'état éclaté)
+};
+
+// ==============================================================================
+// STRUCTURE DE TRANCHE 3D (Voxel Slice)
+// Unité de rendu du moteur : représente une coupe horizontale d'un composant.
+// ==============================================================================
+struct Slice {
+    float    z;           // Profondeur sur l'axe vertical du réacteur
+    float    r_out;       // Rayon extérieur
+    float    r_in;        // Rayon intérieur (0 = disque plein)
+    uint16_t col;         // Couleur pré-calculée (ombrage AO inclus)
+    bool     isTop;       // Vrai pour la dernière tranche du composant
+    PartType type;        // Type pour rendu spécialisé
+    float    spin;        // Angle de rotation propre (bobines du tore)
+    float    depthAlpha;  // Facteur d'ambiance stocké pour ombrage du cuivre
+};
+
+// Limites Z de la scène — servent au calcul de l'Ambient Occlusion
+static const float Z_MIN = -80.0f;
+static const float Z_MAX =  50.0f;
+
+// ==============================================================================
+// clamp01 — Borne un float entre 0.0 et 1.0
+// ==============================================================================
+static inline float clamp01(float x) {
+    return x < 0.0f ? 0.0f : (x > 1.0f ? 1.0f : x);
+}
+
+// ==============================================================================
+// drawThickEllipse — Trace un anneau elliptique épais par interpolation de rayons.
+// Contourne l'absence de primitive anneau native dans LovyanGFX.
+// Paramètres rx_out/ry_out : demi-axes extérieurs, rx_in/ry_in : demi-axes intérieurs.
+// ==============================================================================
+static void drawThickEllipse(int cx, int cy,
+                              float rx_out, float ry_out,
+                              float rx_in,  float ry_in,
+                              uint16_t col) {
+    float drx   = rx_out - rx_in;
+    float dry   = ry_out - ry_in;
+    // Nombre de pas = épaisseur max + 1 pour combler tous les pixels
+    int   steps = (int)max(drx, dry) + 1;
+    for (int i = 0; i <= steps; i++) {
+        float f = (float)i / (float)steps;
+        spr.drawEllipse(cx, cy,
+                        (int)(rx_in + drx * f),
+                        (int)(ry_in + dry * f),
+                        col);
+    }
+}
+
+// ==============================================================================
+// addCylinder — Génère les tranches (slices) d'un composant cylindrique.
+// Applique l'Ambient Occlusion : les couches hautes (Z grand) sont plus lumineuses.
 // Paramètres :
-//   lat, lon  : coordonnées géographiques en radians
-//   rotY      : angle de rotation Y courant (animation)
-//   R         : rayon de la sphère en pixels
-//   cosTX, sinTX : cosinus/sinus de l'inclinaison X de la caméra
-//   sx, sy    : coordonnées écran calculées (sortie)
+//   slices   : vecteur de sortie (accumulation)
+//   zCenter  : centre Z du composant
+//   thick    : épaisseur totale sur Z
+//   r_out/in : rayons extérieur/intérieur (r_in=0 pour disque plein)
+//   steps    : résolution (nombre de tranches intermédiaires)
+//   colSide  : couleur des tranches intermédiaires
+//   colTop   : couleur de la tranche de tête
+//   type     : type de composant (rendu spécialisé)
+//   spin     : angle de rotation propre (tore uniquement)
 // ==============================================================================
-static bool projectGlobe(float lat, float lon, float rotY, float R,
-                         float cosTX, float sinTX, int &sx, int &sy) {
-  // Conversion sphérique → cartésien 3D
-  float x3 =  cos(lat) * sin(lon + rotY);
-  float y3 =  sin(lat);
-  float z3 =  cos(lat) * cos(lon + rotY);
-
-  // Application de l'inclinaison caméra sur l'axe X
-  float yc =  y3 * cosTX - z3 * sinTX;
-  float zc =  y3 * sinTX + z3 * cosTX;
-
-  // Rejet des points derrière la sphère (face arrière)
-  if (zc > 0.12f) return false;
-
-  // Projection perspective
-  float persp = 220.0f / (220.0f - zc * R);
-  sx = CX + (int)(x3 * R * persp);
-  sy = CY - (int)(yc * R * persp);
-  return true;
-}
-
-// ==============================================================================
-// drawContinent — Dessine le contour d'un continent stocké en int8_t PROGMEM.
-// Utilisé pour EU, AF, AS, SA (longitudes dans -128..127).
-// ==============================================================================
-static void drawContinent(const int8_t* cont, uint8_t n, float rotY, float R,
-                          float cosTX, float sinTX, uint16_t col) {
-  int px0 = 0, py0 = 0, px1 = 0, py1 = 0;
-  bool v0 = false, v1 = false;
-  for (uint8_t i = 0; i < n; i++) {
-    float lat = (float)(int8_t)pgm_read_byte(&cont[i * 2])     * DEG_TO_RAD;
-    float lon = (float)(int8_t)pgm_read_byte(&cont[i * 2 + 1]) * DEG_TO_RAD;
-    v1 = projectGlobe(lat, lon, rotY, R, cosTX, sinTX, px1, py1);
-    if (i > 0 && v0 && v1) {
-      int dx = px1 - px0, dy = py1 - py0;
-      // Filtre anti-saut : ignore les segments trop longs (discontinuités de contour)
-      if (dx * dx + dy * dy < 4000) spr.drawLine(px0, py0, px1, py1, col);
+static void addCylinder(std::vector<Slice>& slices,
+                        float zCenter, float thick,
+                        float r_out,  float r_in,
+                        int steps, uint16_t colSide, uint16_t colTop,
+                        PartType type, float spin = 0.0f) {
+    float dz     = thick / (float)steps;
+    float startZ = zCenter - thick * 0.5f;
+    for (int i = 0; i <= steps; i++) {
+        float currentZ = startZ + (float)i * dz;
+        // AO : puissance 0.7 pour un dégradé plus doux dans les ombres
+        float ao = powf(clamp01((currentZ - Z_MIN) / (Z_MAX - Z_MIN)), 0.7f);
+        // La tranche de tête reçoit colTop, les autres reçoivent colSide
+        uint16_t raw     = (i == steps) ? colTop : colSide;
+        uint16_t shaded  = lerpColor(SS_BG, raw, ao);
+        Slice s;
+        s.z          = currentZ;
+        s.r_out      = r_out;
+        s.r_in       = r_in;
+        s.col        = shaded;
+        s.isTop      = (i == steps);
+        s.type       = type;
+        s.spin       = spin;
+        s.depthAlpha = ao;
+        slices.push_back(s);
     }
-    px0 = px1; py0 = py1; v0 = v1;
-  }
 }
 
 // ==============================================================================
-// drawContinent16 — Dessine le contour d'un continent stocké en int16_t PROGMEM.
-// Utilisé pour NA et AU (longitudes hors de la plage -128..127).
-// ==============================================================================
-static void drawContinent16(const int16_t* cont, uint8_t n, float rotY, float R,
-                            float cosTX, float sinTX, uint16_t col) {
-  int px0 = 0, py0 = 0, px1 = 0, py1 = 0;
-  bool v0 = false, v1 = false;
-  for (uint8_t i = 0; i < n; i++) {
-    float lat = (float)(int16_t)pgm_read_word(&cont[i * 2])     * DEG_TO_RAD;
-    float lon = (float)(int16_t)pgm_read_word(&cont[i * 2 + 1]) * DEG_TO_RAD;
-    v1 = projectGlobe(lat, lon, rotY, R, cosTX, sinTX, px1, py1);
-    if (i > 0 && v0 && v1) {
-      int dx = px1 - px0, dy = py1 - py0;
-      if (dx * dx + dy * dy < 4000) spr.drawLine(px0, py0, px1, py1, col);
-    }
-    px0 = px1; py0 = py1; v0 = v1;
-  }
-}
-
-// ==============================================================================
-// renderModeScreensaver — Arc Reactor Hologram (style Iron Man HUD vue éclatée)
-// Projection isométrique avec séparation dynamique sur l'axe Z.
-// Aucun paramètre : utilise g_sleep_phase, g_sleep_color (variables de veille).
+// renderModeScreensaver — Moteur Arc Reactor Holographique (Voxel-Slicing)
+// Pipeline : modélisation → tri Z → projection → rendu spécialisé par type.
+// Utilise g_sleep_phase comme temps et g_sleep_color comme couleur du thème actif.
 // ==============================================================================
 void renderModeScreensaver() {
-  // 1. GESTION DU TEMPS ET DE L'ANIMATION
-  g_sleep_phase += 0.015f; 
-  float rot = g_sleep_phase * 0.4f; // Rotation continue du réacteur
-  
-  // Facteur d'éclatement (0.0 = assemblé, 1.0 = totalement éclaté)
-  // L'animation respire lentement grâce à une onde sinusoïdale
-  float explode = (sin(g_sleep_phase * 0.6f) + 1.0f) * 0.5f;
 
-  // 2. PALETTE DE COULEURS THEMATISEE
-  // Au lieu de calculer un "Stark drift", on utilise g_sleep_color (définie par le thème actif)
-  // On crée par contre de légères oscillations lumineuses sur cette base
-  float pulseLuma = (sin(g_sleep_phase * 2.0f) + 1.0f) * 0.2f; // Léger pulse 0.0 -> 0.4
-  
-  uint16_t colCore = COL_WHITE;
-  uint16_t colNeon = lerpColor(g_sleep_color, COL_WHITE, pulseLuma);
-  uint16_t colDark = lerpColor(COL_BG, g_sleep_color, 0.20f);
-  uint16_t colWire = lerpColor(COL_BG, g_sleep_color, 0.45f);
+    // ── 0. TEMPS ─────────────────────────────────────────────────────────────
+    g_sleep_phase += 0.015f;
+    float t = g_sleep_phase;
 
-  // 3. PARAMETRES DE PERSPECTIVE
-  const float tilt = 0.45f; // Inclinaison de la caméra (ellipse ratio)
-  const float maxZ = 50.0f; // Distance maximale de séparation en pixels
-  
-  // Calcul des hauteurs (Y-screen) pour chaque couche
-  int y_base  = CY + (int)(maxZ * explode);              // Couche 1: Radiateur bas
-  int y_coilB = CY + (int)((maxZ * 0.5f) * explode);    // Couche 2: Support bobines
-  int y_core  = CY;                                      // Couche 3: Centre (Fixe)
-  int y_coilT = CY - (int)((maxZ * 0.5f) * explode);    // Couche 4: Anneau de confinement
-  int y_top   = CY - (int)(maxZ * explode);              // Couche 5: Lentille Palladium
+    // ── 1. PALETTE THÉMATISÉE ─────────────────────────────────────────────────
+    // colNeon  : couleur vive du thème (ex. cyan Classic, rouge Ironman…)
+    // colCore  : mélange thème + blanc pur pour le noyau plasma
+    // colDark  : version sombre du thème pour les ombres / câbles
+    uint16_t colNeon = g_sleep_color;
+    uint16_t colCore = lerpColor(g_sleep_color, rgb565(240, 248, 255), 0.5f);
+    uint16_t colDark = lerpColor(SS_BG, g_sleep_color, 0.25f);
 
-  // ----------------------------------------------------------------------------
-  // PHASE A : LIGNES DIRECTRICES D'ECLATEMENT (Arrière-plan)
-  // ----------------------------------------------------------------------------
-  if (explode > 0.05f) {
-    // Axe central
-    spr.drawLine(CX, y_base, CX, y_top, lerpColor(COL_BG, colWire, 0.5f));
-    // Axes périphériques
-    for (int i = 0; i < 4; i++) {
-      float a = i * (PI / 2.0f) + rot;
-      int px = CX + (int)(cos(a) * 45.0f);
-      spr.drawLine(px, y_base + (int)(sin(a) * 45.0f * tilt), 
-                   px, y_top + (int)(sin(a) * 45.0f * tilt), 
-                   lerpColor(COL_BG, colWire, 0.3f));
+    // ── 2. ANIMATION ET PARAMÈTRES CAMÉRA ────────────────────────────────────
+    // Facteur d'éclatement : oscillation sinusoïdale lente (0 → 1 → 0)
+    float explode = (sinf(t * 1.5f) + 1.0f) * 0.5f;
+    float camYaw  = t * 0.3f;               // Rotation continue du tore
+    // Inclinaison caméra oscillante (perspective variable)
+    float pitch   = 0.5f + sinf(t * 0.5f) * 0.12f;
+    float fov     = 450.0f;                  // Distance focale (projection perspective)
+
+    // ── 3. MODÉLISATION 3D ───────────────────────────────────────────────────
+    std::vector<Slice> slices;
+    slices.reserve(90); // Pré-allocation pour éviter les copies mémoire
+
+    // Composant 1 : Base radiateur (disque plein, gravure laser animée)
+    float zBase = -40.0f - 50.0f * explode;
+    addCylinder(slices, zBase, 8, 88, 0, 8,
+                COL_CARBON_SHADOW, COL_CARBON_MID, PT_BASE);
+
+    // Composant 2 : Anneau de support intermédiaire
+    float zRing1 = -22.0f - 25.0f * explode;
+    addCylinder(slices, zRing1, 4, 76, 58, 4,
+                COL_CARBON_SHADOW, COL_METAL_HL, PT_PLAIN);
+
+    // Composant 3 : Tore avec bobines de cuivre (spin = camYaw)
+    addCylinder(slices, 0.0f, 18, 68, 46, 18,
+                COL_CARBON_SHADOW, COL_CARBON_MID, PT_TORUS, camYaw);
+
+    // Composant 4 : Anneau de confinement néon (couleur du thème)
+    float zRing2 = 14.0f + 20.0f * explode;
+    addCylinder(slices, zRing2, 6, 42, 35, 6, colDark, colNeon, PT_GLOWRING);
+
+    // Composant 5 : Noyau plasma (disque plein, glow multicouche)
+    float zCore = 24.0f + 45.0f * explode;
+    addCylinder(slices, zCore, 12, 24, 0, 12, colCore, rgb565(240, 248, 255), PT_CORE);
+
+    // Composant 6 : Câble d'énergie central (seulement quand le réacteur est éclaté)
+    if (explode > 0.05f) {
+        float tetherLen = (zCore - 6.0f) - (zBase + 4.0f);
+        int   steps     = max(2, (int)(tetherLen / 2.0f));
+        addCylinder(slices,
+                    zBase + 4.0f + tetherLen * 0.5f,
+                    tetherLen, 3, 0, steps,
+                    colDark, colNeon, PT_LASER);
     }
-  }
 
-  // ----------------------------------------------------------------------------
-  // PHASE B : COUCHE 1 - RADIATEUR INFERIEUR (Heat Sink)
-  // ----------------------------------------------------------------------------
-  // Disque sombre pour masquer les lignes arrière
-  spr.fillEllipse(CX, y_base, 75, 75 * tilt, lerpColor(COL_BG, colDark, 0.5f));
-  spr.drawEllipse(CX, y_base, 75, 75 * tilt, colWire);
-  spr.drawEllipse(CX, y_base, 65, 65 * tilt, colDark);
-  // Grille de dissipation radiale
-  for (int i = 0; i < 12; i++) {
-    float a = i * (PI / 6.0f) - rot;
-    spr.drawLine(CX + cos(a)*20, y_base + sin(a)*20*tilt, 
-                 CX + cos(a)*75, y_base + sin(a)*75*tilt, colDark);
-  }
+    // ── 4. TRI DE PROFONDEUR (Algorithme du Peintre) ─────────────────────────
+    // Tri croissant sur Z : les tranches les plus basses sont peintes en premier
+    std::sort(slices.begin(), slices.end(),
+              [](const Slice& a, const Slice& b) { return a.z < b.z; });
 
-  // ----------------------------------------------------------------------------
-  // PHASE C : COUCHE 2 - SUPPORT INFERIEUR DES BOBINES
-  // ----------------------------------------------------------------------------
-  spr.drawEllipse(CX, y_coilB, 85, 85 * tilt, colWire);
-  spr.drawEllipse(CX, y_coilB, 45, 45 * tilt, colWire);
+    // ── 5. PROJECTION ET RENDU ────────────────────────────────────────────────
+    float cosPitch = cosf(pitch);
+    float sinPitch = sinf(pitch);
 
-  // ----------------------------------------------------------------------------
-  // PHASE D : COUCHE 3 - MODULES D'ACCELERATION & CŒUR (Gestion Profondeur)
-  // ----------------------------------------------------------------------------
-  // Pour un effet 3D correct, on divise les 10 bobines :
-  // On dessine d'abord celles de l'arrière, puis le cœur central, puis celles de l'avant.
-  
-  // drawCoil : dessine une bobine radiale (ligne triple + connecteur)
-  // Définie comme struct local pour éviter les lambdas capturantes (compatibilité ESP32)
-  struct CoilDrawer {
-    LGFX_Sprite& spr;
-    int y_core;
-    float tilt;
-    uint16_t colNeon, colDark, colCore, colWire;
-    void draw(float angle, bool isFront) {
-      float cA = cos(angle), sA = sin(angle);
-      int x_in  = CX + (int)(cA * 45);
-      int y_in  = y_core + (int)(sA * 45 * tilt);
-      int x_out = CX + (int)(cA * 85);
-      int y_out = y_core + (int)(sA * 85 * tilt);
-      uint16_t cColor = isFront ? colNeon : colDark;
-      spr.drawLine(x_in, y_in,   x_out, y_out,   cColor);
-      spr.drawLine(x_in, y_in-1, x_out, y_out-1, cColor);
-      spr.drawLine(x_in, y_in+1, x_out, y_out+1, cColor);
-      spr.fillCircle(x_in, y_in, 2, isFront ? colCore : colWire);
+    for (const Slice& s : slices) {
+        // Projection perspective : Z → Y écran + facteur d'échelle
+        float py    = -s.z * sinPitch;
+        float pz    =  s.z * cosPitch;
+        float scale = fov / (fov + pz);
+        py          *= scale;
+
+        // Demi-axes projetés (sY aplati par cosPitch = effet ellipse 3D)
+        float rx = s.r_out * scale;
+        float ry = s.r_out * cosPitch * scale;
+
+        if (s.r_in > 0.0f) {
+            // ═══ RENDU ANNEAU ════════════════════════════════════════════════
+            float rxIn = s.r_in * scale;
+            float ryIn = s.r_in * cosPitch * scale;
+            drawThickEllipse(CX, CY + (int)py, rx, ry, rxIn, ryIn, s.col);
+
+            // Bobines de cuivre sur le Tore — cercles positionnés en coordonnées polaires
+            if (s.type == PT_TORUS) {
+                float rMid    = (s.r_out + s.r_in) * 0.5f;
+                float rxMid   = rMid * scale;
+                float ryMid   = rMid * cosPitch * scale;
+                float strokeW = (s.r_out - s.r_in) * scale;
+
+                for (int c = 0; c < 10; c++) {
+                    float baseAngle = c * (2.0f * PI / 10.0f) + s.spin;
+                    // 5 fils par bobine : fil central plus brillant
+                    for (int wire = -2; wire <= 2; wire++) {
+                        float    angle   = baseAngle + wire * 0.04f;
+                        bool     isCtr   = (wire == 0);
+                        uint16_t wireCol = (isCtr && s.isTop) ? COL_COPPER_BRIGHT
+                                         : (s.isTop           ? COL_COPPER_MID
+                                                               : COL_COPPER_DARK);
+                        // Ombrage global de la bobine = même AO que la tranche parente
+                        uint16_t shadedWire = lerpColor(SS_BG, wireCol, s.depthAlpha);
+                        float wx = rxMid * cosf(angle);
+                        float wy = ryMid * sinf(angle);
+                        spr.fillCircle((int)(CX + wx),
+                                       (int)(CY + py + wy),
+                                       (int)(strokeW * 0.5f) + 1,
+                                       shadedWire);
+                    }
+                }
+            }
+
+            // Diffuseur néon sur la tranche de tête du Glow Ring
+            if (s.type == PT_GLOWRING && s.isTop) {
+                float rxM = ((s.r_out + s.r_in) * 0.5f) * scale;
+                float ryM = ((s.r_out + s.r_in) * 0.5f) * cosPitch * scale;
+                spr.drawEllipse(CX, (int)(CY + py), (int)rxM, (int)ryM, colCore);
+            }
+
+        } else {
+            // ═══ RENDU DISQUE PLEIN ══════════════════════════════════════════
+            spr.fillEllipse(CX, CY + (int)py, (int)rx, (int)ry, s.col);
+
+            // Gravure laser sur la base radiateur (tourne lentement)
+            if (s.type == PT_BASE && s.isTop) {
+                spr.drawEllipse(CX, CY + (int)py,
+                                (int)(rx * 0.75f), (int)(ry * 0.75f), COL_CARBON_SHADOW);
+                spr.drawEllipse(CX, CY + (int)py,
+                                (int)(rx * 0.35f), (int)(ry * 0.35f), COL_CARBON_SHADOW);
+                // 8 lignes radiales formant la grille de dissipation
+                for (int i = 0; i < 8; i++) {
+                    float a  = i * (PI * 0.25f) - t * 0.05f;
+                    float hx = cosf(a) * (rx * 0.65f);
+                    float hy = sinf(a) * (ry * 0.65f);
+                    spr.drawLine(CX, CY + (int)py,
+                                 CX + (int)hx, CY + (int)(py + hy),
+                                 COL_CARBON_SHADOW);
+                }
+            }
+
+            // Effet plasma photométrique du noyau (couches concentriques alpha-blended)
+            if (s.type == PT_CORE && s.isTop) {
+                // Halo externe — teinté par le thème, très transparent
+                spr.fillCircle(CX, CY + (int)py,
+                               (int)(rx * 2.5f),
+                               lerpColor(SS_BG, colNeon, 0.18f));
+                // Halo intermédiaire — thème vers blanc
+                spr.fillCircle(CX, CY + (int)py,
+                               (int)(rx * 1.5f),
+                               lerpColor(colNeon, colCore, 0.6f));
+                // Noyau brillant blanc pur
+                spr.fillCircle(CX, CY + (int)py,
+                               (int)(rx * 0.8f),
+                               rgb565(240, 248, 255));
+            }
+        }
     }
-  } coilDrawer{spr, y_core, tilt, colNeon, colDark, colCore, colWire};
 
-  // 1. Bobines Arrière (sin(a) < 0)
-  for (int i = 0; i < 10; i++) {
-    float a = i * (PI / 5.0f) + rot;
-    if (sin(a) < 0) coilDrawer.draw(a, false);
-  }
-
-  // 2. Chambre de réaction centrale (Masque le fond)
-  spr.fillEllipse(CX, y_core, 40, 40 * tilt, COL_BG); 
-  spr.drawEllipse(CX, y_core, 40, 40 * tilt, colNeon);
-  spr.drawEllipse(CX, y_core, 30, 30 * tilt, colWire);
-  
-  // 3. Bobines Avant (sin(a) >= 0)
-  for (int i = 0; i < 10; i++) {
-    float a = i * (PI / 5.0f) + rot;
-    if (sin(a) >= 0) coilDrawer.draw(a, true);
-  }
-
-  // ----------------------------------------------------------------------------
-  // PHASE E : COUCHE 4 - ANNEAU DE CONFINEMENT SUPERIEUR
-  // ----------------------------------------------------------------------------
-  spr.drawEllipse(CX, y_coilT, 85, 85 * tilt, colWire);
-  spr.drawEllipse(CX, y_coilT, 45, 45 * tilt, colNeon);
-
-  // ----------------------------------------------------------------------------
-  // PHASE F : COUCHE 5 - LENTILLE PALLADIUM SUPERIEURE
-  // ----------------------------------------------------------------------------
-  // Anneau externe
-  spr.drawEllipse(CX, y_top, 50, 50 * tilt, colNeon);
-  // Halo interne
-  for (int r = 25; r > 5; r -= 4) {
-    float f = (float)r / 25.0f;
-    spr.drawEllipse(CX, y_top, r, r * tilt, lerpColor(colNeon, COL_BG, f));
-  }
-  // Noyau brillant
-  spr.fillEllipse(CX, y_top, 10, 10 * tilt, colCore);
-  
-  // Détails de verrouillage (3 points tournants)
-  for (int i = 0; i < 3; i++) {
-    float a = i * (2.0f * PI / 3.0f) + (rot * 1.5f);
-    spr.fillCircle(CX + cos(a)*40, y_top + sin(a)*40*tilt, 2, colCore);
-  }
-
-  // ----------------------------------------------------------------------------
-  // PHASE G : OVERLAY UI & DONNEES DIAGNOSTIQUES
-  // ----------------------------------------------------------------------------
-  spr.setFont(&fonts::FreeSans9pt7b);
-  spr.setTextColor(colNeon);
-  
-  // Scanner rotatif externe
-  float scanA = g_sleep_phase * 1.5f;
-  float scanDeg = fmodf(scanA * (180.0f / PI), 360.0f);
-  spr.drawArc(CX, CY, 115, 114, scanDeg, scanDeg + 40.0f, colCore);
-  spr.drawCircle(CX, CY, 115, colDark);
-
-  // Textes statiques simulants un plan technique
-  if (explode > 0.8f) {
-    // Affiche le texte uniquement quand l'éclatement est maximal (Lisibilité)
-    spr.setTextDatum(ML_DATUM);
-    spr.drawString("PALLADIUM", 28, 55);
-    spr.drawString("CORE", 28, 70);
-    spr.drawLine(90, 62, CX - 15, y_top, colWire); // Ligne de repère
-
-    spr.setTextDatum(MR_DATUM);
-    spr.drawString("MARK I", 212, 185);
-    spr.drawString("3.0 GJ/s", 212, 200);
-  }
+    // ── 6. HUD : SCANNER ARC TOURNANT (Overlay UI) ───────────────────────────
+    // Arc lumineux de 35° tournant en continu autour du réacteur
+    float scanDeg = fmodf(g_sleep_phase * 1.5f * (180.0f / PI), 360.0f);
+    spr.drawArc(CX, CY, 116, 114, (int)scanDeg, (int)(scanDeg + 35.0f), colCore);
+    spr.drawCircle(CX, CY, 116, colDark); // Anneau externe fixe (cadre délicat)
 }

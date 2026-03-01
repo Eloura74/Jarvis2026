@@ -1,0 +1,73 @@
+{
+    "root":  "A:\\02-PROJECTS\\Jarvis2026",
+    "counts":  {
+                   "files_total":  738,
+                   "python_files":  3,
+                   "entrypoints_detected":  0,
+                   "unused_high_confidence":  2,
+                   "ambiguous_to_review":  1,
+                   "unused_assets_candidates":  1
+               },
+    "entrypoints":  [
+
+                    ],
+    "unused_high_confidence":  [
+                                   {
+                                       "path":  "sphere/fix_screensaver.py",
+                                       "type":  "python",
+                                       "reason":  "non atteignable depuis entrypoints + non importé par un module local",
+                                       "evidence":  {
+                                                        "reachable":  false,
+                                                        "imported_by_local":  false,
+                                                        "entrypoint":  false,
+                                                        "dynamic_hints":  [
+
+                                                                          ]
+                                                    }
+                                   },
+                                   {
+                                       "path":  "sphere/jarvis_sphere_serial.py",
+                                       "type":  "python",
+                                       "reason":  "non atteignable depuis entrypoints + non importé par un module local",
+                                       "evidence":  {
+                                                        "reachable":  false,
+                                                        "imported_by_local":  false,
+                                                        "entrypoint":  false,
+                                                        "dynamic_hints":  [
+
+                                                                          ]
+                                                    }
+                                   }
+                               ],
+    "ambiguous_to_review":  [
+                                {
+                                    "path":  "scanUtilisation.py",
+                                    "type":  "python",
+                                    "reason":  "non atteignable mais import possible/usage implicite/dynamique",
+                                    "evidence":  {
+                                                     "reachable":  false,
+                                                     "imported_by_local":  false,
+                                                     "entrypoint":  false,
+                                                     "dynamic_hints":  [
+                                                                           "hint:importlib.import_module",
+                                                                           "hint:__import__"
+                                                                       ]
+                                                 }
+                                }
+                            ],
+    "unused_assets_candidates":  {
+                                     "path":  "report_full.json",
+                                     "type":  "asset_or_config",
+                                     "reason":  "aucune référence textuelle trouvée (heuristique)",
+                                     "evidence":  {
+                                                      "searched_by":  [
+                                                                          "relative_path",
+                                                                          "filename"
+                                                                      ],
+                                                      "note":  "peut être référencé dynamiquement ou par convention"
+                                                  }
+                                 },
+    "ambiguous_import_hints":  [
+
+                               ]
+}
