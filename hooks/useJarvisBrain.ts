@@ -55,6 +55,8 @@ export function useJarvisBrain(props: UseJarvisBrainProps) {
     addConversationMessage,
     getConversationContext,
     appMemory,
+    setActiveOverlay,
+    setStatusOverlay,
   } = props;
 
   // ── Tous les useState/useRef en premier (règle des hooks) ──────────────────
@@ -189,6 +191,10 @@ export function useJarvisBrain(props: UseJarvisBrainProps) {
       setCommandHistory((prev) => [newCommand, ...prev].slice(0, 50));
       setStatus(SystemStatus.PROCESSING);
       addLog(`Analyzing: "${text}"`, "USER", "info");
+
+      // 👉 AUTO-FERMETURE DES POPUPS DÈS QU'ON ENVOIE UNE NOUVELLE REQUÊTE
+      if (setActiveOverlay) setActiveOverlay(null);
+      if (setStatusOverlay) setStatusOverlay(null);
 
       // 🟣 SPHERE VISUAL CONTEXT
       const visualMode = detectVisualMode(text);
@@ -375,6 +381,9 @@ export function useJarvisBrain(props: UseJarvisBrainProps) {
       resetInactivity,
       setStatus,
       speak,
+      setActiveOverlay,
+      setStatusOverlay,
+      props.interceptCommandRef,
     ],
   );
 

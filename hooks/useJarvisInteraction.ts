@@ -366,7 +366,8 @@ export function useJarvisInteraction({
         }, resumeDelay);
       } else if (isExitingRef.current) {
         console.log("👋 Fin de session confirmée, micro reste coupé.");
-        isExitingRef.current = false; // Reset pour la prochaine fois
+        isExitingRef.current = false; // Reset immédiat
+        setConversationMode(false);
         // Signaler IDLE à la Sphere : fin de session, screensaver peut s'activer
         sendSphereState("IDLE");
       }
@@ -408,20 +409,31 @@ export function useJarvisInteraction({
       }
 
       // CAS 2 : isConversationResumingRef bloqué à true alors que le micro est inactif
-      // Cela empêche le wake word de se réactiver (useEffect ligne ~455 bloque enableWakeWord)
-      // Symptôme : status=IDLE, isListening=false, mais wake word ne démarre pas
+      // Cela empêche le wake word de se réactiver ou le micro de reprendre correctement
       if (
         isConversationResumingRef.current &&
         !isListening &&
-        status === SystemStatus.IDLE &&
         !window.speechSynthesis.speaking
       ) {
-        console.warn(
-          "⚠️ Watchdog: isConversationResumingRef bloqué, reset forcé",
-        );
-        isConversationResumingRef.current = false;
-        // Forcer un micro-changement de status pour retriggerer le useEffect du wake word
-        setStatus(SystemStatus.IDLE);
+        // On attend 2 secondes max avant de considérer le flag comme bloqué
+        const timeSinceMicActivation =
+          Date.now() - lastMicActivationTime.current;
+        if (timeSinceMicActivation > 2000) {
+          console.warn(
+            "⚠️ Watchdog: isConversationResumingRef bloqué depuis > 2s, reset forcé",
+          );
+          isConversationResumingRef.current = false;
+          // Si on devait écouter, on relance. Sinon on force l'IDLE pour réveiller le WakeWord
+          if (
+            conversationModeRef.current &&
+            !isExitingRef.current &&
+            status === SystemStatus.IDLE
+          ) {
+            startListening();
+          } else if (status === SystemStatus.IDLE) {
+            setStatus(SystemStatus.IDLE); // Trigger useEffect
+          }
+        }
       }
     }, 500); // Vérification toutes les 500ms
 

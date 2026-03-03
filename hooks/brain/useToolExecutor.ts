@@ -154,7 +154,16 @@ export function useToolExecutor({
               if (additionalDeps.setActiveOverlay) {
                 additionalDeps.setActiveOverlay(null);
               }
-              speak("Affichage fermé.");
+              // Ne pas parler à voix haute par défaut
+              // speak("Affichage fermé.");
+
+              // Remettre la Sphère en mode IDLE
+              fetch("http://localhost:3001/api/sphere/mode", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ mode: "IDLE" }),
+              }).catch(() => {});
+
               return { status: "success", message: "Overlay closed" };
             }
             return { status: "error", message: "No overlay controller" };

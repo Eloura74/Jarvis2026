@@ -285,12 +285,14 @@ export function useWakeWord(
       // console.log("🛑 Wake Word Désactivé");
       isEnabledRef.current = false; // Sync immédiat
       setIsEnabled(false);
-    }, []),
+      stopListening(); // 🛑 FORCER L'ARRÊT IMMÉDIAT
+    }, [stopListening]),
     /** Active manuellement */
     enable: useCallback(() => {
       // console.log("🟢 Wake Word Activé");
       isEnabledRef.current = true; // Sync immédiat
       setIsEnabled(true);
+      // startListening sera appelé par le useEffect [isEnabled]
     }, []),
   };
 }
