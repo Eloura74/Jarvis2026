@@ -118,21 +118,25 @@ export function useJarvisInteraction({
       }
 
       // 2. Filtrer si Jarvis parle : ignorer silencieusement toute transcription
-      // (c'est la voix de Jarvis captée par le micro, pas l'utilisateur)
-      // Seul un mot STOP explicite (bloc ci-dessus) peut interrompre.
       if (isCurrentlySpeaking) {
-        // Transcription ignorée (Jarvis parle) — log supprimé
+        console.log("🔇 Transcription ignorée : Jarvis parle actuellement.");
         return;
       }
 
       // 3. Période de sécurité (Echo cancellation temporelle)
       const timeSinceSpeech = Date.now() - lastSpeechEndTime.current;
-      if (timeSinceSpeech < 3500) {
-        // Écho filtré — log supprimé
+      if (timeSinceSpeech < 1200) {
+        console.log(
+          `🔇 Transcription ignorée (Echo): ${timeSinceSpeech}ms < 1200ms`,
+        );
         return;
       }
 
-      if (Date.now() - lastMicActivationTime.current < 1500) {
+      const timeSinceMic = Date.now() - lastMicActivationTime.current;
+      if (timeSinceMic < 600) {
+        console.log(
+          `🔇 Transcription ignorée (Mic Init): ${timeSinceMic}ms < 600ms`,
+        );
         return;
       }
 

@@ -15,7 +15,6 @@
  */
 
 import { GoogleGenAI } from "@google/genai";
-import html2canvas from "html2canvas";
 
 // ============================================================================
 // CONFIGURATION
@@ -66,35 +65,37 @@ export interface VisionAnalysisResult {
  */
 export const captureScreen = async (): Promise<string> => {
   try {
-    console.log("📸 Capture automatique de l'interface J.A.R.V.I.S...");
+    console.log(
+      "📸 Capture de l'OS entier via Node.js (Copilote de Bureau)...",
+    );
 
-    // Capturer l'interface avec html2canvas (SANS popup)
-    const canvas = await html2canvas(document.body, {
-      backgroundColor: "#000000", // Fond noir J.A.R.V.I.S.
-      scale: 1, // Qualité normale (performance optimale)
-      logging: false, // Pas de logs debug
-      useCORS: true, // Images cross-origin
-      allowTaint: true,
-      windowWidth: window.innerWidth,
-      windowHeight: window.innerHeight,
-      // Ignorer certains éléments pour de meilleures performances
-      ignoreElements: (element) => {
-        // Ignorer les vidéos et iframes pour éviter les problèmes
-        return element.tagName === "VIDEO" || element.tagName === "IFRAME";
-      },
-    });
+    // Appel du service Node.js pour une vraie capture Windows
+    const response = await fetch(
+      "http://localhost:3001/api/desktop/screenshot",
+    );
 
-    // Convertir en base64
-    const dataUrl = canvas.toDataURL("image/png", 0.9);
+    if (!response.ok) {
+      throw new Error(`API screenshot error: ${response.status}`);
+    }
 
-    console.log("✅ Capture réussie !");
-    console.log(`📊 Résolution : ${canvas.width}x${canvas.height}px`);
-    console.log(`📦 Taille : ${Math.round(dataUrl.length / 1024)}KB`);
+    const result = await response.json();
 
+    if (!result.success || !result.data) {
+      throw new Error(result.error || "No data received");
+    }
+
+    // Convertir la payload base64 en data URL pour Gemini
+    const dataUrl = `data:${result.mimeType || "image/jpeg"};base64,${result.data}`;
+
+    console.log(
+      "✅ Capture OS réussie! Poids approx. base64:",
+      Math.round(dataUrl.length / 1024),
+      "KB",
+    );
     return dataUrl;
   } catch (error) {
-    console.error("❌ Erreur capture automatique:", error);
-    throw new Error("Échec de la capture automatique de l'interface");
+    console.error("❌ Erreur capture OS:", error);
+    throw new Error("Échec de la capture de l'écran via le service backend.");
   }
 };
 

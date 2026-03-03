@@ -44,7 +44,6 @@ export {
 const estimateMaxOutputTokens = (input: string): number | undefined => {
   const t = input.toLowerCase();
   const complexKeywords = [
-    "analyse",
     "rapport",
     "résumé",
     "liste",
@@ -93,6 +92,11 @@ const estimateMaxOutputTokens = (input: string): number | undefined => {
     "gmail",
     "whatsapp",
     "spotify",
+    "écran",
+    "code",
+    "regarde",
+    "lis",
+    "analyse",
   ];
   if (toolKeywords.some((k) => t.includes(k))) return undefined;
   return 300;
@@ -151,8 +155,31 @@ export const streamCommand = async (
     // - 8192  réflexion approfondie (analyses, rapports complexes)
     const thinkingBudget = selectThinkingBudget(input);
 
-    const systemInstruction =
+    // Détecter si on doit forcer l'usage d'un outil visuel
+    const t = input.toLowerCase();
+    const isToolExplicit = [
+      "écran",
+      "code",
+      "regarde",
+      "lis",
+      "analyse",
+      "capture",
+    ].some((k) => t.includes(k));
+
+    // FORÇAGE TECHNIQUE : On désactive la réflexion longue si une requête visuelle est demandée
+    // car le "Thinking Mode" désactive ou occulte très souvent l'appel aux outils (Function Calling) chez Gemini.
+    const finalThinkingBudget = isToolExplicit ? 0 : thinkingBudget;
+
+    let systemInstruction =
       generateSystemInstruction(memSum, conversationContext) + haContext;
+
+    // FORÇAGE SÉMANTIQUE : Si l'utilisateur demande à voir/lire qqchose,
+    // on injecte un ordre ABSOLU en tête du prompt système.
+    if (isToolExplicit) {
+      systemInstruction =
+        "CRITICAL DIRECTIVE: The user is asking you to look at their screen or code. YOU MUST IMMEDIATELY CALL THE 'analyze_screen' TOOL. DO NOT ANSWER BY TEXT FIRST. CALL THE TOOL NOW.\n\n" +
+        systemInstruction;
+    }
 
     // S1 : Appel via proxy backend (clé API sécurisée côté serveur)
     // Le proxy gère le fallback 2.5-flash  1.5-flash automatiquement
@@ -164,7 +191,7 @@ export const streamCommand = async (
       temperature: 0.1,
       maxOutputTokens: maxOutputTokens as number | undefined,
       history: history.length > 0 ? history : undefined,
-      thinkingBudget,
+      thinkingBudget: finalThinkingBudget,
     });
 
     let fullText = "";

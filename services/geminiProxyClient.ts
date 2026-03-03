@@ -51,6 +51,10 @@ export interface ProxyStreamConfig {
    * Voir geminiThinkingConfig.ts pour les constantes et le helper.
    */
   thinkingBudget?: number;
+  /**
+   * Force ou restreint l'utilisation d'outils (gemini parameter)
+   */
+  toolChoice?: "AUTO" | "ANY" | "NONE";
 }
 
 // ============================================================================

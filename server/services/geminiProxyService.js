@@ -159,10 +159,8 @@ export async function handleGeminiStream(req, res) {
     temperature,
     maxOutputTokens,
     history,
-    // thinkingBudget : budget de réflexion Gemini 2.5 Flash
-    // -1 = automatique, 0 = désactivé, >0 = tokens alloués
-    // undefined = non fourni → on n'active pas thinkingConfig
     thinkingBudget,
+    toolChoice,
   } = req.body;
 
   if (!input) {
@@ -176,12 +174,6 @@ export async function handleGeminiStream(req, res) {
   try {
     await waitIfNecessary();
 
-    // Construction du thinkingConfig si un budget est fourni et non nul.
-    // Budget 0 = désactivé → on n'envoie pas le paramètre (économie de tokens).
-    // Budget -1 = automatique (Gemini décide selon la complexité perçue).
-    // Budget >0 = nombre de tokens alloués à la réflexion interne.
-    // La réflexion est SUPERPOSÉE au streaming : Gemini "pense" en interne
-    // puis génère la réponse finale en flux continu sans latence perceptible.
     const thinkingConfig =
       thinkingBudget !== undefined && thinkingBudget !== 0
         ? { thinkingBudget }
@@ -192,7 +184,6 @@ export async function handleGeminiStream(req, res) {
       tools: tools ? [{ functionDeclarations: tools }] : undefined,
       temperature: temperature ?? 0.1,
       ...(maxOutputTokens !== undefined && { maxOutputTokens }),
-      // Injecter thinkingConfig uniquement si défini (évite erreur API si non supporté)
       ...(thinkingConfig !== undefined && { thinkingConfig }),
     };
 

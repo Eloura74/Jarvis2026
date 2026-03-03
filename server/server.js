@@ -65,13 +65,14 @@ import securityRoutes from "./routes/security.js"; // Sécurité & Surveillance 
 import mediaRoutes from "./routes/media.js"; // Multimédia (YouTube, Spotify, Plex)
 import visionRoutes from "./routes/vision.js"; // Vision Gemini (webcam, analyse image)
 import sphereRoutes from "./routes/sphere.js"; // Contrôle Sphere ESP32 (états, modes, texte)
+import desktopRoutes from "./routes/desktop.js"; // Copilote Bureau Windows (capture d'écran)
 
 const app = express();
 const PORT = 3001;
 
 // MIDDLEWARES GLOBAUX DE SÉCURITÉ
 app.use(corsMiddleware); // CORS strict avec whitelist
-app.use(express.json({ limit: "10mb" })); // Limite taille body
+app.use(express.json({ limit: "15mb" })); // Limite taille body (augmentée pour base64 images)
 app.use(sanitizeAll); // Sanitization XSS/injection
 app.use(apiLimiter); // Rate limiting global (100 req/15min)
 
@@ -102,6 +103,7 @@ app.use("/api/security", securityRoutes); // Sécurité & Surveillance HA (alarm
 app.use("/api/media", mediaRoutes); // Multimédia (YouTube, Spotify, Plex)
 app.use("/api/vision", visionRoutes); // Vision Gemini (webcam, analyse image)
 app.use("/api/sphere", sphereRoutes); // Contrôle Sphere ESP32 (états, modes, texte)
+app.use("/api/desktop", desktopRoutes); // Copilote Bureau Windows (capture d'écran)
 
 // Route directe pour lancer une application par son chemin
 app.post("/api/launch", async (req, res) => {

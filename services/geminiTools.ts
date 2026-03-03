@@ -128,7 +128,8 @@ export const toolDeclarations: FunctionDeclaration[] = [
   },
   {
     name: "analyze_screen",
-    description: "Capture and analyze screen content.",
+    description:
+      "MANDATORY TOOL: Use THIS tool when the user asks you to 'look at', 'read', 'check', 'analyze' something on their screen, or asks 'what is wrong with my code', 'what's on my screen', 'read this'. This tool captures a screenshot of their actual Windows desktop/code/software and analyzes it using Gemini Vision. Do NOT try to answer blindly if they refer to their screen/code.",
     parameters: {
       type: Type.OBJECT,
       properties: {
@@ -136,7 +137,11 @@ export const toolDeclarations: FunctionDeclaration[] = [
           type: Type.STRING,
           enum: ["general", "ocr", "code", "ui", "error"],
         },
-        prompt: { type: Type.STRING },
+        prompt: {
+          type: Type.STRING,
+          description:
+            "Optional custom prompt to guide the vision analysis. e.g: 'Trouve l'erreur de syntaxe dans le composant React'",
+        },
       },
     },
   },
