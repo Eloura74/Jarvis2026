@@ -61,16 +61,16 @@ void updateLogic() {
       // Première entrée en screensaver : initialiser les variables de veille
       if (previous_state == OrbState::IDLE) {
         g_screensaver_start = millis();
-        // La couleur de veille est celle du repos du thème
+        // <--- MODIFICATION : La couleur de veille est celle du repos du thème
         g_sleep_color = theme_idle_col; 
+        if (!g_dust_init) { initDustParticles(); g_dust_init = true; }
       }
       local_state = OrbState::MODE_SCREENSAVER;
     }
   } else {
     // Retour d'activité : réinitialiser le flag pour la prochaine veille
-    // Retour d'activité : on quitte le mode SCREENSAVER
     if (previous_state == OrbState::MODE_SCREENSAVER) {
-      // Pas de cleanup nécessaire pour l'instant
+      g_dust_init = false;
     }
     idleStartTime = millis();
   }

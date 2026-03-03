@@ -165,7 +165,6 @@ extern const uint16_t COL_PINK;
 extern const uint16_t COL_GREY;
 extern const uint16_t COL_DARK;
 extern const uint16_t COL_BG;
-extern const uint16_t COL_CARBON_SHADOW;
 extern const uint16_t COL_COPPER;
 extern const uint16_t COL_WOOD;
 extern const uint16_t COL_OAK;

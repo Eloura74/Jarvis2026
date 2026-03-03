@@ -23,7 +23,6 @@ const uint16_t COL_PINK      = rgb565(255, 0, 127);
 const uint16_t COL_GREY      = rgb565(100, 110, 120);
 const uint16_t COL_DARK      = rgb565(10, 15, 20);
 const uint16_t COL_BG        = rgb565(2, 3, 5);
-const uint16_t COL_CARBON_SHADOW = rgb565(5, 6, 8);
 
 // Couleurs liées aux thèmes (WOOD, COPPER, etc.)
 const uint16_t COL_COPPER        = rgb565(184, 115, 51);

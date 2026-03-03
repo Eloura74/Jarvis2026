@@ -23,7 +23,6 @@ const uint16_t COL_PINK      = rgb565(255, 0, 127);
 const uint16_t COL_GREY      = rgb565(100, 110, 120);
 const uint16_t COL_DARK      = rgb565(10, 15, 20);
 const uint16_t COL_BG        = rgb565(2, 3, 5);
-const uint16_t COL_CARBON_SHADOW = rgb565(5, 6, 8);
 
 // Couleurs liées aux thèmes (WOOD, COPPER, etc.)
 const uint16_t COL_COPPER        = rgb565(184, 115, 51);
@@ -107,3 +106,13 @@ void init3DGeometry() {
   }
 }
 
+// Initialise les 8 particules de poussière flottantes du screensaver
+// Positions pseudo-aléatoires basées sur l'index pour éviter rand()
+void initDustParticles() {
+  for (int i = 0; i < 8; i++) {
+    g_dust[i].angle  = (i / 8.0f) * 2.0f * PI + (i * 0.37f);
+    g_dust[i].radius = 92.0f + (i % 3) * 8.0f;
+    g_dust[i].speed  = 0.0008f + (i % 4) * 0.0003f;
+    g_dust[i].size   = (i % 2 == 0) ? 1 : 2;
+  }
+}

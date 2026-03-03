@@ -105,7 +105,8 @@ struct JarvisState {
 struct Point3D  { float x, y, z; };
 struct ProjPoint { int x, y; float z; };
 
-// (Anciennes structures particules screensaver supprimées)
+// Particules de poussière (screensaver)
+struct DustParticle { float angle; float radius; float speed; float size; };
 
 // ==============================================================================
 // VARIABLES GLOBALES — définies dans main.cpp, extern partout ailleurs
@@ -119,14 +120,11 @@ extern const int CY;
 extern float     g_phase;
 extern uint32_t  ms_time;
 
-// ==============================================================================
-// LAYERS DE RENDU HYBRIDE (Screensaver Arc Reactor)
-// (Supprimés pour libérer 345Ko de RAM, rendu compositing direct sur spr)
-// ==============================================================================
-
 // Screensaver
 extern float          g_sleep_phase;
 extern uint16_t       g_sleep_color;
+extern DustParticle   g_dust[8];
+extern bool           g_dust_init;
 extern unsigned long  g_screensaver_start;
 
 // Moteur 3D
@@ -165,7 +163,6 @@ extern const uint16_t COL_PINK;
 extern const uint16_t COL_GREY;
 extern const uint16_t COL_DARK;
 extern const uint16_t COL_BG;
-extern const uint16_t COL_CARBON_SHADOW;
 extern const uint16_t COL_COPPER;
 extern const uint16_t COL_WOOD;
 extern const uint16_t COL_OAK;

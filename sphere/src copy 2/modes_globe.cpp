@@ -103,37 +103,21 @@ void renderModeScreensaver() {
     }
   }
 
-  // --- PHASE B : RADIATEUR INFERIEUR (Heat Sink Volumétrique) ---
-  // On simule une "épaisseur" avec une ellipse décalée (Ombrage de l'extrudation)
-  spr.fillEllipse(CX, y_base + 3, 75, 75 * tilt, COL_CARBON_SHADOW);
-  spr.fillEllipse(CX, y_base, 75, 75 * tilt, lerpColor(COL_BG, colDark, 0.4f));
-  
-  // Rebord brillant épais
+  // --- PHASE B : RADIATEUR INFERIEUR ---
+  spr.fillEllipse(CX, y_base, 75, 75 * tilt, lerpColor(COL_BG, colDark, 0.5f));
   spr.drawEllipse(CX, y_base, 75, 75 * tilt, colWire);
-  spr.drawEllipse(CX, y_base, 74, 74 * tilt, lerpColor(colWire, COL_WHITE, 0.3f));
-  
-  // Anneau interne profondément creusé
   spr.drawEllipse(CX, y_base, 65, 65 * tilt, colDark);
-  spr.drawEllipse(CX, y_base, 64, 64 * tilt, colDark);
-  
   for (int i = 0; i < 12; i++) {
     float a = i * (PI / 6.0f) - rot;
-    // Grille 2px de large et ancrée profondément
-    int x1 = CX + cos(a)*20, y1 = y_base + sin(a)*20*tilt;
-    int x2 = CX + cos(a)*75, y2 = y_base + sin(a)*75*tilt;
-    spr.drawLine(x1, y1, x2, y2, colDark);
-    spr.drawLine(x1-1, y1, x2-1, y2, COL_CARBON_SHADOW); // Ombre portée de la latte
+    spr.drawLine(CX + cos(a)*20, y_base + sin(a)*20*tilt, 
+                 CX + cos(a)*75, y_base + sin(a)*75*tilt, colDark);
   }
 
   // --- PHASE C : SUPPORT BOBINES ---
-  // Support extérieur (Anneau de Titanium) - 2px
-  spr.drawEllipse(CX, y_coilB, 85, 85 * tilt, lerpColor(colWire, colNeon, 0.2f));
-  spr.drawEllipse(CX, y_coilB, 84, 84 * tilt, colWire);
-  
-  // Support intérieur
+  spr.drawEllipse(CX, y_coilB, 85, 85 * tilt, colWire);
   spr.drawEllipse(CX, y_coilB, 45, 45 * tilt, colWire);
 
-  // --- PHASE D : CŒUR & BOBINES ÉPAISSES ---
+  // --- PHASE D : CŒUR & BOBINES ---
   struct CoilDrawer {
     lgfx::LGFX_Sprite& spr;
     int y_core;
@@ -145,20 +129,11 @@ void renderModeScreensaver() {
       int y_in  = y_core + (int)(sA * 45 * tilt);
       int x_out = CX + (int)(cA * 85);
       int y_out = y_core + (int)(sA * 85 * tilt);
-      
-      uint16_t cColorMain = isFront ? colNeon : colDark;
-      uint16_t cColorEdge = isFront ? lerpColor(colNeon, COL_WHITE, 0.6f) : lerpColor(colDark, COL_BG, 0.5f);
-      
-      // Bobine avec épaisseur et volume (5 lignes, avec highlight sur le bord)
-      spr.drawLine(x_in, y_in-2, x_out, y_out-2, cColorEdge);
-      spr.drawLine(x_in, y_in-1, x_out, y_out-1, cColorMain);
-      spr.drawLine(x_in, y_in,   x_out, y_out,   cColorMain);
-      spr.drawLine(x_in, y_in+1, x_out, y_out+1, cColorMain);
-      spr.drawLine(x_in, y_in+2, x_out, y_out+2, isFront ? colWire : COL_CARBON_SHADOW); // Ombre portée
-      
-      // Connecteur métallique central (plus gros)
-      spr.fillCircle(x_in, y_in, 3, isFront ? colCore : colWire);
-      spr.drawCircle(x_in, y_in, 4, isFront ? colNeon : colDark);
+      uint16_t cColor = isFront ? colNeon : colDark;
+      spr.drawLine(x_in, y_in,   x_out, y_out,   cColor);
+      spr.drawLine(x_in, y_in-1, x_out, y_out-1, cColor);
+      spr.drawLine(x_in, y_in+1, x_out, y_out+1, cColor);
+      spr.fillCircle(x_in, y_in, 2, isFront ? colCore : colWire);
     }
   } coilDrawer{spr, y_core, tilt, colNeon, colDark, colCore, colWire};
 
@@ -179,23 +154,14 @@ void renderModeScreensaver() {
     if (sin(a) >= 0) coilDrawer.draw(a, true);
   }
 
-  // --- PHASE E : ANNEAU SUPERIEUR DE CONFINEMENT (Épais) ---
-  spr.drawEllipse(CX, y_coilT, 85, 85 * tilt, lerpColor(colWire, COL_WHITE, 0.4f));
-  spr.drawEllipse(CX, y_coilT, 84, 84 * tilt, colWire);
-  spr.drawEllipse(CX, y_coilT, 83, 83 * tilt, colWire);
-  
+  // --- PHASE E : ANNEAU SUPERIEUR ---
+  spr.drawEllipse(CX, y_coilT, 85, 85 * tilt, colWire);
   spr.drawEllipse(CX, y_coilT, 45, 45 * tilt, colNeon);
-  spr.drawEllipse(CX, y_coilT, 44, 44 * tilt, colNeon); // Doublement du néon intérieur
 
-  // --- PHASE F : LENTILLE PALLADIUM VOLUMÉTRIQUE ---
+  // --- PHASE F : LENTILLE PALLADIUM ---
   drawAdditiveGlow(CX, y_top, 35, colNeon, 0.60f); // Faisceau sortant de la lentille !
-  
-  // Contour épais de la lentille en verre
   spr.drawEllipse(CX, y_top, 50, 50 * tilt, colNeon);
-  spr.drawEllipse(CX, y_top, 49, 49 * tilt, lerpColor(colNeon, COL_WHITE, 0.5f));
-  
-  // Ombrage graduel de la sphère de verre
-  for (int r = 48; r > 10; r -= 3) {
+  for (int r = 25; r > 5; r -= 4) {
     float f = (float)r / 25.0f;
     spr.drawEllipse(CX, y_top, r, r * tilt, lerpColor(colNeon, COL_BG, f));
   }

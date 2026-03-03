@@ -20,9 +20,6 @@
 LGFX display;
 lgfx::LGFX_Sprite spr(&display);
 
-// LGFX Sprites supplémentaires supprimés pour économiser la RAM.
-// Le rendu se fera directement sur le sprite principal (spr).
-
 // ==============================================================================
 // ÉTAT PARTAGÉ MULTI-CORE (accès protégé par spinlock FreeRTOS)
 // ==============================================================================
@@ -43,6 +40,8 @@ uint32_t ms_time = 0;
 // Variables de veille (screensaver)
 float         g_sleep_phase       = 0.0f;
 uint16_t      g_sleep_color       = 0;
+DustParticle  g_dust[8];
+bool          g_dust_init         = false;
 unsigned long g_screensaver_start = 0;
 
 // ==============================================================================
@@ -84,8 +83,6 @@ void setup() {
   // Création du sprite double-buffer 240x240 (rendu hors-écran, évite le tearing)
   spr.createSprite(240, 240);
   spr.setSwapBytes(true);
-
-
 
   // Initialisation de la couleur dynamique de départ
   // COL_OMNI_BLUE est une constante définie dans utils.cpp
