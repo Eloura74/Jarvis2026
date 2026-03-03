@@ -1,5 +1,6 @@
 import express from "express";
 import { setSphereState, setSphereText } from "../services/sphereService.js";
+import { duckAudio, restoreAudio } from "../services/duckingService.js";
 
 const router = express.Router();
 
@@ -51,6 +52,17 @@ router.post(["/state", "/mode"], async (req, res) => {
         error: "État non reconnu.",
         accepted_values: VALID_STATES,
       });
+    }
+
+    // --- DUCKING AUDIO (Baisse du son) ---
+    if (normalizedTarget === "SPEAKING") {
+      duckAudio().catch((err) => console.error("Erreur duckAudio:", err));
+    } else if (
+      normalizedTarget === "IDLE" ||
+      normalizedTarget === "MODE_SCREENSAVER" ||
+      normalizedTarget === "STANDBY"
+    ) {
+      restoreAudio().catch((err) => console.error("Erreur restoreAudio:", err));
     }
 
     // L'utilisation de await prévient les crashs si le service est asynchrone
