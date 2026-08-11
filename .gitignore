@@ -40,4 +40,5 @@ server/.wwebjs_cache/
 
 # Cache fichiers générés automatiquement
 server/apps-index.json
-server/data/local_memory_index.json
+server/data/local_memory_index.jsongoogle_credentials.json.backup
+google_credentials.json.backup

@@ -13,9 +13,9 @@ const router = express.Router();
 /**
  * GET /api/maps/directions
  * Calcule temps de trajet entre deux adresses avec trafic en temps réel
- * 
+ *
  * Query params:
- * - origin: Adresse de départ (ex: "Istres, France")
+ * - origin: Adresse de départ (ex: "Le Luc en Provence, France")
  * - destination: Adresse d'arrivée (ex: "Marseille, France")
  * - mode: Mode de transport (driving, walking, bicycling, transit) - défaut: driving
  */
@@ -24,8 +24,8 @@ router.get("/directions", searchLimiter, async (req, res) => {
     const { origin, destination, mode = "driving" } = req.query;
 
     if (!origin || !destination) {
-      return res.status(400).json({ 
-        error: "Paramètres 'origin' et 'destination' requis" 
+      return res.status(400).json({
+        error: "Paramètres 'origin' et 'destination' requis",
       });
     }
 

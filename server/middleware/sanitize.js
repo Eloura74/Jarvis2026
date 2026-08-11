@@ -7,25 +7,25 @@ import validator from "validator";
 
 /**
  * Sanitize une string : trim + escape HTML
- * 
+ *
  * @param {string} str - String à nettoyer
  * @returns {string} String nettoyée
  */
 export const sanitizeString = (str) => {
   if (typeof str !== "string") return str;
-  
+
   // Trim whitespace
   let cleaned = validator.trim(str);
-  
+
   // Escape HTML pour prévenir XSS
   cleaned = validator.escape(cleaned);
-  
+
   return cleaned;
 };
 
 /**
  * Sanitize récursivement un objet
- * 
+ *
  * @param {any} obj - Objet à nettoyer
  * @returns {any} Objet nettoyé
  */
@@ -82,9 +82,20 @@ export const sanitizeParams = (req, res, next) => {
 };
 
 /**
+ * Routes exemptées de sanitization.
+ * Le callback OAuth reçoit un code d'autorisation Google contenant des
+ * caractères spéciaux (/, +, =) qui seraient corrompus par validator.escape()
+ * → provoquait l'erreur "invalid_grant: Malformed auth code."
+ */
+const SANITIZE_EXEMPT_PATHS = ["/api/google/callback"];
+
+/**
  * Middleware combiné : sanitize body + query + params
  */
 export const sanitizeAll = (req, res, next) => {
+  if (SANITIZE_EXEMPT_PATHS.some((path) => req.path.startsWith(path))) {
+    return next();
+  }
   sanitizeBody(req, res, () => {});
   sanitizeQuery(req, res, () => {});
   sanitizeParams(req, res, () => {});

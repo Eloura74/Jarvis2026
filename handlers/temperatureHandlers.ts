@@ -19,7 +19,7 @@ export const handleOutdoorTemperature = async (
   ctx: HandlerContext,
 ) => {
   const { addLog, setStatus, speak } = ctx;
-  const city = args.city || "Istres,FR";
+  const city = args.city || "Le Luc en Provence,FR";
 
   addLog(
     `Récupération température extérieure pour ${city}...`,

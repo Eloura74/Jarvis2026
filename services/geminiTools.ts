@@ -475,7 +475,7 @@ export const toolDeclarations: FunctionDeclaration[] = [
         city: {
           type: Type.STRING,
           description:
-            "City name for weather query. Default: 'Istres,FR'. Format: 'CityName,CountryCode'.",
+            "City name for weather query. Default: 'Le Luc en Provence,FR'. Format: 'CityName,CountryCode'.",
         },
       },
     },
@@ -508,7 +508,7 @@ export const toolDeclarations: FunctionDeclaration[] = [
         origin: {
           type: Type.STRING,
           description:
-            "Starting address (e.g. 'Istres, France', 'home', 'current location'). If user says 'pour aller à X' without origin, use 'Istres, France' as default.",
+            "Starting address (e.g. 'Le Luc en Provence, France', 'home', 'current location'). If user says 'pour aller à X' without origin, use 'Le Luc en Provence, France' as default.",
         },
         destination: {
           type: Type.STRING,

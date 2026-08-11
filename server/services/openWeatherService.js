@@ -10,15 +10,15 @@ const CACHE_DURATION = 15 * 60 * 1000; // 15 minutes
 
 /**
  * Récupère la météo actuelle pour une ville
- * 
- * @param {string} city - Nom de la ville (ex: "Istres,FR")
+ *
+ * @param {string} city - Nom de la ville (ex: "Le Luc en Provence,FR")
  * @returns {Promise<Object>} Données météo
  */
-export async function getCurrentWeather(city = "Istres,FR") {
+export async function getCurrentWeather(city = "Le Luc en Provence,FR") {
   const now = Date.now();
-  
+
   // Retourner cache si valide
-  if (weatherCache && (now - cacheTimestamp) < CACHE_DURATION) {
+  if (weatherCache && now - cacheTimestamp < CACHE_DURATION) {
     console.log("☁️ [OpenWeather] Utilisation du cache");
     return weatherCache;
   }
@@ -30,14 +30,14 @@ export async function getCurrentWeather(city = "Istres,FR") {
 
   try {
     const url = `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(city)}&appid=${API_KEY}&units=metric&lang=fr`;
-    
+
     const response = await fetch(url);
     if (!response.ok) {
       throw new Error(`OpenWeather API error: ${response.status}`);
     }
 
     const data = await response.json();
-    
+
     const result = {
       temperature: Math.round(data.main.temp),
       feelsLike: Math.round(data.main.feels_like),
@@ -55,7 +55,9 @@ export async function getCurrentWeather(city = "Istres,FR") {
     weatherCache = result;
     cacheTimestamp = now;
 
-    console.log(`☁️ [OpenWeather] ${result.city}: ${result.temperature}°C (${result.description})`);
+    console.log(
+      `☁️ [OpenWeather] ${result.city}: ${result.temperature}°C (${result.description})`,
+    );
     return result;
   } catch (error) {
     console.error("❌ [OpenWeather] Erreur:", error.message);
@@ -65,11 +67,11 @@ export async function getCurrentWeather(city = "Istres,FR") {
 
 /**
  * Récupère les prévisions 5 jours
- * 
+ *
  * @param {string} city - Nom de la ville
  * @returns {Promise<Array>} Prévisions par tranches de 3h
  */
-export async function getForecast(city = "Istres,FR") {
+export async function getForecast(city = "Le Luc en Provence,FR") {
   const API_KEY = process.env.OPENWEATHER_API_KEY;
   if (!API_KEY) {
     throw new Error("OPENWEATHER_API_KEY manquante dans .env");
@@ -77,16 +79,16 @@ export async function getForecast(city = "Istres,FR") {
 
   try {
     const url = `https://api.openweathermap.org/data/2.5/forecast?q=${encodeURIComponent(city)}&appid=${API_KEY}&units=metric&lang=fr`;
-    
+
     const response = await fetch(url);
     if (!response.ok) {
       throw new Error(`OpenWeather API error: ${response.status}`);
     }
 
     const data = await response.json();
-    
+
     // Formater les prévisions
-    const forecast = data.list.map(item => ({
+    const forecast = data.list.map((item) => ({
       timestamp: item.dt * 1000,
       temperature: Math.round(item.main.temp),
       description: item.weather[0].description,
@@ -95,7 +97,9 @@ export async function getForecast(city = "Istres,FR") {
       windSpeed: item.wind.speed,
     }));
 
-    console.log(`☁️ [OpenWeather] Prévisions ${city}: ${forecast.length} entrées`);
+    console.log(
+      `☁️ [OpenWeather] Prévisions ${city}: ${forecast.length} entrées`,
+    );
     return forecast;
   } catch (error) {
     console.error("❌ [OpenWeather] Erreur prévisions:", error.message);

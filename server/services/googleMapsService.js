@@ -9,7 +9,7 @@ const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
 /**
  * Calcule le temps de trajet entre deux adresses avec trafic en temps réel
- * 
+ *
  * @param {string} origin - Adresse de départ
  * @param {string} destination - Adresse d'arrivée
  * @param {string} mode - Mode de transport (driving, walking, bicycling, transit)
@@ -21,12 +21,13 @@ export async function getDirections(origin, destination, mode = "driving") {
 
   // Vérifier cache
   const cached = directionsCache.get(cacheKey);
-  if (cached && (now - cached.timestamp) < CACHE_DURATION) {
+  if (cached && now - cached.timestamp < CACHE_DURATION) {
     console.log("🗺️ [GoogleMaps] Utilisation du cache");
     return cached.data;
   }
 
-  const API_KEY = process.env.GOOGLE_MAPS_API_KEY;
+  const API_KEY =
+    process.env.GOOGLE_MAPS_API_KEY || process.env.VITE_GOOGLE_MAPS_API_KEY;
   if (!API_KEY) {
     throw new Error("GOOGLE_MAPS_API_KEY manquante dans .env");
   }
@@ -42,7 +43,7 @@ export async function getDirections(origin, destination, mode = "driving") {
     url.searchParams.append("key", API_KEY);
 
     const response = await fetch(url.toString());
-    
+
     if (!response.ok) {
       throw new Error(`Google Maps API error: ${response.status}`);
     }
@@ -50,7 +51,9 @@ export async function getDirections(origin, destination, mode = "driving") {
     const data = await response.json();
 
     if (data.status !== "OK") {
-      throw new Error(`Google Maps status: ${data.status} - ${data.error_message || "Unknown error"}`);
+      throw new Error(
+        `Google Maps status: ${data.status} - ${data.error_message || "Unknown error"}`,
+      );
     }
 
     const route = data.routes[0];
@@ -67,17 +70,19 @@ export async function getDirections(origin, destination, mode = "driving") {
         text: leg.duration.text,
         seconds: leg.duration.value,
       },
-      durationInTraffic: leg.duration_in_traffic ? {
-        text: leg.duration_in_traffic.text,
-        seconds: leg.duration_in_traffic.value,
-      } : null,
-      steps: leg.steps.map(step => ({
+      durationInTraffic: leg.duration_in_traffic
+        ? {
+            text: leg.duration_in_traffic.text,
+            seconds: leg.duration_in_traffic.value,
+          }
+        : null,
+      steps: leg.steps.map((step) => ({
         instruction: step.html_instructions.replace(/<[^>]*>/g, ""), // Retirer HTML
         distance: step.distance.text,
         duration: step.duration.text,
       })),
-      trafficDelay: leg.duration_in_traffic 
-        ? leg.duration_in_traffic.value - leg.duration.value 
+      trafficDelay: leg.duration_in_traffic
+        ? leg.duration_in_traffic.value - leg.duration.value
         : 0,
       timestamp: now,
     };
@@ -85,7 +90,9 @@ export async function getDirections(origin, destination, mode = "driving") {
     // Mettre en cache
     directionsCache.set(cacheKey, { data: result, timestamp: now });
 
-    console.log(`🗺️ [GoogleMaps] ${origin} → ${destination}: ${result.durationInTraffic?.text || result.duration.text} (${result.distance.text})`);
+    console.log(
+      `🗺️ [GoogleMaps] ${origin} → ${destination}: ${result.durationInTraffic?.text || result.duration.text} (${result.distance.text})`,
+    );
     return result;
   } catch (error) {
     console.error("❌ [GoogleMaps] Erreur:", error.message);
@@ -96,11 +103,14 @@ export async function getDirections(origin, destination, mode = "driving") {
 /**
  * Nettoie le cache périodiquement (toutes les 10 minutes)
  */
-setInterval(() => {
-  const now = Date.now();
-  for (const [key, value] of directionsCache.entries()) {
-    if (now - value.timestamp > CACHE_DURATION) {
-      directionsCache.delete(key);
+setInterval(
+  () => {
+    const now = Date.now();
+    for (const [key, value] of directionsCache.entries()) {
+      if (now - value.timestamp > CACHE_DURATION) {
+        directionsCache.delete(key);
+      }
     }
-  }
-}, 10 * 60 * 1000);
+  },
+  10 * 60 * 1000,
+);

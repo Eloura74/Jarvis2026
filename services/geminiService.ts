@@ -194,10 +194,97 @@ export const streamCommand = async (
       "show",
     ].some((k) => t.includes(k));
 
-    // FORÇAGE TECHNIQUE : On désactive la réflexion longue si une requête visuelle, action ou recherche est demandée
+    // Détecter les commandes domotiques (Home Assistant)
+    const isHomeCommand = [
+      "allume",
+      "éteins",
+      "lumière",
+      "chauffage",
+      "volet",
+      "température",
+      "turn on",
+      "turn off",
+      "light",
+    ].some((k) => t.includes(k));
+
+    // Détecter les commandes Gmail
+    const isGmailCommand = [
+      "mail",
+      "email",
+      "envoie un mail",
+      "lis mes mails",
+      "qui m'a écrit",
+      "gmail",
+    ].some((k) => t.includes(k));
+
+    // Détecter les commandes Calendar
+    const isCalendarCommand = [
+      "agenda",
+      "rendez-vous",
+      "calendrier",
+      "événement",
+      "planning",
+      "rdv",
+      "réunion",
+    ].some((k) => t.includes(k));
+
+    // Détecter les commandes Spotify/Média
+    const isMediaCommand = [
+      "spotify",
+      "musique",
+      "plex",
+      "youtube",
+      "pause",
+      "play",
+      "piste suivante",
+      "volume",
+    ].some((k) => t.includes(k));
+
+    // Détecter les commandes Phone (KDE Connect)
+    const isPhoneCommand = [
+      "téléphone",
+      "appelle",
+      "sms",
+      "notification",
+      "batterie",
+      "phone",
+    ].some((k) => t.includes(k));
+
+    // Détecter les commandes TrueNAS/Storage
+    const isStorageCommand = [
+      "nas",
+      "stockage",
+      "disque",
+      "truenas",
+      "espace",
+      "storage",
+    ].some((k) => t.includes(k));
+
+    // Détecter les commandes Sécurité/Caméras
+    const isSecurityCommand = [
+      "caméra",
+      "sécurité",
+      "alarme",
+      "mouvement",
+      "camera",
+      "security",
+    ].some((k) => t.includes(k));
+
+    // FORÇAGE TECHNIQUE : On désactive la réflexion longue si une requête visuelle, action ou feature avancée est demandée
     // car le "Thinking Mode" désactive ou occulte très souvent l'appel aux outils (Function Calling) chez Gemini.
     const finalThinkingBudget =
-      isToolExplicit || isActionCommand || isSearchCommand ? 0 : thinkingBudget;
+      isToolExplicit ||
+      isActionCommand ||
+      isSearchCommand ||
+      isHomeCommand ||
+      isGmailCommand ||
+      isCalendarCommand ||
+      isMediaCommand ||
+      isPhoneCommand ||
+      isStorageCommand ||
+      isSecurityCommand
+        ? 0
+        : thinkingBudget;
 
     let systemInstruction =
       generateSystemInstruction(memSum, conversationContext) + haContext;
@@ -228,6 +315,81 @@ export const streamCommand = async (
         systemInstruction;
     }
 
+    // FORÇAGE SÉMANTIQUE : Domotique Home Assistant
+    if (isHomeCommand) {
+      systemInstruction =
+        "CRITICAL DIRECTIVE: The user is requesting HOME AUTOMATION control. YOU MUST CALL control_home_automation tool.\n" +
+        "Examples: 'allume la lumière du salon' → control_home_automation(target='salon', action='turn_on')\n" +
+        "DO NOT ANSWER BY TEXT. CALL THE TOOL NOW.\n\n" +
+        systemInstruction;
+    }
+
+    // FORÇAGE SÉMANTIQUE : Gmail
+    if (isGmailCommand) {
+      systemInstruction =
+        "CRITICAL DIRECTIVE: The user is requesting GMAIL operations. YOU MUST CALL:\n" +
+        "- 'lis mes mails', 'qui m'a écrit' → gmail_read\n" +
+        "- 'envoie un mail à X' → gmail_send\n" +
+        "DO NOT ANSWER BY TEXT. CALL THE TOOL NOW.\n\n" +
+        systemInstruction;
+    }
+
+    // FORÇAGE SÉMANTIQUE : Calendar
+    if (isCalendarCommand) {
+      systemInstruction =
+        "CRITICAL DIRECTIVE: The user is requesting CALENDAR operations. YOU MUST CALL:\n" +
+        "- 'mes prochains rendez-vous', 'mon agenda' → calendar_list\n" +
+        "- 'ajoute un rendez-vous' → calendar_create\n" +
+        "- 'déplace mon RDV' → calendar_move\n" +
+        "DO NOT ANSWER BY TEXT. CALL THE TOOL NOW.\n\n" +
+        systemInstruction;
+    }
+
+    // FORÇAGE SÉMANTIQUE : Média (Spotify/Plex/YouTube)
+    if (isMediaCommand) {
+      systemInstruction =
+        "CRITICAL DIRECTIVE: The user is requesting MEDIA control. YOU MUST CALL:\n" +
+        "- 'lance X sur Spotify', 'pause Spotify' → spotify_control\n" +
+        "- 'lance X sur Plex' → play_plex\n" +
+        "- 'lance X sur YouTube' → play_youtube\n" +
+        "DO NOT ANSWER BY TEXT. CALL THE TOOL NOW.\n\n" +
+        systemInstruction;
+    }
+
+    // FORÇAGE SÉMANTIQUE : Phone (KDE Connect)
+    if (isPhoneCommand) {
+      systemInstruction =
+        "CRITICAL DIRECTIVE: The user is requesting PHONE operations. YOU MUST CALL:\n" +
+        "- 'appelle X' → make_phone_call\n" +
+        "- 'envoie un SMS à X' → send_sms\n" +
+        "- 'envoie une notification' → send_phone_notification\n" +
+        "- 'batterie téléphone' → phone_battery\n" +
+        "DO NOT ANSWER BY TEXT. CALL THE TOOL NOW.\n\n" +
+        systemInstruction;
+    }
+
+    // FORÇAGE SÉMANTIQUE : TrueNAS/Storage
+    if (isStorageCommand) {
+      systemInstruction =
+        "CRITICAL DIRECTIVE: The user is requesting STORAGE/NAS information. YOU MUST CALL:\n" +
+        "- 'statut stockage', 'espace NAS' → storage_status\n" +
+        "- 'santé disques', 'température disques' → disk_health\n" +
+        "- 'services TrueNAS' → truenas_services\n" +
+        "DO NOT ANSWER BY TEXT. CALL THE TOOL NOW.\n\n" +
+        systemInstruction;
+    }
+
+    // FORÇAGE SÉMANTIQUE : Sécurité/Caméras
+    if (isSecurityCommand) {
+      systemInstruction =
+        "CRITICAL DIRECTIVE: The user is requesting SECURITY/CAMERA operations. YOU MUST CALL:\n" +
+        "- 'montre la caméra X' → security_camera_snapshot\n" +
+        "- 'état alarme' → alarm_control\n" +
+        "- 'historique mouvement' → motion_history\n" +
+        "DO NOT ANSWER BY TEXT. CALL THE TOOL NOW.\n\n" +
+        systemInstruction;
+    }
+
     // S1 : Appel via proxy backend (clé API sécurisée côté serveur)
     // Le proxy gère le fallback 2.5-flash  1.5-flash automatiquement
     // On passe l'historique natif Gemini pour un contexte multi-tours réel
@@ -249,6 +411,44 @@ export const streamCommand = async (
       allowedFunctionNames = ["analyze_screen", "take_screenshot"];
     } else if (isSearchCommand) {
       allowedFunctionNames = ["search_web", "show_search_results", "open_url"];
+    } else if (isHomeCommand) {
+      allowedFunctionNames = ["control_home_automation", "show_status_overlay"];
+    } else if (isGmailCommand) {
+      allowedFunctionNames = ["gmail_read", "gmail_send"];
+    } else if (isCalendarCommand) {
+      allowedFunctionNames = [
+        "calendar_list",
+        "calendar_create",
+        "calendar_move",
+      ];
+    } else if (isMediaCommand) {
+      allowedFunctionNames = [
+        "spotify_control",
+        "play_plex",
+        "play_youtube",
+        "adjust_volume",
+      ];
+    } else if (isPhoneCommand) {
+      allowedFunctionNames = [
+        "send_phone_notification",
+        "make_phone_call",
+        "send_sms",
+        "phone_battery",
+      ];
+    } else if (isStorageCommand) {
+      allowedFunctionNames = [
+        "storage_status",
+        "disk_health",
+        "truenas_services",
+      ];
+    } else if (isSecurityCommand) {
+      allowedFunctionNames = [
+        "security_camera_snapshot",
+        "alarm_control",
+        "motion_history",
+        "list_cameras",
+        "security_status",
+      ];
     }
 
     const responseStream = generateContentStreamProxy(input, {

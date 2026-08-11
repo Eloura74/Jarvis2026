@@ -6,7 +6,10 @@
  */
 
 import express from "express";
-import { getCurrentWeather, getForecast } from "../services/openWeatherService.js";
+import {
+  getCurrentWeather,
+  getForecast,
+} from "../services/openWeatherService.js";
 import { searchLimiter } from "../middleware/index.js";
 
 const router = express.Router();
@@ -17,7 +20,7 @@ const router = express.Router();
  */
 router.get("/outdoor", searchLimiter, async (req, res) => {
   try {
-    const city = req.query.city || "Istres,FR";
+    const city = req.query.city || "Le Luc en Provence,FR";
     const weather = await getCurrentWeather(city);
     res.json({ success: true, weather });
   } catch (error) {
@@ -32,7 +35,7 @@ router.get("/outdoor", searchLimiter, async (req, res) => {
  */
 router.get("/forecast", searchLimiter, async (req, res) => {
   try {
-    const city = req.query.city || "Istres,FR";
+    const city = req.query.city || "Le Luc en Provence,FR";
     const forecast = await getForecast(city);
     res.json({ success: true, forecast });
   } catch (error) {
@@ -56,7 +59,7 @@ router.get("/pool", async (req, res) => {
       status: "ok",
       alert: false, // true si <18°C ou >30°C
     };
-    
+
     res.json({ success: true, pool: poolTemp });
   } catch (error) {
     console.error("❌ Erreur température piscine:", error.message);
@@ -87,7 +90,7 @@ router.get("/system", async (req, res) => {
       },
       timestamp: Date.now(),
     };
-    
+
     res.json({ success: true, system: systemTemps });
   } catch (error) {
     console.error("❌ Erreur températures système:", error.message);

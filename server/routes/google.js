@@ -70,13 +70,29 @@ router.get("/callback", async (req, res) => {
         <p style="margin-top: 20px; opacity: 0.8;">J.A.R.V.I.S. dispose désormais des accès CRUD pour votre calendrier.</p>
         <script>
           setTimeout(() => {
-            window.location.href = 'http://localhost:3000';
+            window.location.href = 'http://localhost:5173';
           }, 2000);
         </script>
       </div>
     `);
   } catch (error) {
-    res.status(500).send("Erreur d'authentification : " + error.message);
+    console.error("❌ [Google OAuth] Erreur détaillée:", {
+      message: error.message,
+      response: error.response?.data,
+      code: error.code,
+    });
+    const details = error.response?.data
+      ? JSON.stringify(error.response.data)
+      : "";
+    res
+      .status(500)
+      .send(
+        "Erreur d'authentification : " +
+          error.message +
+          "<br><pre>" +
+          details +
+          "</pre>",
+      );
   }
 });
 
