@@ -13,12 +13,25 @@ import { FunctionDeclaration, Type } from "@google/genai";
 export const toolDeclarations: FunctionDeclaration[] = [
   {
     name: "search_and_launch_app",
-    description: "Launch an application, optionally with a URL (for browsers).",
+    description:
+      "🚀 MANDATORY TOOL FOR ALL APPLICATION LAUNCH COMMANDS. " +
+      "ALWAYS USE THIS when user says: 'ouvre X', 'lance X', 'démarre X', 'open X', 'launch X', 'start X'. " +
+      "Examples: 'ouvre Chrome' → appName='Chrome', 'lance Spotify' → appName='Spotify', 'démarre Word' → appName='Word'. " +
+      "For browsers with URL: 'ouvre Chrome sur YouTube' → appName='Chrome', url='https://youtube.com'. " +
+      "DO NOT respond with text, CALL THIS TOOL IMMEDIATELY for any launch/open command.",
     parameters: {
       type: Type.OBJECT,
       properties: {
-        appName: { type: Type.STRING },
-        url: { type: Type.STRING },
+        appName: {
+          type: Type.STRING,
+          description:
+            "REQUIRED: The application name to launch. Examples: 'Chrome', 'Firefox', 'Spotify', 'Word', 'Excel', 'Code', 'Discord', etc.",
+        },
+        url: {
+          type: Type.STRING,
+          description:
+            "OPTIONAL: URL to open in the browser. Only for browsers like Chrome, Firefox, Edge, Opera.",
+        },
       },
       required: ["appName"],
     },

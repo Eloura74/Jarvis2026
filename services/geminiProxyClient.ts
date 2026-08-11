@@ -55,6 +55,12 @@ export interface ProxyStreamConfig {
    * Force ou restreint l'utilisation d'outils (gemini parameter)
    */
   toolChoice?: "AUTO" | "ANY" | "NONE";
+  /**
+   * Liste restreinte de tools autorisés. Si fournie, le backend active
+   * le mode ANY (appel de tool obligatoire) limité à ces fonctions.
+   * ATTENTION : ne jamais activer ANY avec les 57 tools (erreur "too much branching").
+   */
+  allowedFunctionNames?: string[];
 }
 
 // ============================================================================

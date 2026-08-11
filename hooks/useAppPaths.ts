@@ -21,7 +21,7 @@ const DEFAULT_APP_PATHS: AppPath[] = [
   // ============================================================================
   {
     name: "Chrome",
-    path: "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+    path: "C:\\Users\\faber\\AppData\\Local\\Google\\Chrome\\Application\\chrome.exe",
     aliases: ["chrome", "google chrome", "navigateur", "web", "browser"],
     category: "browser",
     icon: "🌐",
@@ -250,14 +250,28 @@ const DEFAULT_APP_PATHS: AppPath[] = [
 
 // Clé localStorage
 const STORAGE_KEY = "jarvis_app_paths";
+const VERSION_KEY = "jarvis_app_paths_version";
+const CURRENT_VERSION = "2"; // Incrémenter pour forcer la mise à jour
 
 export const useAppPaths = () => {
   const [appPaths, setAppPaths] = useState<AppPath[]>(() => {
+    // Vérifier la version du cache
+    const storedVersion = localStorage.getItem(VERSION_KEY);
+
     // Charger depuis localStorage ou utiliser défaut
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
+      if (stored && storedVersion === CURRENT_VERSION) {
         return JSON.parse(stored);
+      } else {
+        // Version obsolète ou absente : utiliser les nouveaux défauts
+        console.log(
+          "🔄 Mise à jour des chemins d'applications (v" +
+            CURRENT_VERSION +
+            ")",
+        );
+        localStorage.setItem(VERSION_KEY, CURRENT_VERSION);
+        return DEFAULT_APP_PATHS;
       }
     } catch (error) {
       console.error("❌ Erreur chargement app paths:", error);

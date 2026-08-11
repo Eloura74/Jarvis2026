@@ -174,10 +174,13 @@ export function getHistoryForGemini(maxTurns = 10): GeminiContent[] {
   if (history.length === 0) return [];
 
   // Mapper les rôles : "assistant" → "model" (convention Gemini)
-  const mapped: GeminiContent[] = history.map((m) => ({
-    role: m.role === "user" ? "user" : "model",
-    parts: [{ text: m.content }],
-  }));
+  // Filtrer les messages sans contenu valide (content undefined/vide)
+  const mapped: GeminiContent[] = history
+    .filter((m) => typeof m.content === "string" && m.content.trim() !== "")
+    .map((m) => ({
+      role: m.role === "user" ? "user" : "model",
+      parts: [{ text: m.content }],
+    }));
 
   // CONSOLIDATION DÉFENSIVE : fusionner les messages consécutifs du même rôle.
   // L'API Gemini exige une alternance stricte user/model.

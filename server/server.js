@@ -5,13 +5,12 @@
 
 import express from "express";
 import dotenv from "dotenv";
-import { spawn } from "child_process";
+import path from "path";
+import { spawn, exec } from "child_process";
 
 // Charger les variables d'environnement
-// 1. Racine du projet (Home Assistant, WhatsApp, etc.)
-dotenv.config({ path: "../.env.local" });
-// 2. Dossier server/ (GEMINI_API_KEY et secrets backend uniquement)
-dotenv.config({ path: "./.env.local" });
+// On charge .env.local depuis la racine de Jarvis2026
+dotenv.config({ path: path.resolve(process.cwd(), ".env.local") });
 
 // MIDDLEWARES DE SÉCURITÉ
 import {
@@ -125,28 +124,45 @@ app.post("/api/launch", async (req, res) => {
 
     console.log(`📍 [launch] Chemin décodé: ${decodedPath}`);
 
-    // Construire la commande avec arguments si fournis
-    let command = `start "" "${decodedPath}"`;
-    if (args && args.length > 0) {
-      const argsStr = args.map((arg) => `"${arg}"`).join(" ");
-      command = `start "" "${decodedPath}" ${argsStr}`;
-    }
+    // Décoder aussi les arguments (mêmes entités HTML que le path)
+    const decodedArgs = (args || []).map((a) =>
+      String(a)
+        .replace(/&#x2F;/g, "/")
+        .replace(/&#x3A;/g, ":")
+        .replace(/&#x5C;/g, "\\")
+        .replace(/&amp;/g, "&"),
+    );
 
-    console.log(`⚙️ [launch] Commande: ${command}`);
-
-    // Lancer l'application
-    await new Promise((resolve, reject) => {
-      const child = spawn("cmd.exe", ["/c", command], {
-        detached: true,
-        stdio: "ignore",
-        windowsHide: true,
+    if (decodedPath.toLowerCase().endsWith(".exe")) {
+      // Lancement DIRECT du .exe : pas de shell, pas de "start", pas de
+      // problème de guillemets. Le plus fiable sous Windows.
+      console.log(
+        `⚙️ [launch] Spawn direct: ${decodedPath} ${decodedArgs.join(" ")}`,
+      );
+      await new Promise((resolve, reject) => {
+        const child = spawn(decodedPath, decodedArgs, {
+          detached: true,
+          stdio: "ignore",
+        });
+        child.on("error", reject);
+        child.on("spawn", () => {
+          child.unref();
+          resolve();
+        });
       });
-
-      child.on("error", reject);
-      child.unref();
-
-      setTimeout(() => resolve(), 500);
-    });
+    } else {
+      // Fichiers non-exe (.lnk, documents…) : ouvrir via le shell
+      let command = `start "" "${decodedPath}"`;
+      if (decodedArgs.length > 0) {
+        command += " " + decodedArgs.map((a) => `"${a}"`).join(" ");
+      }
+      console.log(`⚙️ [launch] Commande shell: ${command}`);
+      await new Promise((resolve, reject) => {
+        exec(command, { windowsHide: true, timeout: 10000 }, (error) =>
+          error ? reject(error) : resolve(),
+        );
+      });
+    }
 
     console.log(`✅ [launch] Application lancée: ${decodedPath}`);
     res.json({ success: true, path: decodedPath });
@@ -265,8 +281,8 @@ initializeIndex().then(() => {
   initBambuMqtt();
   // Init Sphere Serial connection
   initSphereService();
-  // Init WhatsApp connection
-  initWhatsAppService();
+  // Init WhatsApp connection (DÉSACTIVÉ temporairement - QR Code ne fonctionne pas)
+  // initWhatsAppService();
   // Init Calendar Reminder (rappels proactifs)
   startCalendarReminder();
 

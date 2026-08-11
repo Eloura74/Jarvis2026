@@ -16,16 +16,27 @@
  * comme avant, sans changement de comportement visible.
  */
 
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
-// Clé API stockée uniquement côté serveur (jamais exposée au client)
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+// Instance AI (initialisée à la demande)
+let aiInstance = null;
 
-if (!GEMINI_API_KEY) {
-  console.error("❌ [Gemini Proxy] GEMINI_API_KEY manquante dans process.env");
+function getAI() {
+  if (!aiInstance) {
+    const key = process.env.GEMINI_API_KEY;
+    if (!key) {
+      console.error(
+        "❌ [Gemini Proxy] GEMINI_API_KEY manquante dans process.env",
+      );
+    } else {
+      console.log(
+        `🔑 [Gemini Proxy] Clé API chargée: ${key.substring(0, 10)}...${key.substring(key.length - 4)}`,
+      );
+    }
+    aiInstance = new GoogleGenerativeAI(key);
+  }
+  return aiInstance;
 }
-
-const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
 
 // Modèles avec fallback automatique
 const PRIMARY_MODEL = "gemini-2.5-flash";
@@ -60,12 +71,18 @@ async function generateStreamWithFallback(
   config,
   useFallback = false,
 ) {
-  const model = useFallback ? FALLBACK_MODEL : PRIMARY_MODEL;
+  const modelName = useFallback ? FALLBACK_MODEL : PRIMARY_MODEL;
   try {
-    return await ai.models.generateContentStream({ model, contents, config });
+    const model = getAI().getGenerativeModel({ model: modelName, ...config });
+    // IMPORTANT : si contents est un tableau de Content[] ({role, parts}),
+    // il FAUT l'envelopper dans { contents } sinon le SDK l'interprète
+    // comme un tableau de Parts → erreur 400 "Unknown name role/parts".
+    const request = Array.isArray(contents) ? { contents } : contents;
+    const result = await model.generateContentStream(request);
+    return result.stream;
   } catch (error) {
     // Logger l'erreur complète pour debug
-    console.error(`❌ [Gemini Proxy] Erreur ${model}:`, {
+    console.error(`❌ [Gemini Proxy] Erreur ${modelName}:`, {
       status: error.status,
       message: error.message,
       hasThinkingConfig: !!config.thinkingConfig,
@@ -89,11 +106,14 @@ async function generateStreamWithFallback(
       const configWithoutThinking = { ...config };
       delete configWithoutThinking.thinkingConfig;
       try {
-        return await ai.models.generateContentStream({
-          model,
-          contents,
-          config: configWithoutThinking,
+        const retryModel = getAI().getGenerativeModel({
+          model: modelName,
+          ...configWithoutThinking,
         });
+        const retryRequest = Array.isArray(contents) ? { contents } : contents;
+        const retryResult =
+          await retryModel.generateContentStream(retryRequest);
+        return retryResult.stream;
       } catch (retryError) {
         // Si erreur 400 persiste, c'est probablement l'historique multi-tours
         const is400Again =
@@ -106,7 +126,7 @@ async function generateStreamWithFallback(
           // Extraire uniquement le dernier message (input utilisateur)
           const lastMessage = contents[contents.length - 1];
           const simpleContents = lastMessage?.parts?.[0]?.text || contents;
-          return await ai.models.generateContentStream({
+          return await getAI().models.generateContentStream({
             model,
             contents: simpleContents,
             config: configWithoutThinking,
@@ -120,7 +140,7 @@ async function generateStreamWithFallback(
       console.warn(
         `⚠️ [Gemini Proxy] ${PRIMARY_MODEL} indisponible → bascule sur ${FALLBACK_MODEL}`,
       );
-      return await ai.models.generateContentStream({
+      return await getAI().models.generateContentStream({
         model: FALLBACK_MODEL,
         contents,
         config,
@@ -161,6 +181,7 @@ export async function handleGeminiStream(req, res) {
     history,
     thinkingBudget,
     toolChoice,
+    allowedFunctionNames,
   } = req.body;
 
   if (!input) {
@@ -182,8 +203,21 @@ export async function handleGeminiStream(req, res) {
     const config = {
       systemInstruction,
       tools: tools ? [{ functionDeclarations: tools }] : undefined,
+      // Mode ANY avec 57 tools → erreur "too much branching".
+      // ANY n'est activé QUE si une liste restreinte est fournie.
+      toolConfig: tools
+        ? {
+            functionCallingConfig:
+              Array.isArray(allowedFunctionNames) &&
+              allowedFunctionNames.length > 0
+                ? { mode: "ANY", allowedFunctionNames }
+                : { mode: "AUTO" },
+          }
+        : undefined,
       temperature: temperature ?? 0.1,
-      ...(maxOutputTokens !== undefined && { maxOutputTokens }),
+      ...(maxOutputTokens !== undefined && {
+        generationConfig: { maxOutputTokens },
+      }),
       ...(thinkingConfig !== undefined && { thinkingConfig }),
     };
 
@@ -200,6 +234,10 @@ export async function handleGeminiStream(req, res) {
     // - Si pas d'historique, on passe juste le message courant (comportement précédent).
     let contents;
     if (Array.isArray(history) && history.length > 0) {
+      console.log(
+        `🔍 [Gemini Proxy] History RAW reçu:`,
+        JSON.stringify(history).substring(0, 500),
+      );
       // Validation défensive : chaque entrée doit avoir role et parts[0].text
       // ET le texte ne doit pas être "undefined" ou vide
       const validHistory = history.filter(
@@ -239,6 +277,38 @@ export async function handleGeminiStream(req, res) {
     // Log config pour debug
     console.log(`🔍 [Gemini Proxy] Config keys:`, Object.keys(config));
     console.log(`🔍 [Gemini Proxy] Has tools:`, !!config.tools);
+    if (config.tools) {
+      try {
+        if (
+          Array.isArray(config.tools) &&
+          config.tools.length > 0 &&
+          config.tools[0].functionDeclarations
+        ) {
+          const toolNames = config.tools[0].functionDeclarations.map(
+            (t) => t.name,
+          );
+          console.log(`🔍 [Gemini Proxy] Nombre de tools:`, toolNames.length);
+          console.log(
+            `📋 [Gemini Proxy] Liste des tools:`,
+            toolNames.join(", "),
+          );
+          // Détecter les doublons
+          const duplicates = toolNames.filter(
+            (name, index) => toolNames.indexOf(name) !== index,
+          );
+          if (duplicates.length > 0) {
+            console.error(`❌ [Gemini Proxy] TOOLS DUPLIQUÉS:`, duplicates);
+          }
+        } else {
+          console.warn(
+            `⚠️ [Gemini Proxy] Tools mal formatés:`,
+            JSON.stringify(config.tools).substring(0, 200),
+          );
+        }
+      } catch (err) {
+        console.error(`❌ [Gemini Proxy] Erreur analyse tools:`, err.message);
+      }
+    }
     console.log(
       `🔍 [Gemini Proxy] Has thinkingConfig:`,
       !!config.thinkingConfig,
@@ -314,7 +384,7 @@ export async function handleGeminiSummarize(req, res) {
 
   try {
     await waitIfNecessary();
-    const response = await ai.models.generateContent({
+    const response = await getAI().models.generateContent({
       model: PRIMARY_MODEL,
       contents: [{ role: "user", parts: [{ text: prompt }] }],
       config: { temperature: 0.1, maxOutputTokens: 200 },
@@ -343,7 +413,7 @@ export async function handleGeminiQMS(req, res) {
 
   try {
     await waitIfNecessary();
-    const response = await ai.models.generateContent({
+    const response = await getAI().models.generateContent({
       model: PRIMARY_MODEL,
       contents: [{ role: "user", parts: [{ text: prompt }] }],
       config: {

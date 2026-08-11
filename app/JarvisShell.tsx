@@ -21,6 +21,7 @@ import { useProactiveEvents } from "../hooks/useProactiveEvents";
 import { useDialogFlow } from "../hooks/useDialogFlow";
 import { useHACameraRefresh } from "../hooks/useHACameraRefresh";
 
+// déclaration du composant JarvisShell
 export interface JarvisShellProps {
   shouldGreet?: boolean;
 }

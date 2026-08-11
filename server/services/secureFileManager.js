@@ -43,15 +43,9 @@ class SecureFileManager {
   constructor() {
     this.userHome = os.homedir();
 
-    // Détection INTÉLLIGENTE : Priorité au dossier "Monsieur" si présent (cas spécifique de l'utilisateur)
-    const monsieurDesktop = "C:\\Users\\Monsieur\\Desktop";
-    try {
-      // On teste si on peut accéder au bureau de "Monsieur"
-      this.desktopPath = monsieurDesktop;
-      console.log(`📂 [SecureFile] Desktop target set to: ${this.desktopPath}`);
-    } catch (e) {
-      this.desktopPath = path.join(this.userHome, "Desktop");
-    }
+    // Détection DYNAMIQUE du bureau via le dossier home de l'utilisateur
+    this.desktopPath = path.join(this.userHome, "Desktop");
+    console.log(`📂 [SecureFile] Desktop target set to: ${this.desktopPath}`);
   }
 
   /**

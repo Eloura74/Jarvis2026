@@ -18,7 +18,7 @@ import {
 import { generateSystemInstruction } from "./geminiSystemPrompt";
 import { toolDeclarations } from "./geminiTools";
 import { waitIfNecessary } from "./geminiRateLimiter";
-import { getHAContext } from "./homeAssistantService";
+// import { getHAContext } from "./homeAssistantService"; // DÉSACTIVÉ - HA inaccessible
 import { selectThinkingBudget } from "./geminiThinkingConfig";
 
 // Réexports pour compatibilité des imports existants
@@ -143,7 +143,9 @@ export const streamCommand = async (
         memories.map((m) => m.appName + " (" + m.launchCount + ")").join(", ");
     }
 
-    const haContext = await getHAContext();
+    // DÉSACTIVÉ temporairement - Home Assistant inaccessible après déménagement
+    // const haContext = await getHAContext();
+    const haContext = "";
 
     // Adapter maxOutputTokens selon la complexité de la requête (A7)
     // undefined = pas de limite (tool calls), 300 = simple, 600 = complexe
@@ -166,9 +168,36 @@ export const streamCommand = async (
       "capture",
     ].some((k) => t.includes(k));
 
-    // FORÇAGE TECHNIQUE : On désactive la réflexion longue si une requête visuelle est demandée
+    // Détecter les commandes d'action (ouvre, lance, ferme, etc.)
+    const isActionCommand = [
+      "ouvre",
+      "lance",
+      "démarre",
+      "ferme",
+      "arrête",
+      "open",
+      "launch",
+      "start",
+      "close",
+      "stop",
+    ].some((k) => t.includes(k));
+
+    // Détecter les commandes de recherche web
+    const isSearchCommand = [
+      "recherche",
+      "cherche",
+      "trouve",
+      "montre",
+      "affiche",
+      "search",
+      "find",
+      "show",
+    ].some((k) => t.includes(k));
+
+    // FORÇAGE TECHNIQUE : On désactive la réflexion longue si une requête visuelle, action ou recherche est demandée
     // car le "Thinking Mode" désactive ou occulte très souvent l'appel aux outils (Function Calling) chez Gemini.
-    const finalThinkingBudget = isToolExplicit ? 0 : thinkingBudget;
+    const finalThinkingBudget =
+      isToolExplicit || isActionCommand || isSearchCommand ? 0 : thinkingBudget;
 
     let systemInstruction =
       generateSystemInstruction(memSum, conversationContext) + haContext;
@@ -181,10 +210,47 @@ export const streamCommand = async (
         systemInstruction;
     }
 
+    // FORÇAGE SÉMANTIQUE : Si l'utilisateur demande une action (ouvrir, lancer, fermer),
+    // on force l'appel du tool approprié
+    if (isActionCommand) {
+      systemInstruction =
+        "CRITICAL DIRECTIVE: The user is requesting an ACTION (open, launch, close, etc.). YOU MUST IMMEDIATELY CALL THE APPROPRIATE TOOL. DO NOT ANSWER BY TEXT. AVAILABLE ACTION TOOLS: search_and_launch_app, manage_window, adjust_volume, control_home_automation. CALL THE TOOL NOW.\n\n" +
+        systemInstruction;
+    }
+
+    // FORÇAGE SÉMANTIQUE : Si l'utilisateur demande une recherche web
+    if (isSearchCommand) {
+      systemInstruction =
+        "CRITICAL DIRECTIVE: The user is requesting a WEB SEARCH. YOU MUST CALL THE APPROPRIATE SEARCH TOOL:\n" +
+        "- If user says 'recherche sur Google/YouTube/GitHub' → CALL search_web\n" +
+        "- If user says 'montre-moi', 'trouve', 'affiche' + object/file → CALL show_search_results\n" +
+        "DO NOT ANSWER BY TEXT. CALL THE TOOL NOW.\n\n" +
+        systemInstruction;
+    }
+
     // S1 : Appel via proxy backend (clé API sécurisée côté serveur)
     // Le proxy gère le fallback 2.5-flash  1.5-flash automatiquement
     // On passe l'historique natif Gemini pour un contexte multi-tours réel
     // thinkingBudget est transmis au backend pour activer la réflexion Gemini 2.5 Flash
+    // FORÇAGE ABSOLU : pour les commandes d'action/visuelles, on active le
+    // mode ANY (tool call obligatoire) restreint à une liste courte de tools.
+    // ANY avec les 57 tools provoque une erreur 400 "too much branching".
+    let allowedFunctionNames: string[] | undefined;
+    if (isActionCommand) {
+      allowedFunctionNames = [
+        "search_and_launch_app",
+        "manage_window",
+        "adjust_volume",
+        "control_home_automation",
+        "spotify_control",
+        "kill_process",
+      ];
+    } else if (isToolExplicit) {
+      allowedFunctionNames = ["analyze_screen", "take_screenshot"];
+    } else if (isSearchCommand) {
+      allowedFunctionNames = ["search_web", "show_search_results", "open_url"];
+    }
+
     const responseStream = generateContentStreamProxy(input, {
       systemInstruction,
       tools: toolDeclarations,
@@ -192,6 +258,7 @@ export const streamCommand = async (
       maxOutputTokens: maxOutputTokens as number | undefined,
       history: history.length > 0 ? history : undefined,
       thinkingBudget: finalThinkingBudget,
+      allowedFunctionNames,
     });
 
     let fullText = "";
