@@ -44,8 +44,8 @@ export const useSystemStats = (): SystemStats => {
 
   useEffect(() => {
     /**
-     * Récupère les stats système depuis l'API backend
-     * Utilise l'endpoint /light pour optimiser les performances
+     * Récupère les stats système depuis l'API backend.
+     * Silencieux si le backend n'est pas encore prêt (ERR_CONNECTION_REFUSED).
      */
     const fetchStats = async () => {
       try {
@@ -64,23 +64,32 @@ export const useSystemStats = (): SystemStats => {
             processes: data.data.processes,
           });
         }
-      } catch (error) {
-        // En cas d'erreur (backend offline, etc.), ne pas crasher l'app
-        console.error("Erreur récupération stats système :", error);
-
-        // Garder les dernières valeurs connues (ne pas réinitialiser à 0)
-        // Cela évite un "clignotement" visuel en cas d'erreur ponctuelle
+      } catch (error: unknown) {
+        // Silencer ERR_CONNECTION_REFUSED au démarrage (backend pas encore prêt)
+        const msg = error instanceof Error ? error.message : String(error);
+        const isConnRefused =
+          msg.includes("Failed to fetch") ||
+          msg.includes("ERR_CONNECTION_REFUSED") ||
+          msg.includes("NetworkError");
+        if (!isConnRefused) {
+          console.error("Erreur récupération stats système :", error);
+        }
+        // Garder les dernières valeurs connues pour éviter un clignotement visuel
       }
     };
 
-    // Récupération initiale
-    fetchStats();
+    // Délai initial de 2 secondes pour laisser le backend démarrer
+    let intervalId: ReturnType<typeof setInterval> | null = null;
 
-    // Rafraîchissement automatique toutes les 2 secondes
-    const interval = setInterval(fetchStats, 2000);
+    const initTimer = setTimeout(() => {
+      fetchStats();
+      intervalId = setInterval(fetchStats, 2000);
+    }, 2000);
 
-    // Cleanup : arrêter le polling quand le composant se démonte
-    return () => clearInterval(interval);
+    return () => {
+      clearTimeout(initTimer);
+      if (intervalId) clearInterval(intervalId);
+    };
   }, []);
 
   return stats;

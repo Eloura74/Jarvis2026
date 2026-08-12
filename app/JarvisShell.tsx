@@ -43,6 +43,7 @@ export default function JarvisShell({ shouldGreet }: JarvisShellProps) {
 
   // Bootstraps isolés
   useGeminiBootstrap();
+  const { isBackendOnline } = useBackendBootstrap({ addLog });
 
   const [activeOverlay, setActiveOverlay] = useState<string | null>(null);
   const [statusOverlay, setStatusOverlay] = useState<StatusOverlayData | null>(
@@ -59,7 +60,8 @@ export default function JarvisShell({ shouldGreet }: JarvisShellProps) {
       );
     } else {
       console.log("🟢 APP: Overlay closed, resetting Sphere to IDLE");
-      // 🟣 SPHERE: IDLE when overlay closes
+      // 🟣 SPHERE: IDLE when overlay closes — attendre que le backend soit prêt
+      if (!isBackendOnline) return;
       fetch("http://localhost:3001/api/sphere/state", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -72,15 +74,14 @@ export default function JarvisShell({ shouldGreet }: JarvisShellProps) {
         body: JSON.stringify({ mode: "IDLE" }),
       }).catch(() => {});
     }
-  }, [statusOverlay]);
+  }, [statusOverlay, isBackendOnline]);
 
   useEffect(() => {
     console.log("🚀 JARVIS FRONTEND v1.1.0 - NAVIGATION FIX LOADED");
     console.log("🔌 Connecting to Backend at http://localhost:3001");
   }, []);
 
-  // Vérif backend isolée (log + console)
-  useBackendBootstrap({ addLog });
+  // useBackendBootstrap maintenant appelé plus haut (retourne isBackendOnline)
 
   const brainRef = useRef<{
     processCommand: (cmd: string) => Promise<void>;

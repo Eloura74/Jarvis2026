@@ -1,4 +1,4 @@
-﻿// ============================================================================
+// ============================================================================
 // GEMINI SERVICE  Point d'entrée principal
 // ============================================================================
 // Ce fichier orchestre les appels Gemini en streaming.
@@ -71,6 +71,7 @@ const estimateMaxOutputTokens = (input: string): number | undefined => {
     "ajoute",
     "supprime",
     "ferme",
+    "quitte",
     "minimise",
     "maximise",
     "cherche",
@@ -97,6 +98,19 @@ const estimateMaxOutputTokens = (input: string): number | undefined => {
     "regarde",
     "lis",
     "analyse",
+    // ⌨️ Automation clavier — OBLIGATOIRE pour keyboard_automation
+    "écris",
+    "tape",
+    "dicte",
+    "écrit",
+    "inscris",
+    "frappe",
+    "saisis",
+    // 🧠 Commandes ambigüès clavier/note
+    "faire une note",
+    "faire la note",
+    "prends une note",
+    "note que",
   ];
   if (toolKeywords.some((k) => t.includes(k))) return undefined;
   return 300;
@@ -536,7 +550,7 @@ export const streamCommand = async (
       allToolCalls.length > 0 ? allToolCalls[0].name : "",
     );
     if (callbacks.onComplete) callbacks.onComplete(decision);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("OMNI Core STREAM Error:", error);
     const errorMessage =
       error instanceof Error ? error.message : "Erreur inconnue";

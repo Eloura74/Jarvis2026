@@ -9,11 +9,13 @@ import { z } from "zod";
  * Schémas de validation Zod pour les routes
  */
 export const schemas = {
-  // Routes fenêtres
+  // Routes fenêtres — l'action est encodée dans l'URL (ex: POST /close)
+  // On accepte windowTitle OU appName, les deux sont optionnels pour
+  // permettre un body vide (ex: fermer la fenêtre active)
   windowAction: z.object({
     windowTitle: z.string().min(1).max(200).optional(),
     appName: z.string().min(1).max(200).optional(),
-    action: z.enum(["close", "minimize", "maximize", "focus"]),
+    title: z.string().min(1).max(200).optional(),
   }),
 
   // Routes web
@@ -43,7 +45,7 @@ export const schemas = {
 
 /**
  * Middleware factory pour valider le body d'une requête
- * 
+ *
  * @param {z.ZodSchema} schema - Schéma Zod à utiliser
  * @returns {Function} Middleware Express
  */
@@ -70,7 +72,7 @@ export const validateBody = (schema) => {
 
 /**
  * Middleware factory pour valider les query params
- * 
+ *
  * @param {z.ZodSchema} schema - Schéma Zod à utiliser
  * @returns {Function} Middleware Express
  */

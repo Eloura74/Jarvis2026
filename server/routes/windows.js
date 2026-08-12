@@ -6,8 +6,12 @@ import { strictLimiter } from "../middleware/rateLimiter.js";
 const router = express.Router();
 
 /**
- * Routes pour la gestion des fenêtres et l'automatisation clavier
+ * Extrait le nom de la fenêtre depuis les 3 champs possibles envoyés par le frontend
+ * (windowTitle, appName ou title) — Gemini envoie "appName", windowApi envoie "windowTitle"
  */
+function getTargetWindow(body) {
+  return body.windowTitle || body.appName || body.title || "";
+}
 
 // --- LISTE DES FENÊTRES ---
 router.get("/", async (req, res) => {
@@ -22,10 +26,10 @@ router.get("/", async (req, res) => {
 // --- FOCUS ---
 router.post("/focus", validateBody(schemas.windowAction), async (req, res) => {
   try {
-    const result = await windowManager.focusWindow(
-      req.body.windowTitle || req.body.title,
-    );
-    res.json(result);
+    const target = getTargetWindow(req.body);
+    if (!target) return res.status(400).json({ error: "windowTitle, appName ou title requis" });
+    const success = await windowManager.focusWindow(target);
+    res.json({ success });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -34,46 +38,38 @@ router.post("/focus", validateBody(schemas.windowAction), async (req, res) => {
 // --- CLOSE ---
 router.post("/close", validateBody(schemas.windowAction), async (req, res) => {
   try {
-    const result = await windowManager.closeWindow(
-      req.body.windowTitle || req.body.title,
-    );
-    res.json(result);
+    const target = getTargetWindow(req.body);
+    if (!target) return res.status(400).json({ error: "windowTitle, appName ou title requis" });
+    const success = await windowManager.closeWindow(target);
+    res.json({ success });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
 // --- MINIMIZE ---
-router.post(
-  "/minimize",
-  validateBody(schemas.windowAction),
-  async (req, res) => {
-    try {
-      const result = await windowManager.minimizeWindow(
-        req.body.windowTitle || req.body.title,
-      );
-      res.json(result);
-    } catch (error) {
-      res.status(500).json({ error: error.message });
-    }
-  },
-);
+router.post("/minimize", validateBody(schemas.windowAction), async (req, res) => {
+  try {
+    const target = getTargetWindow(req.body);
+    if (!target) return res.status(400).json({ error: "windowTitle, appName ou title requis" });
+    const success = await windowManager.minimizeWindow(target);
+    res.json({ success });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
 
 // --- MAXIMIZE ---
-router.post(
-  "/maximize",
-  validateBody(schemas.windowAction),
-  async (req, res) => {
-    try {
-      const result = await windowManager.maximizeWindow(
-        req.body.windowTitle || req.body.title,
-      );
-      res.json(result);
-    } catch (error) {
-      res.status(500).json({ error: error.message });
-    }
-  },
-);
+router.post("/maximize", validateBody(schemas.windowAction), async (req, res) => {
+  try {
+    const target = getTargetWindow(req.body);
+    if (!target) return res.status(400).json({ error: "windowTitle, appName ou title requis" });
+    const success = await windowManager.maximizeWindow(target);
+    res.json({ success });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
 
 // --- AUTOMATION (TYPE) ---
 router.post(
@@ -83,8 +79,8 @@ router.post(
   async (req, res) => {
     try {
       const { text } = req.body;
-      const result = await automation.typeText(text);
-      res.json(result);
+      const success = await automation.typeText(text);
+      res.json({ success });
     } catch (error) {
       res.status(500).json({ error: error.message });
     }
@@ -99,8 +95,8 @@ router.post(
   async (req, res) => {
     try {
       const { keys } = req.body;
-      const result = await automation.sendShortcut(keys);
-      res.json(result);
+      const success = await automation.sendShortcut(keys);
+      res.json({ success });
     } catch (error) {
       res.status(500).json({ error: error.message });
     }

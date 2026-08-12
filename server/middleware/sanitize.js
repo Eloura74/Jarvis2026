@@ -83,11 +83,17 @@ export const sanitizeParams = (req, res, next) => {
 
 /**
  * Routes exemptées de sanitization.
- * Le callback OAuth reçoit un code d'autorisation Google contenant des
- * caractères spéciaux (/, +, =) qui seraient corrompus par validator.escape()
- * → provoquait l'erreur "invalid_grant: Malformed auth code."
+ * - OAuth callback : code Google contient des / + = corrompus par escape()
+ * - Automation clavier (type/shortcut) : le texte dicté est du contenu utilisateur
+ *   arbitraire qui doit arriver intact (apostrophes, &, <, >, etc.)
  */
-const SANITIZE_EXEMPT_PATHS = ["/api/google/callback"];
+const SANITIZE_EXEMPT_PATHS = [
+  "/api/google/callback",
+  "/api/windows/type",
+  "/api/windows/shortcut",
+  "/api/automation/type",
+  "/api/automation/shortcut",
+];
 
 /**
  * Middleware combiné : sanitize body + query + params

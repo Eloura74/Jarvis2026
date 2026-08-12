@@ -50,12 +50,12 @@ const API_BASE = "http://localhost:3001/api/config";
  * Fallback localStorage si backend fail
  */
 export async function loadSettings(): Promise<JarvisSettings> {
-  console.log("⚙️ Charge des paramètres depuis:", API_BASE);
+  console.debug("⚙️ Charge des paramètres depuis:", API_BASE);
   try {
     const response = await fetch(`${API_BASE}/settings`);
     if (response.ok) {
       const data = await response.json();
-      console.log("✅ Paramètres chargés du backend:", data);
+      console.debug("✅ Paramètres chargés du backend:", data);
       return { ...DEFAULT_SETTINGS, ...data };
     } else {
       console.error(
@@ -64,8 +64,12 @@ export async function loadSettings(): Promise<JarvisSettings> {
         response.statusText,
       );
     }
-  } catch (error) {
-    console.warn("⚠️ Backend settings unavailable, using localStorage", error);
+  } catch (error: unknown) {
+    // Silencer ERR_CONNECTION_REFUSED (backend pas encore prêt au démarrage)
+    const msg = error instanceof Error ? error.message : String(error);
+    if (!msg.includes("Failed to fetch") && !msg.includes("NetworkError")) {
+      console.warn("⚠️ Backend settings unavailable, using localStorage", error);
+    }
   }
 
   // Fallback localStorage

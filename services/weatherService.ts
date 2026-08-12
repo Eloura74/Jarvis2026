@@ -159,12 +159,11 @@ export const fetchWeatherData = async (
     };
 
     return weatherData;
-  } catch (error) {
-    console.error("Erreur récupération météo :", error);
-    // Reuse offline fallback logic if needed or let caller handle it.
-    // But since we had a fallback in caller, we can throw or return fallback here.
-    // The previous edit added fallback inside getWeatherByCity but not fetchWeatherData?
-    // Let's add standard fallback here too to be safe.
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error);
+    if (!msg.includes("Failed to fetch") && !msg.includes("NetworkError")) {
+      console.error("Erreur récupération météo :", error);
+    }
     return {
       temperature: 0,
       condition: "Offline",
@@ -197,7 +196,7 @@ export const getCurrentWeather = async (): Promise<WeatherData> => {
     // 1. Tenter la géolocalisation
     const position = await getUserPosition();
     return await fetchWeatherData(position.latitude, position.longitude);
-  } catch (error) {
+  } catch {
     // 2. Fallback sur une ville par défaut (ou IP-based si on avait le service)
     // On utilise Paris par défaut pour ne pas laisser le widget vide
     return await getWeatherByCity("Paris");
@@ -237,8 +236,11 @@ export const getWeatherByCity = async (
     };
 
     return weatherData;
-  } catch (error) {
-    console.error("Erreur récupération météo par ville :", error);
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error);
+    if (!msg.includes("Failed to fetch") && !msg.includes("NetworkError")) {
+      console.error("Erreur récupération météo par ville :", error);
+    }
     return {
       temperature: 0,
       condition: "Offline",

@@ -18,6 +18,7 @@ export const toolDeclarations: FunctionDeclaration[] = [
       "ALWAYS USE THIS when user says: 'ouvre X', 'lance X', 'démarre X', 'open X', 'launch X', 'start X'. " +
       "Examples: 'ouvre Chrome' → appName='Chrome', 'lance Spotify' → appName='Spotify', 'démarre Word' → appName='Word'. " +
       "For browsers with URL: 'ouvre Chrome sur YouTube' → appName='Chrome', url='https://youtube.com'. " +
+      "⛔ NEVER use this tool to CLOSE an application: 'ferme X', 'quitte X', 'close X' → use manage_window instead. " +
       "DO NOT respond with text, CALL THIS TOOL IMMEDIATELY for any launch/open command.",
     parameters: {
       type: Type.OBJECT,
@@ -39,11 +40,14 @@ export const toolDeclarations: FunctionDeclaration[] = [
   {
     name: "manage_window",
     description:
-      "Control application windows (close, minimize, maximize, focus). " +
+      "⛔ MANDATORY TOOL to CLOSE, minimize, maximize or focus ANY open application window. " +
+      "ALWAYS USE THIS when user says: 'ferme X', 'quitte X', 'close X', 'minimise X', 'agrandis X'. " +
+      "Works for ALL apps: browsers, notepad (bloc-notes), Word, Spotify, etc. " +
       "CRITICAL: appName is MANDATORY and must be the application name. " +
-      "Examples: 'Chrome', 'Opera', 'Firefox', 'Code', 'Spotify'. " +
       "For 'ferme Opera' → appName='Opera', action='close'. " +
-      "For 'minimise Chrome' → appName='Chrome', action='minimize'.",
+      "For 'ferme le bloc-notes' / 'ferme note' → appName='Notepad', action='close'. " +
+      "For 'minimise Chrome' → appName='Chrome', action='minimize'. " +
+      "NEVER use search_and_launch_app for closing — that tool only OPENS apps.",
     parameters: {
       type: Type.OBJECT,
       properties: {
@@ -59,6 +63,48 @@ export const toolDeclarations: FunctionDeclaration[] = [
         },
       },
       required: ["appName", "action"],
+    },
+  },
+  {
+    name: "keyboard_automation",
+    description:
+      "⌨️ MANDATORY TOOL to type text or send keyboard shortcuts into ANY window. " +
+      "ALWAYS USE THIS when user says: 'écris X', 'tape X', 'note X', 'dicte X', 'inscris X', 'write X', 'type X'. " +
+      "DO NOT respond with text, CALL THIS TOOL IMMEDIATELY. " +
+      "Examples: " +
+      "- 'écris bonjour tout le monde' → action='type', text='bonjour tout le monde' " +
+      "- 'écris bonjour dans le bloc-notes' → action='type', text='bonjour', focusApp='Notepad' " +
+      "- 'tape hello world' → action='type', text='hello world' " +
+      "- 'note rendez-vous demain' → action='type', text='rendez-vous demain' " +
+      "- 'fais contrôle S' → action='shortcut', shortcut='ctrl+s' " +
+      "If user specifies a target app ('dans notepad', 'dans word'), set focusApp to that app name. " +
+      "The text is typed exactly as provided into the active window.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        action: {
+          type: Type.STRING,
+          enum: ["type", "shortcut"],
+          description:
+            "'type' to write text into the active window, 'shortcut' to send a keyboard shortcut.",
+        },
+        text: {
+          type: Type.STRING,
+          description:
+            "The text to type into the active window (required when action='type').",
+        },
+        shortcut: {
+          type: Type.STRING,
+          description:
+            "Keyboard shortcut to send, e.g. 'ctrl+s', 'ctrl+z', 'alt+f4' (required when action='shortcut').",
+        },
+        focusApp: {
+          type: Type.STRING,
+          description:
+            "OPTIONAL: Application name to focus before typing (e.g. 'Notepad', 'Word', 'Chrome'). Use when user specifies a target app ('dans notepad', 'dans word', etc.).",
+        },
+      },
+      required: ["action"],
     },
   },
   {

@@ -8,6 +8,23 @@
 
 import { listEvents, isAuthRevoked } from "../googleService.js";
 import { broadcastEvent } from "../routes/events.js";
+import fs from "fs/promises";
+import path from "path";
+
+// Chemin vers le token Google (défini dans googleService.js aussi)
+const TOKEN_PATH = path.join(process.cwd(), "google_token.json");
+
+/**
+ * Retourne true si un token Google est disponible sur le disque
+ */
+async function hasGoogleToken() {
+  try {
+    await fs.access(TOKEN_PATH);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 // IDs des événements déjà notifiés (évite les doublons)
 const notifiedEventIds = new Set();
@@ -38,8 +55,10 @@ function formatTimeUntil(ms) {
  */
 async function checkUpcomingEvents() {
   // Si le token Google est révoqué (invalid_grant), ne pas tenter d'appel API
-  // Le service reprendra automatiquement après une nouvelle authentification
   if (isAuthRevoked()) return;
+
+  // Si aucun token Google n'est présent sur le disque, ne rien faire silencieusement
+  if (!(await hasGoogleToken())) return;
 
   try {
     // Récupérer les 10 prochains événements
@@ -85,9 +104,17 @@ async function checkUpcomingEvents() {
     // On ne peut pas itérer et supprimer directement, donc on reconstruit le Set
     // en gardant seulement les événements futurs récents (non implémenté ici pour simplicité)
   } catch (err) {
-    // Silencieux si Google non configuré (pas de token)
-    if (!err.message?.includes("non authentifié")) {
-      console.error("❌ [CALENDAR REMINDER] Erreur vérification:", err.message);
+    // Silencieux si Google non configuré : pas de token, refresh token manquant, auth révoquée
+    const msg = err.message || "";
+    const isSilentError =
+      msg.includes("non authentifié") ||
+      msg.includes("No refresh token") ||
+      msg.includes("refresh token") ||
+      msg.includes("invalid_grant") ||
+      msg.includes("Token has been expired");
+
+    if (!isSilentError) {
+      console.error("❌ [CALENDAR REMINDER] Erreur vérification:", msg);
     }
   }
 }
@@ -102,11 +129,11 @@ export function startCalendarReminder() {
     "📅 [CALENDAR REMINDER] Service démarré (vérification toutes les 5 min)",
   );
 
-  // Première vérification après 30 secondes (laisser le temps au serveur de démarrer)
+  // Première vérification après 60 secondes (laisser le temps au token d'être chargé)
   setTimeout(() => {
     checkUpcomingEvents();
     intervalId = setInterval(checkUpcomingEvents, CHECK_INTERVAL_MS);
-  }, 30000);
+  }, 60000);
 }
 
 /**

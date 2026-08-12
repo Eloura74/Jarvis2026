@@ -9,17 +9,29 @@ interface RightPanelProps {
     message: string;
     type: "info" | "success" | "error" | "warning";
   }>;
+  onCommand?: (command: string) => void;
   setIsAppPathsOpen: (isOpen: boolean) => void;
   setIsFileExplorerOpen: (isOpen: boolean) => void;
 }
 
 export const RightPanel: React.FC<RightPanelProps> = ({
   logs,
+  onCommand,
   setIsAppPathsOpen,
   setIsFileExplorerOpen,
 }) => {
   // TIME STATE
   const [time, setTime] = useState(new Date());
+
+  // COMMAND INPUT STATE
+  const [commandText, setCommandText] = useState("");
+
+  const handleCommandSubmit = () => {
+    const cmd = commandText.trim();
+    if (!cmd || !onCommand) return;
+    onCommand(cmd);
+    setCommandText("");
+  };
 
   useEffect(() => {
     const timer = setInterval(() => setTime(new Date()), 1000);
@@ -95,7 +107,7 @@ export const RightPanel: React.FC<RightPanelProps> = ({
 
           {/* LOCATION (Static for now) */}
           <div className="absolute top-2 right-3 text-[8px] text-cyan-500/50 tracking-widest uppercase">
-            PARIS, FR
+            LE LUC, FR
           </div>
         </div>
       </motion.div>
@@ -141,10 +153,26 @@ export const RightPanel: React.FC<RightPanelProps> = ({
           />
         </div>
 
-        {/* Input Area Placeholder (Visual only) */}
+        {/* Command Input (clavier → JARVIS Brain) */}
         <div className="p-3 border-t border-cyan-400/30 bg-black/20 relative z-10">
-          <div className="h-8 rounded border border-cyan-500/30 flex items-center px-3 text-xs text-cyan-400/70 italic tracking-wider bg-black/40">
-            Waiting for input...
+          <div className="h-8 rounded border border-cyan-500/30 focus-within:border-cyan-400 focus-within:shadow-[0_0_10px_rgba(0,229,255,0.3)] flex items-center px-3 bg-black/40 transition-all">
+            <input
+              type="text"
+              value={commandText}
+              onChange={(e) => setCommandText(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleCommandSubmit();
+              }}
+              placeholder="Tapez une commande pour JARVIS..."
+              className="flex-1 bg-transparent outline-none text-xs text-cyan-100 placeholder:text-cyan-400/50 placeholder:italic tracking-wider"
+            />
+            <button
+              onClick={handleCommandSubmit}
+              disabled={!commandText.trim()}
+              className="text-cyan-400/70 hover:text-cyan-300 disabled:opacity-30 text-xs tracking-widest ml-2 transition-colors"
+            >
+              ▶
+            </button>
           </div>
         </div>
       </motion.div>

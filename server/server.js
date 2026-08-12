@@ -82,6 +82,7 @@ app.use("/api/commands", commandsRoutes);
 app.use("/api/google", googleRoutes);
 app.use("/api/system", systemRoutes);
 app.use("/api/windows", windowsRoutes);
+app.use("/api/automation", windowsRoutes); // Alias : le frontend appelle /api/automation/type et /shortcut
 app.use("/api/files", filesRoutes);
 app.use("/api/memory", memoryRoutes);
 app.use("/api/web", webRoutes);

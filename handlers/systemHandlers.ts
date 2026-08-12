@@ -302,30 +302,62 @@ export const handleManageWindow = async (
 
 /**
  * HANDLER 3: Automation clavier
+ * Supporte focus automatique d'une app avant de taper (paramètre focusApp)
  */
 export const handleKeyboardAutomation = async (
-  args: { action: string; text?: string; shortcut?: string },
+  args: { action: string; text?: string; shortcut?: string; focusApp?: string },
   ctx: HandlerContext,
 ) => {
-  const { action, text, shortcut } = args;
+  const { action, text, shortcut, focusApp } = args;
   const { addLog, setStatus } = ctx;
 
-  addLog(`Keyboard automation: ${action}`, "SYSTEM", "info");
+  addLog(`Keyboard automation: ${action}${focusApp ? ` (focus: ${focusApp})` : ""}`, "SYSTEM", "info");
   setStatus(SystemStatus.EXECUTING);
 
   try {
+    // Étape 1 : Mettre l'app au premier plan si spécifié
+    if (focusApp) {
+      addLog(`🔍 Focus sur "${focusApp}" avant de taper...`, "SYSTEM", "info");
+      const focused = await focusWindow(focusApp);
+      if (focused) {
+        // Attendre que Windows active vraiment la fenêtre
+        await new Promise((resolve) => setTimeout(resolve, 400));
+        addLog(`✅ Fenêtre "${focusApp}" active`, "SYSTEM", "success");
+      } else {
+        addLog(`⚠️ Fenêtre "${focusApp}" introuvable — frappe dans la fenêtre active`, "SYSTEM", "warning");
+      }
+    }
+
+    // Étape 2 : Exécuter l'action clavier
     if (action === "type" && text) {
-      await typeText(text);
+      const success = await typeText(text);
+      if (!success) {
+        throw new Error("Échec de la frappe (fenêtre active introuvable ?)");
+      }
       addLog(`Typed: "${text}"`, "SYSTEM", "success");
+      setStatus(SystemStatus.IDLE);
+      return { status: "success", message: `Texte écrit : "${text}"` };
     } else if (action === "shortcut" && shortcut) {
-      await sendShortcut(shortcut);
+      const success = await sendShortcut(shortcut);
+      if (!success) {
+        throw new Error("Échec de l'envoi du raccourci");
+      }
       addLog(`Shortcut sent: ${shortcut}`, "SYSTEM", "success");
+      setStatus(SystemStatus.IDLE);
+      return { status: "success", message: `Raccourci ${shortcut} envoyé` };
     }
 
     setStatus(SystemStatus.IDLE);
+    return {
+      status: "error",
+      message:
+        "Paramètres invalides : action='type' requiert 'text', action='shortcut' requiert 'shortcut'.",
+    };
   } catch (error) {
-    addLog(`Keyboard automation failed: ${error}`, "SYSTEM", "error");
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    addLog(`Keyboard automation failed: ${errorMsg}`, "SYSTEM", "error");
     setStatus(SystemStatus.ERROR);
     setTimeout(() => setStatus(SystemStatus.IDLE), 2000);
+    return { status: "error", message: errorMsg };
   }
 };

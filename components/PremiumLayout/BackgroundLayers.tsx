@@ -44,11 +44,8 @@ export const BackgroundLayers: React.FC = () => {
       />
 
       <JarvisCinematicBackground />
-      {/* 
-        <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black opacity-80" />
-        <div className="jarvis-scanlines opacity-20" />
-        <div className="jarvis-vignette opacity-50" />
-        */}
+      {/* Effet hologramme : scanlines subtiles par-dessus le fond */}
+      <div className="jarvis-scanlines opacity-15 pointer-events-none" />
     </div>
   );
 };

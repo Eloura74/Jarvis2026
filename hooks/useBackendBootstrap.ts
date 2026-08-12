@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState, useRef } from "react";
 import { checkBackendStatus } from "../services/backendApi";
 
 import { LogEntry } from "../types";
@@ -9,45 +9,64 @@ type AddLogFn = (
   type?: LogEntry["type"],
 ) => void;
 
+/**
+ * Hook de bootstrap backend avec retry exponentiel.
+ * Tente de contacter le backend jusqu'à ce qu'il soit disponible.
+ * Retourne `isBackendOnline` que les composants peuvent utiliser pour gater leurs appels.
+ *
+ * Délais : 500ms → 1s → 2s → 4s → 8s (max) jusqu'à succès
+ */
 export function useBackendBootstrap({ addLog }: { addLog: AddLogFn }) {
+  const [isBackendOnline, setIsBackendOnline] = useState(false);
+  const attemptRef = useRef(0);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   useEffect(() => {
-    const verifyBackend = async () => {
+    let cancelled = false;
+
+    const attempt = async () => {
+      if (cancelled) return;
+
       const isOnline = await checkBackendStatus();
-      if (!isOnline) {
+
+      if (cancelled) return;
+
+      if (isOnline) {
+        setIsBackendOnline(true);
+        addLog("✅ Backend connecté (port 3001)", "SYSTEM", "success");
+        console.log("✅ Backend online - Ready to execute commands");
+        return;
+      }
+
+      attemptRef.current += 1;
+
+      // Première tentative uniquement → afficher le message d'erreur
+      if (attemptRef.current === 1) {
         addLog(
-          "⚠️ BACKEND OFFLINE - Les commandes ne fonctionneront pas !",
-          "SYSTEM",
-          "error",
-        );
-        addLog(
-          "💡 Démarrez le backend : cd server && node server.js",
+          "⚠️ BACKEND OFFLINE - Tentatives de reconnexion en cours...",
           "SYSTEM",
           "warning",
         );
-        console.error(
-          "\n" +
-            "═══════════════════════════════════════════════════════════\n" +
-            "  ⚠️  BACKEND NON DÉMARRÉ\n" +
-            "═══════════════════════════════════════════════════════════\n" +
-            "\n" +
-            "Le serveur backend (port 3001) n'est pas accessible.\n" +
-            "\n" +
-            "SOLUTION:\n" +
-            "1. Ouvrez un nouveau terminal\n" +
-            "2. Allez dans le dossier: cd server\n" +
-            "3. Démarrez le serveur: node server.js\n" +
-            "\n" +
-            "OU utilisez le script automatique:\n" +
-            "   Double-cliquez sur start-jarvis.bat\n" +
-            "\n" +
-            "═══════════════════════════════════════════════════════════\n",
+        console.warn(
+          "\n═══════════════════════════════════════\n" +
+          "  ⚠️  BACKEND NON ACCESSIBLE (port 3001)\n" +
+          "  Reconnexion automatique en cours...\n" +
+          "═══════════════════════════════════════",
         );
-      } else {
-        addLog("✅ Backend connecté (port 3001)", "SYSTEM", "success");
-        console.log("✅ Backend online - Ready to execute commands");
       }
+
+      // Délai exponentiel : 500ms, 1s, 2s, 4s, 8s (max)
+      const delayMs = Math.min(500 * Math.pow(2, attemptRef.current - 1), 8000);
+      timerRef.current = setTimeout(attempt, delayMs);
     };
 
-    verifyBackend();
+    attempt();
+
+    return () => {
+      cancelled = true;
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
   }, [addLog]);
+
+  return { isBackendOnline };
 }

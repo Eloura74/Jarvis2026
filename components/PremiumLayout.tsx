@@ -45,6 +45,7 @@ export const PremiumLayout: React.FC<PremiumLayoutProps> = ({
   processes = 24,
   onMicrophoneClick,
   isListening,
+  onCommand,
   logs,
   isProcessing,
   processingMessage,
@@ -92,6 +93,7 @@ export const PremiumLayout: React.FC<PremiumLayoutProps> = ({
         {/* === RIGHT COLUMN - RESPONSIVE === */}
         <RightPanel
           logs={logs}
+          onCommand={onCommand}
           setIsAppPathsOpen={setIsAppPathsOpen}
           setIsFileExplorerOpen={setIsFileExplorerOpen}
         />
