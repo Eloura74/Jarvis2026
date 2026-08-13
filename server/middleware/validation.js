@@ -34,12 +34,18 @@ export const schemas = {
   }),
 
   // Routes automation
+  // text est optionnel : on peut focus une app sans taper (focusApp seul)
   typeText: z.object({
-    text: z.string().min(1).max(10000),
-  }),
+    text: z.string().max(10000).optional(),
+    focusApp: z.string().max(200).optional(),
+  }).refine(
+    (data) => data.text !== undefined || data.focusApp !== undefined,
+    { message: "Au moins 'text' ou 'focusApp' doit être fourni" }
+  ),
 
   sendShortcut: z.object({
     keys: z.string().min(1).max(50),
+    shortcut: z.string().min(1).max(50).optional(), // alias utilisé par certains tools
   }),
 };
 

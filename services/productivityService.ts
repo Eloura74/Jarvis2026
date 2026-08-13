@@ -293,6 +293,48 @@ export function getActiveTodos(): TodoItem[] {
 }
 
 // ============================================================================
+// SHOPPING LIST
+// ============================================================================
+
+const SHOPPING_KEY = "jarvis_shopping_list";
+
+export interface ShoppingItem {
+  id: string;
+  name: string;
+  addedAt: number;
+}
+
+export function getShoppingList(): ShoppingItem[] {
+  try {
+    const stored = localStorage.getItem(SHOPPING_KEY);
+    return stored ? JSON.parse(stored) : [];
+  } catch (error) {
+    console.error("Erreur getShoppingList:", error);
+    return [];
+  }
+}
+
+export function addShoppingItems(names: string[]): ShoppingItem[] {
+  const list = getShoppingList();
+  const added: ShoppingItem[] = [];
+  
+  names.forEach((name) => {
+    const item = { id: Date.now().toString() + Math.random(), name, addedAt: Date.now() };
+    list.push(item);
+    added.push(item);
+  });
+  
+  localStorage.setItem(SHOPPING_KEY, JSON.stringify(list));
+  console.log(`🛒 Articles ajoutés à la liste de courses: ${names.join(", ")}`);
+  return added;
+}
+
+export function clearShoppingList(): void {
+  localStorage.removeItem(SHOPPING_KEY);
+  console.log(`🛒 Liste de courses vidée`);
+}
+
+// ============================================================================
 // RAPPELS
 // ============================================================================
 

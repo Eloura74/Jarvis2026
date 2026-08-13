@@ -45,6 +45,10 @@ let currentStatus = {
   lastUpdate: null,
 };
 
+// Suivi pour les notifications de fin d'impression
+let _wasPrinting = false;
+let _printDoneTimeout = null; // Anti-rebond : évite les faux positifs
+
 let mqttClient = null;
 
 /**
@@ -95,34 +99,48 @@ export function initBambuMqtt() {
       const print = data.print || {};
       const temps = print.temp || {};
 
-      // Détection des changements d'état pour Notifications Proactives (Push)
-      const isNowPrinting = print.gcode_state === "RUNNING";
-      if (
-        currentStatus.printing === true &&
-        isNowPrinting === false &&
-        print.mc_percent === 100
-      ) {
+      // ─── Détection des changements d'état (Notifications Push) ───
+      const gcodeState = print.gcode_state;
+      const isNowPrinting = gcodeState === "RUNNING";
+      const fileName = print.subtask_name || "fichier inconnu";
+
+      // Mise à jour du tracker _wasPrinting
+      if (isNowPrinting && !_wasPrinting) {
+        _wasPrinting = true;
+        // Annuler un éventuel timeout de fin en cours (faux positif)
+        if (_printDoneTimeout) {
+          clearTimeout(_printDoneTimeout);
+          _printDoneTimeout = null;
+        }
+      }
+
+      // Fin d'impression détectée via gcode_state FINISH
+      if (_wasPrinting && gcodeState === "FINISH") {
+        // Anti-rebond 2s : on attend pour confirmer que l'état est stable
+        if (!_printDoneTimeout) {
+          _printDoneTimeout = setTimeout(() => {
+            _printDoneTimeout = null;
+            _wasPrinting = false;
+            console.log(`🖨️ [Bambu] Impression terminée : ${fileName}`);
+            broadcastEvent(
+              "PRINTER_BAMBU",
+              { event: "PRINT_FINISHED", printer: "Bambu A1 Mini", file: fileName },
+              `Monsieur, l'impression de "${fileName}" sur la Bambu Lab A1 Mini est terminée avec succès.`,
+            );
+          }, 2000);
+        }
+      }
+
+      // Interruption : FAILED ou PAUSED alors qu'on imprimait
+      if (_wasPrinting && (gcodeState === "FAILED")) {
+        _wasPrinting = false;
+        if (_printDoneTimeout) { clearTimeout(_printDoneTimeout); _printDoneTimeout = null; }
+        const progress = print.mc_percent || 0;
         broadcastEvent(
           "PRINTER_BAMBU",
-          { event: "PRINT_FINISHED", printer: "Bambu A1 Mini" },
-          "Monsieur, l'impression sur la Bambu Lab A1 Mini est terminée avec succès.",
+          { event: "PRINT_FAILED", state: gcodeState, printer: "Bambu A1 Mini", file: fileName },
+          `Monsieur, attention, l'impression de "${fileName}" a échoué à ${progress}% sur la Bambu A1 Mini.`,
         );
-      } else if (
-        print.gcode_state === "FAILED" ||
-        print.gcode_state === "PAUSED"
-      ) {
-        // Optionnel : Alerte si erreur
-        if (currentStatus.printing === true) {
-          broadcastEvent(
-            "PRINTER_BAMBU",
-            {
-              event: "PRINT_INTERRUPTED",
-              state: print.gcode_state,
-              printer: "Bambu A1 Mini",
-            },
-            `Monsieur, attention, l'impression sur la Bambu A1 Mini est actuellement en état ${print.gcode_state}.`,
-          );
-        }
       }
 
       currentStatus.connected = true;

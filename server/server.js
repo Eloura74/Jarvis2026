@@ -65,6 +65,7 @@ import mediaRoutes from "./routes/media.js"; // Multimédia (YouTube, Spotify, P
 import visionRoutes from "./routes/vision.js"; // Vision Gemini (webcam, analyse image)
 import sphereRoutes from "./routes/sphere.js"; // Contrôle Sphere ESP32 (états, modes, texte)
 import desktopRoutes from "./routes/desktop.js"; // Copilote Bureau Windows (capture d'écran)
+import webhookRoutes from "./routes/webhook.js"; // Webhooks entrants (HA)
 
 const app = express();
 const PORT = 3001;
@@ -104,6 +105,7 @@ app.use("/api/media", mediaRoutes); // Multimédia (YouTube, Spotify, Plex)
 app.use("/api/vision", visionRoutes); // Vision Gemini (webcam, analyse image)
 app.use("/api/sphere", sphereRoutes); // Contrôle Sphere ESP32 (états, modes, texte)
 app.use("/api/desktop", desktopRoutes); // Copilote Bureau Windows (capture d'écran)
+app.use("/api/webhook", webhookRoutes); // Webhooks entrants (HA)
 
 // Route directe pour lancer une application par son chemin
 app.post("/api/launch", async (req, res) => {
@@ -275,6 +277,8 @@ import { initSphereService } from "./services/sphereService.js";
 import { initWhatsAppService } from "./services/whatsappService.js";
 // Import Calendar Reminder Service
 import { startCalendarReminder } from "./services/calendarReminder.js";
+// Import Morning Briefing Cron
+import { startMorningBriefingCron } from "./services/morningBriefingCron.js";
 
 // START
 initializeIndex().then(() => {
@@ -286,6 +290,8 @@ initializeIndex().then(() => {
   // initWhatsAppService();
   // Init Calendar Reminder (rappels proactifs)
   startCalendarReminder();
+  // Init Morning Briefing Cron
+  startMorningBriefingCron();
 
   app.listen(PORT, () => {
     console.log(`✅ J.A.R.V.I.S. Core running on http://localhost:${PORT}`);

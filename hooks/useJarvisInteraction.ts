@@ -273,6 +273,9 @@ export function useJarvisInteraction({
       // Signaler SPEAKING à la Sphere
       sendSphereState("SPEAKING");
 
+      // 🔈 Audio Ducking : baisser le volume des autres apps pendant que Jarvis parle
+      fetch("http://localhost:3001/api/system/duck/start", { method: "POST" }).catch(() => {});
+
       // On force le réveil du micro 100ms après le début de la parole (pour contrer la coupure navigateur)
       setTimeout(() => {
         forceResumeListening();
@@ -284,6 +287,9 @@ export function useJarvisInteraction({
       // Signaler IDLE à la Sphere : le timer screensaver peut redémarrer
       sendSphereState("IDLE");
       lastSpeechEndTime.current = Date.now(); // Marquer le moment exact
+
+      // 🔈 Audio Ducking : restaurer le volume après la parole
+      fetch("http://localhost:3001/api/system/duck/stop", { method: "POST" }).catch(() => {});
 
       // Stocker la durée TTS pour le délai adaptatif (V1)
       lastTtsDurationRef.current = ttsDurationMs;

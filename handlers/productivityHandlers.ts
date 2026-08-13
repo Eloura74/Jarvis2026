@@ -172,3 +172,54 @@ export const handleSetReminder = async (
   addLog("Reminder scheduled", "SYSTEM", "success");
   setStatus(SystemStatus.IDLE);
 };
+
+/**
+ * Gérer la liste de courses vocale
+ */
+export const handleManageShoppingList = async (
+  args: {
+    action: "add" | "list" | "clear";
+    items?: string[];
+  },
+  ctx: HandlerContext,
+) => {
+  const { action, items } = args;
+  const { addLog, speak } = ctx;
+
+  addLog(`Shopping List: ${action}`, "SYSTEM", "info");
+
+  try {
+    switch (action) {
+      case "add":
+        if (items && items.length > 0) {
+          productivity.addShoppingItems(items);
+          addLog(`Added to shopping list: ${items.join(", ")}`, "SYSTEM", "success");
+          if (speak) speak(`J'ai ajouté ${items.join(", ")} à votre liste de courses, Monsieur.`);
+          return { status: "success", message: `Added ${items.join(", ")} to shopping list.` };
+        }
+        break;
+
+      case "list": {
+        const list = productivity.getShoppingList();
+        addLog(`Shopping list items: ${list.length}`, "SYSTEM", "info");
+        if (list.length === 0) {
+          if (speak) speak("Votre liste de courses est vide, Monsieur.");
+          return { status: "success", message: "Shopping list is empty." };
+        } else {
+          const names = list.map(item => item.name).join(", ");
+          if (speak) speak(`Vous avez ${list.length} articles dans votre liste de courses : ${names}.`);
+          return { status: "success", message: `Shopping list: ${names}` };
+        }
+      }
+
+      case "clear":
+        productivity.clearShoppingList();
+        addLog("Shopping list cleared", "SYSTEM", "success");
+        if (speak) speak("J'ai vidé votre liste de courses, Monsieur.");
+        return { status: "success", message: "Shopping list cleared." };
+    }
+  } catch (e: any) {
+    addLog(`Shopping List ${action} failed: ${e.message}`, "SYSTEM", "error");
+    return { status: "error", message: `Shopping List error: ${e.message}` };
+  }
+};

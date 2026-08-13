@@ -4,6 +4,55 @@ import { HandlerContext, StatusOverlayData } from "../../types/app.types";
 import { SystemStatus, AppMemory, LogEntry } from "../../types";
 import { AppPath } from "../useAppPaths";
 
+// ─── Helpers locaux ──────────────────────────────────────────────────────────
+
+/**
+ * Formate une durée en secondes → texte français lisible
+ * Ex: 300 → "5 minutes", 90 → "1 minute et 30 secondes"
+ */
+function formatTimerDuration(seconds: number): string {
+  if (seconds <= 0) return "0 seconde";
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = seconds % 60;
+  const parts: string[] = [];
+  if (h > 0) parts.push(`${h} heure${h > 1 ? "s" : ""}`);
+  if (m > 0) parts.push(`${m} minute${m > 1 ? "s" : ""}`);
+  if (s > 0) parts.push(`${s} seconde${s > 1 ? "s" : ""}`);
+  return parts.join(" et ");
+}
+
+/**
+ * Génère le texte d'aide de Jarvis selon la catégorie demandée
+ */
+function buildJarvisHelp(category: string): string {
+  const sections: Record<string, string> = {
+    apps:
+      "Applications : dites «ouvre Chrome», «lance Spotify», «ferme Word», «minimise Firefox».",
+    home:
+      "Maison : «allume les lumières du salon», «état des portes», «température du bureau», «capteurs de mouvement».",
+    media:
+      "Médias : «mets de la musique», «pause Spotify», «joue une vidéo YouTube», «monte le volume».",
+    system:
+      "Système : «verrouille le PC», «mets un timer de 5 minutes», «prends une capture d'écran», «liste les processus», «coupe le son».",
+    communication:
+      "Communication : «envoie un message WhatsApp à maman», «lis mes emails», «appelle papa», «agenda de demain».",
+    productivity:
+      "Productivité : «tape ce texte dans le bloc-notes», «ouvre mes workflows», «briefing du matin», «cherche sur Google».",
+  };
+
+  if (category !== "all" && sections[category]) {
+    return `Voici mes capacités en ${category} : ${sections[category]}`;
+  }
+
+  return (
+    "Monsieur, voici mes principales capacités. " +
+    Object.values(sections).join(" ") +
+    " Vous pouvez aussi me demander de l'aide par catégorie : applications, maison, médias, système, communication, ou productivité."
+  );
+}
+
+
 interface ToolExecutorProps {
   appMemory: AppMemory[];
   updateMemory: (appName: string, path: string) => void;
@@ -139,6 +188,8 @@ export function useToolExecutor({
             return await handlers.handleManageNotes(toolArgs, ctx);
           case "manage_todos":
             return await handlers.handleManageTodos(toolArgs, ctx);
+          case "manage_shopping_list":
+            return await handlers.handleManageShoppingList(toolArgs, ctx);
           case "set_reminder":
             return await handlers.handleSetReminder(toolArgs, ctx);
 
@@ -641,6 +692,55 @@ export function useToolExecutor({
             const briefingData = await res.json();
             if (briefingData.text) speak(briefingData.text);
             return { status: "success", data: briefingData };
+          }
+
+          // === JARVIS HELP ===
+          case "jarvis_help": {
+            const helpText = buildJarvisHelp(toolArgs.category || "all");
+            speak(helpText);
+            addLog("ℹ️ Aide affichée", "SYSTEM", "info");
+            return { status: "success", message: helpText };
+          }
+
+          // === EXECUTE WORKFLOW ===
+          case "execute_workflow": {
+            const { action: wfAction, name: wfName } = toolArgs;
+            if (wfAction === "list") {
+              const wfRaw = localStorage.getItem("jarvis_workflows");
+              const wfList: Array<{ name: string }> = wfRaw ? JSON.parse(wfRaw) : [];
+              if (wfList.length === 0) {
+                speak("Aucun workflow sauvegardé pour l'instant, Monsieur. Répétez des séquences de commandes pour que j'en détecte automatiquement.");
+              } else {
+                speak(`Vous avez ${wfList.length} workflow${wfList.length > 1 ? "s" : ""} sauvegardé${wfList.length > 1 ? "s" : ""} : ${wfList.map((w) => w.name).join(", ")}.`);
+              }
+              return { status: "success", workflows: wfList };
+            }
+            if (wfAction === "run" && wfName) {
+              const wfRaw = localStorage.getItem("jarvis_workflows");
+              const wfList: Array<{ name: string; actions: string[] }> = wfRaw ? JSON.parse(wfRaw) : [];
+              const wf = wfList.find((w) => w.name.toLowerCase().includes(wfName.toLowerCase()));
+              if (!wf) {
+                speak(`Aucun workflow "${wfName}" trouvé, Monsieur.`);
+                return { status: "error", message: "Workflow introuvable" };
+              }
+              speak(`Exécution du workflow "${wf.name}", Monsieur.`);
+              addLog(`🔁 Workflow "${wf.name}" : ${wf.actions.length} actions`, "SYSTEM", "info");
+              return { status: "success", workflow: wf };
+            }
+            return { status: "error", message: "action ou name manquant" };
+          }
+
+          // === LOCK PC ===
+          case "lock_pc": {
+            const res = await fetch("http://localhost:3001/api/system/power", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ action: "lock" }),
+            });
+            const data = await res.json();
+            speak("PC verrouillé, Monsieur.");
+            addLog("🔒 PC verrouillé", "SYSTEM", "success");
+            return { status: data.success ? "success" : "error", message: "PC verrouillé" };
           }
 
           // === CONVERSATION CONTROL ===

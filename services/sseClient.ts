@@ -30,7 +30,8 @@ let eventSource: EventSource | null = null;
 const listeners = new Set<SSEListener>();
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 const SSE_URL = "http://localhost:3001/api/events";
-const RECONNECT_DELAY_MS = 3000;
+let reconnectDelayMs = 3000;
+const MAX_RECONNECT_DELAY_MS = 30000;
 
 // ============================================================================
 // GESTION DE LA CONNEXION
@@ -48,6 +49,7 @@ function connect(): void {
 
   eventSource.onopen = () => {
     console.log("✅ [SSE Singleton] Connecté");
+    reconnectDelayMs = 3000; // Reset backoff on successful connection
     if (reconnectTimer) {
       clearTimeout(reconnectTimer);
       reconnectTimer = null;
@@ -65,13 +67,14 @@ function connect(): void {
   };
 
   eventSource.onerror = () => {
-    console.warn("⚠️ [SSE Singleton] Erreur — reconnexion dans", RECONNECT_DELAY_MS, "ms");
+    console.warn(`⚠️ [SSE Singleton] Erreur — reconnexion dans ${reconnectDelayMs} ms`);
     eventSource?.close();
     eventSource = null;
 
-    // Reconnexion automatique si des abonnés sont encore actifs
+    // Reconnexion automatique avec exponential backoff
     if (listeners.size > 0) {
-      reconnectTimer = setTimeout(connect, RECONNECT_DELAY_MS);
+      reconnectTimer = setTimeout(connect, reconnectDelayMs);
+      reconnectDelayMs = Math.min(reconnectDelayMs * 1.5, MAX_RECONNECT_DELAY_MS);
     }
   };
 }
@@ -86,10 +89,12 @@ function disconnectIfIdle(): void {
       clearTimeout(reconnectTimer);
       reconnectTimer = null;
     }
+    reconnectDelayMs = 3000; // Reset delay when disconnecting
     eventSource?.close();
     eventSource = null;
   }
 }
+
 
 // ============================================================================
 // API PUBLIQUE

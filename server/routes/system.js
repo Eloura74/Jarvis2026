@@ -10,6 +10,7 @@ import {
   getVolume,
 } from "../services/systemService.js";
 import { searchLimiter, strictLimiter } from "../middleware/index.js";
+import { duckAudio, restoreAudio } from "../services/duckingService.js";
 
 const router = express.Router();
 
@@ -144,6 +145,33 @@ router.post("/audio/volume", strictLimiter, async (req, res) => {
     }
 
     res.json({ success: true, result });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// --- AUDIO DUCKING ---
+/**
+ * POST /api/system/duck/start
+ * Baisse le volume des autres apps pendant que Jarvis parle
+ */
+router.post("/duck/start", async (_req, res) => {
+  try {
+    await duckAudio();
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * POST /api/system/duck/stop
+ * Restaure le volume après la parole de Jarvis
+ */
+router.post("/duck/stop", async (_req, res) => {
+  try {
+    await restoreAudio();
+    res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

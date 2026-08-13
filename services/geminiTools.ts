@@ -174,6 +174,27 @@ export const toolDeclarations: FunctionDeclaration[] = [
     },
   },
   {
+    name: "manage_shopping_list",
+    description: "🛒 Gérer la liste de courses vocale (ajouter, lister, vider).",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        action: {
+          type: Type.STRING,
+          description: "Action à effectuer ('add', 'list', 'clear').",
+        },
+        items: {
+          type: Type.ARRAY,
+          items: {
+            type: Type.STRING,
+          },
+          description: "Liste des articles à ajouter (si action='add').",
+        },
+      },
+      required: ["action"],
+    },
+  },
+  {
     name: "generate_image",
     description: "Generate an image.",
     parameters: {
@@ -980,6 +1001,101 @@ export const toolDeclarations: FunctionDeclaration[] = [
           type: Type.STRING,
           description:
             "Optional target object or person to detect (e.g. 'une personne', 'un chat', 'un téléphone').",
+        },
+      },
+    },
+  },
+  // ─── NOUVEAUX TOOLS ──────────────────────────────────────────────────────────
+  {
+    name: "set_timer",
+    description:
+      "⏰ MANDATORY TOOL to create a vocal countdown timer. " +
+      "ALWAYS USE THIS when user says: 'timer', 'minuteur', 'compte à rebours', 'rappelle-moi dans', 'mets un timer', 'dans X minutes', 'dans X secondes', 'dans X heures'. " +
+      "Examples: " +
+      "- 'mets un timer de 5 minutes' → durationSeconds=300, label='timer' " +
+      "- 'rappelle-moi dans 30 secondes' → durationSeconds=30, label='rappel' " +
+      "- 'timer cuisson 20 minutes' → durationSeconds=1200, label='cuisson' " +
+      "- 'annule le timer' → action='cancel', label='timer' " +
+      "- 'combien il reste sur mon timer' → action='status' " +
+      "DO NOT respond with text only — CALL THIS TOOL IMMEDIATELY.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        action: {
+          type: Type.STRING,
+          enum: ["create", "cancel", "status"],
+          description: "'create' to start a timer, 'cancel' to stop one, 'status' to check remaining time.",
+        },
+        durationSeconds: {
+          type: Type.NUMBER,
+          description: "Timer duration in seconds (required for action='create'). Convert minutes to seconds: 5min=300, 10min=600, 1h=3600.",
+        },
+        label: {
+          type: Type.STRING,
+          description: "Optional timer name (e.g. 'cuisson', 'réunion', 'rappel'). Default: 'timer'.",
+        },
+      },
+      required: ["action"],
+    },
+  },
+  {
+    name: "jarvis_help",
+    description:
+      "ℹ️ Use this tool when user asks: 'que sais-tu faire', 'quelles sont tes capacités', 'aide-moi', 'comment tu fonctionnes', 'liste tes commandes', 'help'. " +
+      "Returns a formatted list of all available capabilities with examples.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        category: {
+          type: Type.STRING,
+          enum: ["all", "apps", "home", "media", "system", "communication", "productivity"],
+          description: "Optional: filter help by category. Default: 'all'.",
+        },
+      },
+    },
+  },
+  {
+    name: "execute_workflow",
+    description:
+      "🔁 MANDATORY TOOL to execute a saved workflow by name. " +
+      "Use when user says: 'mode travail', 'mode soirée', 'lance ma routine', 'active le workflow X', 'exécute X', or any custom workflow name they've saved. " +
+      "Also use when user says 'montre mes workflows' or 'liste mes workflows' — use action='list'.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        action: {
+          type: Type.STRING,
+          enum: ["run", "list"],
+          description: "'run' to execute a workflow by name, 'list' to show all saved workflows.",
+        },
+        name: {
+          type: Type.STRING,
+          description: "Name of the workflow to execute (required for action='run').",
+        },
+      },
+      required: ["action"],
+    },
+  },
+  {
+    name: "lock_pc",
+    description:
+      "🔒 Lock the Windows PC immediately. Use when user says: 'verrouille le PC', 'verrouille l'ordinateur', 'lock', 'bloque l'écran', 'mets en veille l'écran'.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {},
+    },
+  },
+  {
+    name: "take_screenshot",
+    description:
+      "📸 Take a screenshot of the current screen and describe it using Gemini Vision. " +
+      "Use when user says: 'prends une capture', 'fais un screenshot', 'capture l'écran', 'montre-moi l'écran', 'que vois-tu sur mon écran'.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        question: {
+          type: Type.STRING,
+          description: "Optional question about the screenshot (e.g. 'qu\\'est-ce que tu vois', 'y a-t-il des erreurs').",
         },
       },
     },

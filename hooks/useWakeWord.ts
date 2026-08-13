@@ -46,6 +46,39 @@ interface UseWakeWordOptions {
 const DEFAULT_KEYWORDS = ["jarvis", "hey jarvis", "ok jarvis"];
 
 /**
+ * Joue un double bip de confirmation "Arc Reactor" via AudioContext natif.
+ * Son court (160ms total) pour confirmer la détection du wake word.
+ */
+function playWakeConfirmSound(): void {
+  try {
+    const ctx = new (window.AudioContext ||
+      (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext)();
+
+    const playBeep = (freq: number, startAt: number, duration: number) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = "sine";
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0.18, ctx.currentTime + startAt);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + startAt + duration);
+      osc.start(ctx.currentTime + startAt);
+      osc.stop(ctx.currentTime + startAt + duration);
+    };
+
+    // Bip 1 : 460Hz — Bip 2 : 580Hz (montant = "activation")
+    playBeep(460, 0, 0.08);
+    playBeep(580, 0.1, 0.08);
+
+    // Fermer le contexte après le son
+    setTimeout(() => ctx.close(), 400);
+  } catch {
+    // AudioContext non disponible (contexte sécurisé requis)
+  }
+}
+
+/**
  * Hook de détection du Wake Word
  *
  * @param onWakeWordDetected - Callback appelé quand wake word détecté
@@ -151,6 +184,10 @@ export function useWakeWord(
         if (isWakeWord && confidence >= confidenceThreshold) {
           console.log("✅ WAKE WORD DÉTECTÉ !");
           setLastDetection(new Date());
+
+          // 🔔 Son de confirmation court (bip double Arc Reactor)
+          playWakeConfirmSound();
+
           onWakeWordDetected();
 
           // Pause brève pour éviter double détection

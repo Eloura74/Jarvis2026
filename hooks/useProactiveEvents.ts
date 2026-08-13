@@ -59,16 +59,37 @@ export function useProactiveEvents({
           if (data && data.event === "PRINT_FINISHED") {
             setStatusOverlayRef.current({
               id: `bambu-finished-${Date.now()}`,
-              title: "Bambu Lab A1 Mini",
+              title: "🖨️ Bambu Lab A1 Mini",
               type: "printer",
               lastUpdate: new Date().toLocaleTimeString(),
               stats: [
                 {
                   label: "Statut",
-                  value: "Impression terminée",
+                  value: "✅ Impression terminée",
                   status: "normal",
                   icon: "fas fa-check-circle",
                 },
+                ...(data.file && data.file !== "fichier inconnu"
+                  ? [{ label: "Fichier", value: data.file, status: "normal" as const, icon: "fas fa-file" }]
+                  : []),
+              ],
+            });
+          } else if (data && data.event === "PRINT_FAILED") {
+            setStatusOverlayRef.current({
+              id: `bambu-failed-${Date.now()}`,
+              title: "⚠️ Bambu Lab A1 Mini — Échec",
+              type: "printer",
+              lastUpdate: new Date().toLocaleTimeString(),
+              stats: [
+                {
+                  label: "Statut",
+                  value: "❌ Impression échouée",
+                  status: "error" as const,
+                  icon: "fas fa-times-circle",
+                },
+                ...(data.file && data.file !== "fichier inconnu"
+                  ? [{ label: "Fichier", value: data.file, status: "error" as const, icon: "fas fa-file" }]
+                  : []),
               ],
             });
           }
@@ -177,6 +198,31 @@ export function useProactiveEvents({
           } else {
             // Réveil : fermer tout overlay résiduel
             setStatusOverlayRef.current(null);
+          }
+        } else if (type === "HA_ALERT") {
+          console.log(`📥 [SSE] Reçu event HA_ALERT:`, data);
+          if (data) {
+            setStatusOverlayRef.current({
+              id: `ha-alert-${Date.now()}`,
+              title: "Alerte Maison Intelligente",
+              type: "system",
+              lastUpdate: new Date().toLocaleTimeString(),
+              stats: [
+                {
+                  label: "Alerte",
+                  value: data.type || "Notification",
+                  status: "warning",
+                  icon: "fas fa-exclamation-triangle",
+                },
+                {
+                  label: "Message",
+                  value: data.message || "Alerte reçue de Home Assistant",
+                  status: "warning",
+                  icon: "fas fa-info-circle",
+                },
+              ],
+            });
+            setTimeout(() => setStatusOverlayRef.current(null), 15000);
           }
         }
       } catch (err) {
