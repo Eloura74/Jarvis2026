@@ -131,21 +131,21 @@ export const HA_ENTITIES = {
  * Récupère l'état de toutes les entités
  */
 export const fetchHAStates = async (): Promise<Record<string, any>> => {
-  if (!HA_TOKEN) return {};
   try {
-    const res = await fetch("/api/states", {
-      headers: { Authorization: `Bearer ${HA_TOKEN}` },
-    });
-    if (!res.ok) throw new Error("Fetch HA states failed");
+    const res = await fetch("/api/states");
+    if (!res.ok) return {};
     const data = await res.json();
+
+    if (!Array.isArray(data)) return {};
 
     const states: Record<string, unknown> = {};
     data.forEach((ent: { entity_id: string; [key: string]: unknown }) => {
-      states[ent.entity_id] = ent;
+      if (ent && ent.entity_id) {
+        states[ent.entity_id] = ent;
+      }
     });
     return states;
-  } catch (e) {
-    console.error("HA Error:", e);
+  } catch {
     return {};
   }
 };

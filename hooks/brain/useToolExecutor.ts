@@ -193,9 +193,20 @@ export function useToolExecutor({
           case "set_reminder":
             return await handlers.handleSetReminder(toolArgs, ctx);
 
-          // === VISION ===
+          // === VISION & DEV ASSISTANT ===
           case "analyze_screen":
             return await handlers.handleAnalyzeScreen(toolArgs, ctx);
+          case "dev_assistant_explain":
+            return await handlers.handleDevAssistant(toolArgs, ctx);
+
+          // === MEMORY & RAG ===
+          case "search_local_memory":
+          case "consult_memory":
+            return await handlers.handleConsultMemory(toolArgs, ctx);
+
+          // === PRESENCE & HOME ===
+          case "manage_presence_mode":
+            return await handlers.handleManagePresence(toolArgs, ctx);
 
           // === UI CONTROL ===
           case "close_current_overlay":

@@ -123,12 +123,29 @@ export function useJarvisInteraction({
         return;
       }
 
-      // 3. Période de sécurité (Echo cancellation temporelle)
+      // 3. Période de sécurité (Echo cancellation temporelle : 2.5s après fin de parole)
       const timeSinceSpeech = Date.now() - lastSpeechEndTime.current;
-      if (timeSinceSpeech < 1200) {
+      if (timeSinceSpeech < 2500) {
         console.log(
-          `🔇 Transcription ignorée (Echo): ${timeSinceSpeech}ms < 1200ms`,
+          `🔇 Transcription ignorée (Echo): ${timeSinceSpeech}ms < 2500ms`,
         );
+        return;
+      }
+
+      // 3.1. Ignorer les échos isolés de politesse / salutations de Jarvis sans commande
+      const ECHO_GREETINGS = [
+        "bonjour monsieur",
+        "bonjour monsieur comment puis-je vous être utile",
+        "bonjour monsieur je me porte à merveille",
+        "bon retour au bureau",
+        "bonjour au bureau",
+        "exécuter bon retour au bureau",
+        "comment puis-je vous être utile aujourd'hui",
+        "comment puis-je vous aider",
+      ];
+      const cleanText = textLower.trim();
+      if (ECHO_GREETINGS.some((g) => cleanText === g || cleanText.startsWith("bonjour monsieur"))) {
+        console.log(`🔇 Transcription ignorée (Écho de salutation) : "${text}"`);
         return;
       }
 

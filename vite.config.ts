@@ -19,17 +19,9 @@ export default defineConfig(({ mode }) => {
       },
       proxy: {
         "/api": {
-          target: env.VITE_HA_BASE_URL || "http://192.168.1.193:8123",
+          target: "http://localhost:3001",
           changeOrigin: true,
           secure: false,
-          configure: (proxy, _options) => {
-            proxy.on("proxyReq", (proxyReq, _req, _res) => {
-              const token = env.VITE_HA_TOKEN;
-              if (token) {
-                proxyReq.setHeader("Authorization", `Bearer ${token}`);
-              }
-            });
-          },
         },
       },
     },

@@ -207,6 +207,48 @@ export const toolDeclarations: FunctionDeclaration[] = [
     },
   },
   {
+    name: "dev_assistant_explain",
+    description: "💻 Copilote d'Écran Proactif : Analyser une erreur de code/terminal visible à l'écran et expliquer la solution.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        prompt: {
+          type: Type.STRING,
+          description: "Question ou précision optionnelle sur l'erreur à analyser.",
+        },
+      },
+    },
+  },
+  {
+    name: "search_local_memory",
+    description: "🧠 Mémoire RAG Local : Chercher dans les documents locaux (PDF, Markdown, notes) pour répondre à une question.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        query: {
+          type: Type.STRING,
+          description: "Mots-clés ou question à rechercher dans les documents.",
+        },
+      },
+      required: ["query"],
+    },
+  },
+  {
+    name: "manage_presence_mode",
+    description: "👤 Détection de Présence : Consulter ou simuler l'état de présence au bureau et l'extinction des lumières.",
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        action: {
+          type: Type.STRING,
+          enum: ["status", "simulate_away", "simulate_present"],
+          description: "Action présence ('status', 'simulate_away', 'simulate_present').",
+        },
+      },
+      required: ["action"],
+    },
+  },
+  {
     name: "analyze_screen",
     description:
       "MANDATORY TOOL: Use THIS tool when the user asks you to 'look at', 'read', 'check', 'analyze' something on their screen, or asks 'what is wrong with my code', 'what's on my screen', 'read this'. This tool captures a screenshot of their actual Windows desktop/code/software and analyzes it using Gemini Vision. Do NOT try to answer blindly if they refer to their screen/code.",
@@ -387,11 +429,6 @@ export const toolDeclarations: FunctionDeclaration[] = [
       properties: { url: { type: Type.STRING } },
       required: ["url"],
     },
-  },
-  {
-    name: "take_screenshot",
-    description: "Capture a screenshot.",
-    parameters: { type: Type.OBJECT, properties: {} },
   },
   {
     name: "show_status_overlay",

@@ -1,25 +1,16 @@
 {
   "wakeWordEnabled": true,
-  "wakeWordThreshold": 0.85,
+  "wakeWordThreshold": 0.8,
   "voiceURI": null,
   "voicePitch": 1,
   "voiceRate": 1,
   "voiceVolume": 1,
   "voiceLanguage": "fr-FR",
-  "theme": "wood",
+  "theme": "ironman",
   "ghostModeEnabled": false,
   "psychProfileEnabled": true,
   "savedLocations": {
-    "Travail": "RD20 Le Cellier, 13127 Vitrolles"
-  },
-  "whatsappAliases": {
-    "jérémy afpa": "33782665020@c.us",
-    "jeremy afpa": "33782665020@c.us",
-    "jérémy cailleux": "33782665020@c.us",
-    "jeremy cailleux": "33782665020@c.us",
-    "jérémy iman": "33651920708@c.us",
-    "jeremy iman": "33651920708@c.us",
-    "jérémy imane": "33651920708@c.us",
-    "jeremy imane": "33651920708@c.us"
+    "Travail": "39 rue condorcet , Cogolin",
+    "Maison": "5374 chemin de vaulongue, le Luc en provence"
   }
 }

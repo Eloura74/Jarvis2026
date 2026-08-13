@@ -1,268 +1,396 @@
 /**
- * WorkflowPanel
- *
- * Gestion des workflows automation
+ * WorkflowPanel — Éditeur & Gestionnaire complet de Routines / Workflows
  */
 
-import { useState } from "react";
-import { motion } from "framer-motion";
+import { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Play,
   Trash2,
   Plus,
-  ChevronRight,
+  Zap,
   Activity,
-  Download,
+  CheckCircle2,
+  X,
+  Sliders,
+  Settings,
+  ChevronRight,
+  ListPlus
 } from "lucide-react";
-import { useWorkflows } from "../hooks/useWorkflows";
 import { toast } from "react-hot-toast";
+import PresenceWidget from "./PresenceWidget";
+
+export interface WorkflowItem {
+  id: string;
+  name: string;
+  actions: string[];
+  icon?: string;
+  triggerCount: number;
+}
+
+const ACTION_SUGGESTIONS = [
+  "Lumières Bureau On",
+  "Lumières Bureau Off",
+  "Lancer VS Code",
+  "Spotify Focus",
+  "Volume 50%",
+  "Mode Veille On",
+  "Capture Écran",
+  "Vider Corbeille"
+];
 
 export default function WorkflowPanel() {
-  const { workflows, suggestedPatterns, acceptPattern, removeWorkflow } =
-    useWorkflows();
-  const [newWorkflowName, setNewWorkflowName] = useState("");
-  const [selectedPatternIndex, setSelectedPatternIndex] = useState<
-    number | null
-  >(null);
-  const [runningWorkflow, setRunningWorkflow] = useState<string | null>(null);
+  const [workflows, setWorkflows] = useState<WorkflowItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<"workflows" | "editor" | "presence">("workflows");
 
-  // NOUVEAU: Exemples de workflows
-  const exampleWorkflows = [
-    {
-      name: "Mode Cinéma",
-      actions: ["Lights Off", "Volume 50%", "Open Netflix"],
-    },
-    {
-      name: "Départ Maison",
-      actions: ["All Lights Off", "Lock Door", "Stop Music"],
-    },
-    {
-      name: "Focus Travail",
-      actions: ["DND On", "Spotify Focus", "Open VS Code"],
-    },
-  ];
+  // State création / édition workflow
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [workflowName, setWorkflowName] = useState("");
+  const [actions, setActions] = useState<string[]>([]);
+  const [newActionInput, setNewActionInput] = useState("");
+  const [runningId, setRunningId] = useState<string | null>(null);
 
-  const handleLoadExamples = () => {
-    // Pour l'instant on simule le chargement en toast, car le hook ne permet pas d'ajouter arbitrairement en un clic sans pattern
-    // TODO: Modifier useWorkflows pour permettre l'ajout direct
-    toast.success("Exemples chargés dans le système neural");
-    // Simulation visuelle via le state local si on pouvait, mais on va juste notifier l'utilisateur
-    // car le backend fictif ne persiste pas vraiment sauf si on a implémenté le store.
-  };
-
-  const handleCreateWorkflow = () => {
-    if (selectedPatternIndex !== null && newWorkflowName.trim()) {
-      acceptPattern(selectedPatternIndex, newWorkflowName);
-      setNewWorkflowName("");
-      setSelectedPatternIndex(null);
-      toast.success("Workflow créé avec succès");
+  // Charger workflows depuis le backend
+  const fetchWorkflows = async () => {
+    try {
+      const res = await fetch("http://localhost:3001/api/workflows");
+      if (res.ok) {
+        const json = await res.json();
+        setWorkflows(json.workflows || []);
+      }
+    } catch {
+      // Fallback localStorage
+      const raw = localStorage.getItem("jarvis_workflows");
+      if (raw) setWorkflows(JSON.parse(raw));
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleRunWorkflow = async (workflowName: string) => {
-    setRunningWorkflow(workflowName);
-    toast.loading(`Exécution de "${workflowName}"...`, { id: "run-wf" });
+  useEffect(() => {
+    fetchWorkflows();
+  }, []);
+
+  // Déclencher un workflow
+  const handleRun = async (wf: WorkflowItem) => {
+    setRunningId(wf.id);
+    toast.loading(`Exécution de "${wf.name}"...`, { id: "wf-run" });
+
     try {
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-      toast.success(`"${workflowName}" exécuté avec succès`, { id: "run-wf" });
+      await fetch(`http://localhost:3001/api/workflows/${encodeURIComponent(wf.id)}/run`, {
+        method: "POST"
+      });
+
+      // Exécuter la première action via l'API system
+      toast.success(`Workflow "${wf.name}" exécuté avec succès`, { id: "wf-run" });
+      fetchWorkflows();
     } catch {
-      toast.error("Erreur lors de l'exécution", { id: "run-wf" });
+      toast.error("Erreur exécution workflow", { id: "wf-run" });
     } finally {
-      setRunningWorkflow(null);
+      setRunningId(null);
+    }
+  };
+
+  // Supprimer un workflow
+  const handleDelete = async (wf: WorkflowItem) => {
+    if (!confirm(`Supprimer la routine "${wf.name}" ?`)) return;
+
+    try {
+      await fetch(`http://localhost:3001/api/workflows/${encodeURIComponent(wf.id)}`, {
+        method: "DELETE"
+      });
+      toast.success("Routine supprimée");
+      fetchWorkflows();
+    } catch {
+      toast.error("Erreur lors de la suppression");
+    }
+  };
+
+  // Ouvrir éditeur pour créer ou modifier
+  const handleOpenEditor = (wf?: WorkflowItem) => {
+    if (wf) {
+      setEditingId(wf.id);
+      setWorkflowName(wf.name);
+      setActions([...wf.actions]);
+    } else {
+      setEditingId(null);
+      setWorkflowName("");
+      setActions(["Lancer VS Code", "Spotify Focus"]);
+    }
+    setActiveTab("editor");
+  };
+
+  // Ajouter une étape dans le formulaire
+  const handleAddAction = (actionText?: string) => {
+    const text = actionText || newActionInput.trim();
+    if (!text) return;
+    setActions(prev => [...prev, text]);
+    setNewActionInput("");
+  };
+
+  // Supprimer une étape
+  const handleRemoveAction = (index: number) => {
+    setActions(prev => prev.filter((_, i) => i !== index));
+  };
+
+  // Sauvegarder le workflow (POST au backend)
+  const handleSaveWorkflow = async () => {
+    if (!workflowName.trim()) {
+      toast.error("Veuillez saisir un nom de routine");
+      return;
+    }
+    if (actions.length === 0) {
+      toast.error("Ajoutez au moins 1 action");
+      return;
+    }
+
+    try {
+      const res = await fetch("http://localhost:3001/api/workflows", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: workflowName,
+          actions
+        })
+      });
+
+      if (res.ok) {
+        toast.success(`Routine "${workflowName}" sauvegardée !`);
+        fetchWorkflows();
+        setActiveTab("workflows");
+      } else {
+        toast.error("Erreur sauvegarde serveur");
+      }
+    } catch {
+      toast.error("Impossible de contacter le serveur");
     }
   };
 
   return (
-    <div className="w-full h-full flex flex-col p-4">
-      <div className="p-4 space-y-6 overflow-y-auto custom-scrollbar flex-1">
-        {/* Header Actions */}
-        <div className="flex justify-end">
-          <button
-            onClick={handleLoadExamples}
-            className="flex items-center gap-2 px-3 py-1.5 rounded bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/30 text-cyan-300 text-xs font-bold transition-all"
-          >
-            <Download size={12} />
-            CHARGER EXEMPLES
-          </button>
+    <div className="w-full h-full flex flex-col p-4 space-y-4">
+      {/* Navigation Onglets */}
+      <div className="flex items-center justify-between border-b border-white/10 pb-3">
+        <div className="flex items-center gap-2">
+          <Zap className="w-5 h-5 text-cyan-400 animate-pulse" />
+          <h2 className="text-sm font-bold text-cyan-300 uppercase tracking-widest">
+            Routines & Automatisation
+          </h2>
         </div>
 
-        {/* Patterns Suggérés */}
-        {suggestedPatterns.length > 0 && (
+        <div className="flex gap-2">
+          <button
+            onClick={() => setActiveTab("workflows")}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${activeTab === "workflows" ? "bg-cyan-500/20 border border-cyan-400 text-cyan-200" : "bg-black/40 border border-white/10 text-gray-400 hover:text-white"}`}
+          >
+            <Activity size={14} /> Routines ({workflows.length})
+          </button>
+
+          <button
+            onClick={() => handleOpenEditor()}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${activeTab === "editor" ? "bg-purple-500/20 border border-purple-400 text-purple-200" : "bg-black/40 border border-white/10 text-gray-400 hover:text-white"}`}
+          >
+            <Plus size={14} /> Créer Routine
+          </button>
+
+          <button
+            onClick={() => setActiveTab("presence")}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${activeTab === "presence" ? "bg-amber-500/20 border border-amber-400 text-amber-200" : "bg-black/40 border border-white/10 text-gray-400 hover:text-white"}`}
+          >
+            <Sliders size={14} /> Présence
+          </button>
+        </div>
+      </div>
+
+      {/* CONTENU */}
+      <div className="flex-1 overflow-y-auto custom-scrollbar pr-1">
+        {activeTab === "workflows" && (
           <div className="space-y-3">
-            <div className="flex items-center gap-2 mb-2">
-              <Activity className="w-4 h-4 text-yellow-500 animate-pulse" />
-              <h4 className="text-yellow-500/80 font-bold text-xs tracking-widest uppercase">
-                Patterns Détectés ({suggestedPatterns.length})
-              </h4>
-            </div>
-
-            <div className="space-y-2">
-              {suggestedPatterns.map((pattern, i) => (
-                <div
-                  key={i}
-                  className={`p-3 rounded-lg border transition-all cursor-pointer ${
-                    selectedPatternIndex === i
-                      ? "bg-purple-500/20 border-purple-500 shadow-[0_0_10px_rgba(168,85,247,0.2)]"
-                      : "bg-black/40 border-purple-500/10 hover:border-purple-500/30"
-                  }`}
-                  onClick={() => setSelectedPatternIndex(i)}
-                >
-                  <div className="flex items-center gap-1 flex-wrap mb-2">
-                    {pattern.sequence.map((cmd: string, j: number) => (
-                      <span key={j} className="flex items-center gap-1">
-                        <span className="text-cyan-300 text-xs bg-cyan-900/30 px-1.5 py-0.5 rounded border border-cyan-500/20">
-                          {cmd}
-                        </span>
-                        {j < pattern.sequence.length - 1 && (
-                          <ChevronRight className="w-3 h-3 text-gray-600" />
-                        )}
-                      </span>
-                    ))}
-                  </div>
-                  <div className="text-[10px] text-gray-500 font-mono flex justify-between">
-                    <span>Fréquence: {pattern.count}x</span>
-                    <span>Intervalle: 15min</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Create Workflow Form */}
-            {selectedPatternIndex !== null && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                className="p-3 rounded-lg bg-purple-900/20 border border-purple-500/30"
-              >
-                <input
-                  type="text"
-                  placeholder="Nom du workflow..."
-                  value={newWorkflowName}
-                  onChange={(e) => setNewWorkflowName(e.target.value)}
-                  className="w-full px-3 py-2 rounded bg-black/50 border border-purple-500/30 text-white placeholder-gray-600 focus:outline-none focus:border-purple-400 text-sm mb-2 font-mono"
-                  autoFocus
-                />
+            {loading ? (
+              <div className="text-center py-12 text-gray-500 font-mono text-sm">
+                Chargement des routines...
+              </div>
+            ) : workflows.length === 0 ? (
+              <div className="text-center py-12 space-y-3">
+                <p className="text-gray-400 text-sm">Aucune routine enregistrée pour l'instant.</p>
                 <button
-                  onClick={handleCreateWorkflow}
-                  disabled={!newWorkflowName.trim()}
-                  className="w-full py-1.5 rounded bg-purple-500/20 hover:bg-purple-500/40 border border-purple-500/50 text-purple-300 text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2"
+                  onClick={() => handleOpenEditor()}
+                  className="px-4 py-2 rounded-lg bg-cyan-500/20 border border-cyan-400 text-cyan-300 text-xs font-bold uppercase"
                 >
-                  <Plus className="w-3 h-3" />
-                  Sauvegarder Sequence
+                  + Créer ma première routine
                 </button>
-              </motion.div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {workflows.map((wf) => (
+                  <motion.div
+                    key={wf.id || wf.name}
+                    initial={{ opacity: 0, y: 5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="p-4 rounded-xl bg-gradient-to-br from-white/5 to-black/40 border border-white/10 hover:border-cyan-500/40 transition-all flex flex-col justify-between space-y-3"
+                  >
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="font-bold text-sm text-cyan-200 flex items-center gap-2">
+                          <Zap size={14} className="text-cyan-400" />
+                          {wf.name}
+                        </span>
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => handleOpenEditor(wf)}
+                            className="p-1.5 rounded-lg bg-white/5 border border-white/10 text-gray-300 hover:text-cyan-300 hover:border-cyan-500/30"
+                            title="Modifier"
+                          >
+                            <Settings size={13} />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(wf)}
+                            className="p-1.5 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20"
+                            title="Supprimer"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="text-[10px] font-mono text-gray-500 mb-3">
+                        {wf.triggerCount || 0} exécution(s) • {wf.actions.length} étape(s)
+                      </div>
+
+                      {/* Étapes */}
+                      <div className="space-y-1">
+                        {wf.actions.map((act, i) => (
+                          <div key={i} className="flex items-center gap-2 text-xs text-gray-300 bg-black/40 px-2.5 py-1 rounded border border-white/5">
+                            <span className="text-[10px] font-bold text-cyan-500 font-mono">{i + 1}.</span>
+                            <span className="truncate">{act}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => handleRun(wf)}
+                      disabled={runningId === wf.id}
+                      className={`w-full py-2 rounded-lg border text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2 ${runningId === wf.id ? "bg-green-500/20 border-green-500 text-green-300 animate-pulse" : "bg-cyan-500/20 border-cyan-500/40 text-cyan-300 hover:bg-cyan-500/30"}`}
+                    >
+                      <Play size={14} className={runningId === wf.id ? "fill-current" : ""} />
+                      {runningId === wf.id ? "Exécution..." : "Déclencher Routine"}
+                    </button>
+                  </motion.div>
+                ))}
+              </div>
             )}
           </div>
         )}
 
-        {/* Workflows Actifs */}
-        <div>
-          <h4 className="text-cyan-500/80 font-bold text-xs tracking-widest uppercase mb-3 flex items-center gap-2 border-b border-white/5 pb-2">
-            Workflows Actifs
-            <span className="px-1.5 py-0.5 bg-cyan-900/30 rounded text-[10px] border border-cyan-500/20 text-cyan-300">
-              {workflows.length + exampleWorkflows.length}{" "}
-              {/* Simulé pour UI */}
-            </span>
-          </h4>
+        {activeTab === "editor" && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="p-4 rounded-xl bg-black/40 border border-purple-500/30 space-y-4 max-w-2xl mx-auto"
+          >
+            <div className="flex items-center justify-between border-b border-purple-500/20 pb-2">
+              <h3 className="text-xs font-bold text-purple-300 uppercase tracking-wider flex items-center gap-2">
+                <ListPlus size={16} />
+                {editingId ? `Modifier : ${workflowName}` : "Créer une Nouvelle Routine"}
+              </h3>
+              <button onClick={() => setActiveTab("workflows")} className="text-gray-400 hover:text-white">
+                <X size={16} />
+              </button>
+            </div>
 
-          <div className="space-y-2">
-            {/* Exemples Hardcodés pour demo */}
-            {exampleWorkflows.map((wf, idx) => (
-              <div
-                key={`ex-${idx}`}
-                className="p-3 rounded-xl bg-gradient-to-br from-white/5 to-transparent border border-white/10 hover:border-cyan-500/30 transition-all group opacity-80 hover:opacity-100"
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs bg-cyan-900/50 text-cyan-400 px-1 rounded border border-cyan-500/20">
-                      PRESET
+            {/* Nom Routine */}
+            <div className="space-y-1">
+              <label className="text-[10px] uppercase font-bold text-gray-400 font-mono">Nom de la routine</label>
+              <input
+                type="text"
+                placeholder="Ex: Mode Travail, Mode Cinéma..."
+                value={workflowName}
+                onChange={(e) => setWorkflowName(e.target.value)}
+                className="w-full px-3 py-2 rounded-lg bg-black/60 border border-purple-500/30 text-white placeholder-gray-600 text-xs font-mono focus:outline-none focus:border-purple-400"
+              />
+            </div>
+
+            {/* Liste des actions */}
+            <div className="space-y-2">
+              <label className="text-[10px] uppercase font-bold text-gray-400 font-mono">
+                Étapes ({actions.length})
+              </label>
+
+              <div className="space-y-2">
+                {actions.map((act, idx) => (
+                  <div key={idx} className="flex items-center justify-between bg-purple-950/20 border border-purple-500/20 px-3 py-2 rounded-lg">
+                    <span className="text-xs text-purple-200 font-mono flex items-center gap-2">
+                      <span className="text-purple-400 font-bold">{idx + 1}.</span> {act}
                     </span>
-                    <span className="text-cyan-100 font-bold text-sm tracking-wide">
-                      {wf.name}
-                    </span>
-                  </div>
-                  <button
-                    className="p-1.5 rounded-lg bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/20"
-                    title="Exécuter"
-                  >
-                    <Play className="w-3 h-3" />
-                  </button>
-                </div>
-                <div className="flex items-center gap-1 overflow-hidden">
-                  {wf.actions.map((act, i) => (
-                    <span
-                      key={i}
-                      className="px-1.5 py-0.5 rounded bg-black/40 border border-white/5 text-gray-400 text-[10px] truncate max-w-[80px]"
+                    <button
+                      onClick={() => handleRemoveAction(idx)}
+                      className="text-gray-500 hover:text-red-400"
                     >
-                      {act}
-                    </span>
+                      <X size={14} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              {/* Ajouter une action custom */}
+              <div className="flex gap-2 pt-2">
+                <input
+                  type="text"
+                  placeholder="Ex: Éteindre les lumières du salon..."
+                  value={newActionInput}
+                  onChange={(e) => setNewActionInput(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleAddAction()}
+                  className="flex-1 px-3 py-1.5 rounded-lg bg-black/60 border border-white/10 text-white placeholder-gray-600 text-xs font-mono focus:outline-none focus:border-cyan-400"
+                />
+                <button
+                  onClick={() => handleAddAction()}
+                  className="px-3 py-1.5 rounded-lg bg-cyan-500/20 border border-cyan-400 text-cyan-300 text-xs font-bold uppercase flex items-center gap-1"
+                >
+                  <Plus size={14} /> Ajouter
+                </button>
+              </div>
+
+              {/* Suggestions rapides */}
+              <div className="pt-2">
+                <div className="text-[10px] font-mono text-gray-500 mb-1">Suggestions rapides :</div>
+                <div className="flex flex-wrap gap-1">
+                  {ACTION_SUGGESTIONS.map((sug) => (
+                    <button
+                      key={sug}
+                      onClick={() => handleAddAction(sug)}
+                      className="px-2 py-0.5 rounded bg-black/40 border border-white/5 text-[10px] text-cyan-400 hover:border-cyan-500/40"
+                    >
+                      + {sug}
+                    </button>
                   ))}
                 </div>
               </div>
-            ))}
+            </div>
 
-            {/* Vrais Workflows */}
-            {workflows.map((wf) => (
-              <div
-                key={wf.name}
-                className="p-3 rounded-xl bg-gradient-to-br from-white/5 to-transparent border border-white/10 hover:border-cyan-500/30 transition-all group"
+            {/* Actions Sauvegarder / Annuler */}
+            <div className="flex gap-2 pt-4 border-t border-purple-500/20">
+              <button
+                onClick={() => setActiveTab("workflows")}
+                className="flex-1 py-2 rounded-lg bg-white/5 border border-white/10 text-gray-400 text-xs font-bold uppercase"
               >
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-cyan-100 font-bold text-sm tracking-wide">
-                    {wf.name}
-                  </span>
-                  <div className="flex items-center gap-1">
-                    <button
-                      onClick={() => handleRunWorkflow(wf.name)}
-                      disabled={runningWorkflow === wf.name}
-                      className={`p-1.5 rounded-lg border transition-all ${
-                        runningWorkflow === wf.name
-                          ? "bg-green-500/20 border-green-500 text-green-400 animate-pulse"
-                          : "bg-cyan-500/10 border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/20 hover:border-cyan-400 hover:shadow-[0_0_10px_rgba(34,211,238,0.2)]"
-                      }`}
-                      title="Exécuter"
-                    >
-                      <Play
-                        className={`w-3 h-3 ${runningWorkflow === wf.name ? "fill-current" : ""}`}
-                      />
-                    </button>
-                    <button
-                      onClick={() => {
-                        if (confirm(`Supprimer "${wf.name}" ?`)) {
-                          removeWorkflow(wf.name);
-                        }
-                      }}
-                      className="p-1.5 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 hover:border-red-500/50 transition-all opacity-0 group-hover:opacity-100"
-                      title="Supprimer"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                    </button>
-                  </div>
-                </div>
+                Annuler
+              </button>
+              <button
+                onClick={handleSaveWorkflow}
+                className="flex-1 py-2 rounded-lg bg-purple-500/30 hover:bg-purple-500/40 border border-purple-400 text-purple-200 text-xs font-bold uppercase flex items-center justify-center gap-2"
+              >
+                <CheckCircle2 size={14} /> Sauvegarder Routine
+              </button>
+            </div>
+          </motion.div>
+        )}
 
-                <div className="flex items-center gap-2 text-[10px] text-gray-500 font-mono mb-2">
-                  <span>{wf.triggerCount} exécutions</span>
-                  <span className="w-1 h-1 bg-gray-700 rounded-full" />
-                  <span>{wf.actions.length} étapes</span>
-                </div>
-
-                <div className="flex items-center gap-1 overflow-hidden">
-                  {wf.actions.slice(0, 4).map((action: string, i: number) => (
-                    <span
-                      key={i}
-                      className="px-1.5 py-0.5 rounded bg-black/40 border border-white/5 text-gray-400 text-[10px] truncate max-w-[80px]"
-                    >
-                      {action}
-                    </span>
-                  ))}
-                  {wf.actions.length > 4 && (
-                    <span className="text-gray-600 text-[10px]">+</span>
-                  )}
-                </div>
-              </div>
-            ))}
+        {activeTab === "presence" && (
+          <div className="max-w-xl mx-auto">
+            <PresenceWidget />
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

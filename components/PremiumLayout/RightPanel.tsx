@@ -12,6 +12,7 @@ interface RightPanelProps {
   onCommand?: (command: string) => void;
   setIsAppPathsOpen: (isOpen: boolean) => void;
   setIsFileExplorerOpen: (isOpen: boolean) => void;
+  onToggleWorkflow?: () => void;
 }
 
 export const RightPanel: React.FC<RightPanelProps> = ({
@@ -19,6 +20,7 @@ export const RightPanel: React.FC<RightPanelProps> = ({
   onCommand,
   setIsAppPathsOpen,
   setIsFileExplorerOpen,
+  onToggleWorkflow,
 }) => {
   // TIME STATE
   const [time, setTime] = useState(new Date());
@@ -204,6 +206,20 @@ export const RightPanel: React.FC<RightPanelProps> = ({
           </div>
         </div>
       </motion.div>
+
+      {onToggleWorkflow && (
+        <motion.button
+          initial={{ x: 100, opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+          transition={{ delay: 0.4, duration: 0.8 }}
+          onClick={onToggleWorkflow}
+          className="w-full py-3 border border-purple-400/40 rounded text-sm tracking-widest hover:border-purple-400 hover:text-purple-100 transition-all bg-purple-950/30 backdrop-blur-sm text-purple-300 shadow-[0_0_10px_rgba(168,85,247,0.2)] relative overflow-hidden group"
+        >
+          <span className="relative z-10 drop-shadow-[0_0_5px_rgba(0,0,0,0.8)] font-bold flex items-center justify-center gap-2">
+            ⚡ AUTOMATISATION & ROUTINES
+          </span>
+        </motion.button>
+      )}
 
       <motion.button
         initial={{ x: 100, opacity: 0 }}

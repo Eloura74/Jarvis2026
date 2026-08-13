@@ -23,8 +23,9 @@ const CONFIG = {
     "temp",
     "logs",
   ],
-  // Extensions AUTORISÉES (Fichiers Texte Uniquement)
+  // Extensions AUTORISÉES (Fichiers Texte & PDF)
   allowedExtensions: [
+    ".pdf",
     ".md",
     ".txt",
     ".js",
@@ -199,7 +200,19 @@ class LocalMemoryService {
 
       if (stats.size > CONFIG.maxFileSize) return null;
 
-      const content = await fs.readFile(filePath, "utf8");
+      let content = "";
+      const ext = path.extname(filePath).toLowerCase();
+
+      if (ext === ".pdf") {
+        // Extraction basique des blocs de texte lisibles d'un fichier PDF
+        const buffer = await fs.readFile(filePath);
+        const rawText = buffer.toString("utf8");
+        // Filtrer les séquences textuelles lisibles du flux PDF
+        const matches = rawText.match(/[a-zA-Z0-9àâäéèêëîïôöùûüçÀÂÄÉÈÊËÎÏÔÖÙÛÜÇ\s\.,;:!?\-\(\)'"]{4,}/g);
+        content = matches ? matches.join(" ") : "";
+      } else {
+        content = await fs.readFile(filePath, "utf8");
+      }
 
       // Sécurité : Ne pas indexer les clés privées ou secrets évidents
       if (
@@ -208,6 +221,8 @@ class LocalMemoryService {
       ) {
         return null;
       }
+
+      if (!content.trim()) return null;
 
       return {
         path: filePath,
@@ -228,8 +243,7 @@ class LocalMemoryService {
   }
 
   /**
-   * Recherche basique par mots-clés (pour l'instant)
-   * A remplacer par vectoriel + embedding plus tard
+   * Recherche contextuelle avancée par mots-clés
    */
   search(query) {
     if (!query) return [];
@@ -249,12 +263,32 @@ class LocalMemoryService {
           (term) => pathLower.includes(term) || contentLower.includes(term),
         );
       })
-      .map((file) => ({
-        path: file.path,
-        name: file.name,
-        // Extrait contextuel basique (premiers 200 chars)
-        preview: file.content.substring(0, 200).replace(/\n/g, " ") + "...",
-      }))
+      .map((file) => {
+        const contentLower = file.content.toLowerCase();
+        // Trouver la position de la première occurrence d'un mot clé pour extraire le contexte
+        let firstIndex = -1;
+        for (const term of terms) {
+          const idx = contentLower.indexOf(term);
+          if (idx !== -1 && (firstIndex === -1 || idx < firstIndex)) {
+            firstIndex = idx;
+          }
+        }
+
+        let preview = "";
+        if (firstIndex !== -1) {
+          const start = Math.max(0, firstIndex - 50);
+          const end = Math.min(file.content.length, firstIndex + 250);
+          preview = (start > 0 ? "... " : "") + file.content.substring(start, end).replace(/\s+/g, " ") + (end < file.content.length ? " ..." : "");
+        } else {
+          preview = file.content.substring(0, 200).replace(/\s+/g, " ") + "...";
+        }
+
+        return {
+          path: file.path,
+          name: file.name,
+          preview,
+        };
+      })
       .slice(0, 20); // Limiter résultats
   }
 }

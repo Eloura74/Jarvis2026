@@ -58,3 +58,7 @@ export * from "./securityHandlers";
 
 // Vision & Caméra
 export * from "./visionHandlers";
+
+// Présence
+export * from "./presenceHandlers";
+

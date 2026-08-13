@@ -11,23 +11,30 @@ import rateLimit from "express-rate-limit";
  */
 export const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // 100 requêtes max
+  max: 10000, // 10000 requêtes max (suffisant pour polling local)
   message: {
     error: "Too many requests",
-    message: "Please try again in 15 minutes",
+    message: "Please try again later",
   },
-  standardHeaders: true, // Return rate limit info in `RateLimit-*` headers
-  legacyHeaders: false, // Disable `X-RateLimit-*` headers
-  // Skip successful requests (only count errors)
+  standardHeaders: true,
+  legacyHeaders: false,
   skipSuccessfulRequests: false,
-  // Exempter les routes appelées très fréquemment par le frontend
+  // Ignorer le rate-limiting pour localhost et les routes de polling
   skip: (req) => {
+    const ip = req.ip || req.socket?.remoteAddress;
+    if (ip === "127.0.0.1" || ip === "::1" || ip === "::ffff:127.0.0.1" || req.hostname === "localhost") {
+      return true; // Ne jamais bloquer les requêtes locales
+    }
     const exemptedPaths = [
-      "/api/sphere/state",
-      "/api/sphere/mode",
-      "/api/sphere/text",
-      "/api/system/stats/light",
-      "/api/system/stats",
+      "/api/sphere",
+      "/api/system",
+      "/api/presence",
+      "/api/status",
+      "/api/config",
+      "/api/events",
+      "/api/states",
+      "/api/workflows",
+      "/api/weather",
     ];
     return exemptedPaths.some((path) => req.path.startsWith(path));
   },

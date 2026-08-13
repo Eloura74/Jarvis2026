@@ -66,6 +66,9 @@ import visionRoutes from "./routes/vision.js"; // Vision Gemini (webcam, analyse
 import sphereRoutes from "./routes/sphere.js"; // Contrôle Sphere ESP32 (états, modes, texte)
 import desktopRoutes from "./routes/desktop.js"; // Copilote Bureau Windows (capture d'écran)
 import webhookRoutes from "./routes/webhook.js"; // Webhooks entrants (HA)
+import presenceRoutes from "./routes/presence.js"; // Gestion de présence & lumières bureau
+import workflowsRoutes from "./routes/workflows.js"; // Gestion CRUD des routines/workflows
+import haProxyRoutes from "./routes/haProxy.js"; // Fallback proxy silencieux pour HA (states, services)
 
 const app = express();
 const PORT = 3001;
@@ -106,6 +109,9 @@ app.use("/api/vision", visionRoutes); // Vision Gemini (webcam, analyse image)
 app.use("/api/sphere", sphereRoutes); // Contrôle Sphere ESP32 (états, modes, texte)
 app.use("/api/desktop", desktopRoutes); // Copilote Bureau Windows (capture d'écran)
 app.use("/api/webhook", webhookRoutes); // Webhooks entrants (HA)
+app.use("/api/presence", presenceRoutes); // Présence & Lumières Bureau
+app.use("/api/workflows", workflowsRoutes); // Routines & Workflows CRUD
+app.use("/api", haProxyRoutes); // Proxy HA (states, services, camera_proxy_stream)
 
 // Route directe pour lancer une application par son chemin
 app.post("/api/launch", async (req, res) => {
@@ -279,6 +285,8 @@ import { initWhatsAppService } from "./services/whatsappService.js";
 import { startCalendarReminder } from "./services/calendarReminder.js";
 // Import Morning Briefing Cron
 import { startMorningBriefingCron } from "./services/morningBriefingCron.js";
+// Import Presence Service
+import presenceService from "./services/presenceService.js";
 
 // START
 initializeIndex().then(() => {
@@ -292,6 +300,8 @@ initializeIndex().then(() => {
   startCalendarReminder();
   // Init Morning Briefing Cron
   startMorningBriefingCron();
+  // Init Presence Service (monitoring inactivité & lumières bureau)
+  presenceService.start();
 
   app.listen(PORT, () => {
     console.log(`✅ J.A.R.V.I.S. Core running on http://localhost:${PORT}`);

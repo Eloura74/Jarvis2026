@@ -196,6 +196,9 @@ export function useJarvisBrain(props: UseJarvisBrainProps) {
       if (setActiveOverlay) setActiveOverlay(null);
       if (setStatusOverlay) setStatusOverlay(null);
 
+      // Heartbeat présence : réinitialiser le timer d'inactivité
+      fetch("http://localhost:3001/api/presence/heartbeat", { method: "POST" }).catch(() => {});
+
       // 🟣 SPHERE VISUAL CONTEXT
       const visualMode = detectVisualMode(text);
       if (visualMode) {

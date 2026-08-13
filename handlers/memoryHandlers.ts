@@ -6,10 +6,11 @@ interface ConsultMemoryArgs {
 
 export const handleConsultMemory = async (
   args: ConsultMemoryArgs,
-  ctx: HandlerContext,
+  ctx: HandlerContext & { speak?: (text: string) => void },
 ) => {
   const { query } = args;
-  ctx.addLog(`🧠 Searching memory for: "${query}"`, "KERNEL", "info");
+  const { addLog, speak } = ctx;
+  addLog(`🧠 Searching memory for: "${query}"`, "KERNEL", "info");
 
   try {
     const response = await fetch(
@@ -27,20 +28,28 @@ export const handleConsultMemory = async (
         }),
       );
 
+      const topResult = data.results[0];
+      const summaryMsg = `J'ai trouvé ${data.count} document${data.count > 1 ? "s" : ""} pertinent${data.count > 1 ? "s" : ""}, Monsieur. Fichier ${topResult.name} : ${topResult.preview.substring(0, 150)}`;
+
+      if (speak) speak(summaryMsg);
+
       return {
         status: "success",
         data: contextData,
-        message: `Found ${data.count} relevant items.`,
+        message: summaryMsg,
       };
     } else {
+      const notFoundMsg = `Je n'ai trouvé aucun document correspondant à "${query}" dans votre mémoire locale.`;
+      if (speak) speak(notFoundMsg);
       return {
         status: "warning",
         data: [],
-        message: "No relevant information found in memory.",
+        message: notFoundMsg,
       };
     }
   } catch (error) {
-    ctx.addLog(`Memory search failed: ${error}`, "SYSTEM", "error");
+    addLog(`Memory search failed: ${error}`, "SYSTEM", "error");
+    if (speak) speak("Désolé Monsieur, la recherche dans la mémoire locale a échoué.");
     return {
       status: "error",
       message: "Failed to consult memory.",

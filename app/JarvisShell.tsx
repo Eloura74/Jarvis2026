@@ -20,6 +20,7 @@ import ShellPanels from "./overlays/ShellPanels";
 import { useProactiveEvents } from "../hooks/useProactiveEvents";
 import { useDialogFlow } from "../hooks/useDialogFlow";
 import { useHACameraRefresh } from "../hooks/useHACameraRefresh";
+import { usePresenceTracker } from "../hooks/usePresenceTracker";
 
 // déclaration du composant JarvisShell
 export interface JarvisShellProps {
@@ -27,6 +28,9 @@ export interface JarvisShellProps {
 }
 
 export default function JarvisShell({ shouldGreet }: JarvisShellProps) {
+  // Suivi de présence automatique via souris/clavier
+  usePresenceTracker();
+
   const {
     status,
     setStatus,
@@ -228,6 +232,9 @@ export default function JarvisShell({ shouldGreet }: JarvisShellProps) {
         processingMessage={activeOverlay || "🤖 JARVIS analyse..."}
         onToggleLogs={() =>
           setActiveOverlay(activeOverlay === "LOGS" ? null : "LOGS")
+        }
+        onToggleWorkflow={() =>
+          setActiveOverlay(activeOverlay === "WORKFLOW" ? null : "WORKFLOW")
         }
       />
 

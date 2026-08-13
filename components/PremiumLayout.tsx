@@ -36,6 +36,7 @@ interface PremiumLayoutProps {
     candidatesTokens: number;
   };
   onToggleLogs?: () => void;
+  onToggleWorkflow?: () => void;
 }
 
 export const PremiumLayout: React.FC<PremiumLayoutProps> = ({
@@ -52,6 +53,7 @@ export const PremiumLayout: React.FC<PremiumLayoutProps> = ({
   successTrigger,
   tokenUsage,
   onToggleLogs,
+  onToggleWorkflow,
 }) => {
   const [isAppPathsOpen, setIsAppPathsOpen] = useState(false);
   const [isFileExplorerOpen, setIsFileExplorerOpen] = useState(false);
@@ -96,6 +98,7 @@ export const PremiumLayout: React.FC<PremiumLayoutProps> = ({
           onCommand={onCommand}
           setIsAppPathsOpen={setIsAppPathsOpen}
           setIsFileExplorerOpen={setIsFileExplorerOpen}
+          onToggleWorkflow={onToggleWorkflow}
         />
       </div>
 

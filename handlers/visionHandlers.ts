@@ -257,3 +257,19 @@ export const handleDetectObjects = async (
     };
   }
 };
+
+/**
+ * Handler Copilote d'Écran Proactif (Dev Assistant)
+ * Analyse les erreurs de compilation/terminal/VS Code visibles à l'écran et propose une explication + solution.
+ */
+export const handleDevAssistant = async (
+  args: { prompt?: string },
+  ctx: HandlerContext & { speak?: (text: string) => void },
+) => {
+  const customPrompt =
+    args.prompt ||
+    "Analyse cet écran de développeur (VS Code, terminal, console d'erreur). Identifie l'erreur principale ou le bug visible, explique sa cause en 1-2 phrases très claires et donne la solution exacte à appliquer. Sois concis et direct.";
+
+  return handleAnalyzeScreen({ type: "code", prompt: customPrompt }, ctx);
+};
+
